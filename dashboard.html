@@ -12,7 +12,7 @@
     <div class="topbar">
       <div>
         <h1 class="page-title" id="welcome">Xush kelibsiz!</h1>
-        <p class="page-subtitle">Workspace, g'oyalar va bildirishnomalar bir joyda.</p>
+        <p class="page-subtitle" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bir joyda.</p>
         <div class="status-strip">
           <span class="badge badge-active">Firebase Auth ulangan</span>
           <span class="badge">Real ma'lumotlar</span>
@@ -29,8 +29,9 @@
 
     <div class="grid grid-4 mb-4" id="stats"></div>
     <div id="securityReminder"></div>
+    <div id="adminOnlyPanel"></div>
 
-    <div class="grid dashboard-grid">
+    <div class="grid dashboard-grid" id="memberDashboard">
       <div>
         <div class="section-head">
           <h2>Mening workspace'larim</h2>
@@ -116,6 +117,9 @@
       mountLayout('dashboard', window.APP_CONTEXT);
 
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
+      document.getElementById('dashboardSubtitle').textContent = isAdmin
+        ? 'Statistika va workspace yaratish boshqaruvi.'
+        : "Workspace, g'oyalar va bildirishnomalar bir joyda.";
       document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
       document.getElementById('workspaceRoleHint').textContent = isAdmin ? 'Admin workspace yaratadi' : "Team lead a'zo qo'shadi";
       if (profile?.passwordResetRequired) {
@@ -138,6 +142,22 @@
       const teams = data.teams;
       const ideas = data.ideas;
       const unread = data.notifications.filter((n) => n.unread || n.isRead === false).length;
+      if (isAdmin) {
+        document.getElementById('memberDashboard').style.display = 'none';
+        document.getElementById('adminOnlyPanel').innerHTML = `
+          <div class="grid grid-2">
+            <div class="card">
+              <h3 style="margin:0 0 10px">Workspace yaratish</h3>
+              <p class="muted text-sm">Admin team lead emailini belgilaydi. Boshlang'ich parol email bilan bir xil bo'ladi.</p>
+              <button class="btn btn-primary" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
+            </div>
+            <a class="card card-hover" href="admin.html">
+              <h3 style="margin:0 0 10px">Admin paneli</h3>
+              <p class="muted text-sm">Workspace ro'yxati, a'zolar soni va o'chirish boshqaruvi.</p>
+            </a>
+          </div>
+        `;
+      }
       document.getElementById('nextStep').textContent = isAdmin
         ? (teams.length
           ? "Workspace ochilgan. Admin panelida faqat a'zolar soni va o'chirish boshqaruvi ko'rinadi."
@@ -146,7 +166,7 @@
           ? "Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi."
           : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni secret key orqali qo'shadi.");
       document.getElementById('stats').innerHTML = [
-        { icon: 'W', n: teams.length, l: "Workspace'larim" },
+        { icon: 'W', n: teams.length, l: isAdmin ? "Workspace'lar" : "Workspace'larim" },
         { icon: 'L', n: teams.filter(t => t.membershipRole === 'team_lead').length, l: "Lead workspace" },
         { icon: 'M', n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar" },
         { icon: 'N', n: unread, l: 'Yangi bildirishnomalar' },
