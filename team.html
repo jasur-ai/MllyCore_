@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Jamoa — Startap Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <div id="teamHeader"></div>
+    <div class="tabs">
+      <div class="tab active" data-tab="ideas">G'oyalar</div>
+      <div class="tab" data-tab="members">A'zolar</div>
+      <div class="tab" data-tab="chat">Chat</div>
+      <div class="tab" data-tab="kanban">Kanban</div>
+    </div>
+    <div id="tabContent"></div>
+  </div>
+
+  <div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this)UTIL.closeModal('settingsModal')">
+    <div class="modal">
+      <h3>Jamoa sozlamalari</h3>
+      <p class="modal-sub">Team Lead va Admin uchun.</p>
+      <label class="label">Jamoa nomi</label><input class="input mb-3" id="setName">
+      <label class="label">Tavsif</label><textarea class="textarea mb-3" rows="3" id="setDesc"></textarea>
+      <label class="label">Invite kod</label>
+      <div class="flex gap-2 mb-3">
+        <div class="invite-code" id="setCode" style="flex:1"></div>
+        <button class="btn btn-ghost" onclick="document.getElementById('setCode').textContent=Array(4).fill().map(()=>Math.random().toString(36).slice(2,6).toUpperCase()).join('-'); UTIL.toast('Kod yangilandi')">Reset</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="UTIL.closeModal('settingsModal')">Yopish</button>
+        <button class="btn btn-primary" onclick="UTIL.closeModal('settingsModal'); UTIL.toast('Saqlandi')">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="inviteModal" onclick="if(event.target===this)UTIL.closeModal('inviteModal')">
+    <div class="modal">
+      <h3>A'zo taklif qilish</h3>
+      <p class="modal-sub">Quyidagi kodni do'stingizga yuboring yoki email orqali taklif qiling.</p>
+      <div class="invite-code mb-3" id="inviteCode"></div>
+      <button class="btn btn-ghost w-full mb-3" onclick="navigator.clipboard?.writeText(document.getElementById('inviteCode').textContent); UTIL.toast('Nusxalandi')">Kodni nusxalash</button>
+      <hr class="sep">
+      <label class="label">Yoki email orqali</label>
+      <div class="flex gap-2">
+        <input class="input" type="email" placeholder="email@domain.com">
+        <button class="btn btn-primary" onclick="UTIL.toast('Taklif yuborildi')">Yuborish</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    const t = UTIL.team(UTIL.qs('id') || 't1') || MOCK.teams[0];
+    const meIsLead = t.lead === MOCK.currentUser.id || MOCK.currentUser.role === 'admin';
+
+    document.getElementById('teamHeader').innerHTML = `
+      <div class="card mb-4">
+        <div class="flex items-center justify-between gap-3" style="flex-wrap:wrap">
+          <div class="flex items-center gap-3">
+            <div class="team-logo ${t.color}" style="width:64px;height:64px;border-radius:16px;font-size:22px">${t.logo}</div>
+            <div>
+              <h1 class="page-title">${t.name}</h1>
+              <p class="page-subtitle">${t.description}</p>
+              <div class="flex gap-2 mt-2">
+                <span class="badge">${t.members.length} a'zo</span>
+                <span class="badge">${t.ideasCount} g'oya</span>
+                <span class="badge">Lead: ${UTIL.user(t.lead).name}</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost" onclick="UTIL.openModal('inviteModal')">A'zo taklif qilish</button>
+            ${meIsLead ? `<button class="btn btn-primary" onclick="UTIL.openModal('settingsModal')">Sozlamalar</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('setName').value = t.name;
+    document.getElementById('setDesc').value = t.description;
+    document.getElementById('setCode').textContent = t.code;
+    document.getElementById('inviteCode').textContent = t.code;
+
+    const tabContent = document.getElementById('tabContent');
+    const renderTab = (name) => {
+      if (name === 'ideas') {
+        const ideas = MOCK.ideas.filter(i => i.teamId === t.id);
+        tabContent.innerHTML = `
+          <div class="flex justify-between items-center mb-3" style="flex-wrap:wrap;gap:8px">
+            <div class="flex gap-2">
+              <button class="btn btn-ghost btn-sm filter active" data-f="all">Hammasi (${ideas.length})</button>
+              <button class="btn btn-ghost btn-sm filter" data-f="raw">Xom (${ideas.filter(i=>i.category==='raw').length})</button>
+              <button class="btn btn-ghost btn-sm filter" data-f="active">Faol (${ideas.filter(i=>i.category==='active').length})</button>
+              <button class="btn btn-ghost btn-sm filter" data-f="planned">Rejalashtirilgan (${ideas.filter(i=>i.category==='planned').length})</button>
+              <button class="btn btn-ghost btn-sm filter" data-f="archived">Arxiv (${ideas.filter(i=>i.category==='archived').length})</button>
+            </div>
+            <button class="btn btn-primary" onclick="UTIL.toast('Yangi goya modali (demo)')">+ Yangi goya</button>
+          </div>
+          <div class="grid grid-2" id="ideasList"></div>
+        `;
+        const render = (f) => {
+          const list = f==='all'?ideas:ideas.filter(i=>i.category===f);
+          document.getElementById('ideasList').innerHTML = list.map(i => `
+            <a href="idea.html?id=${i.id}" class="card card-hover">
+              <div class="flex justify-between items-center mb-2">
+                <div class="flex gap-2">${UTIL.catBadge(i.category)}${UTIL.statusBadge(i.status)}</div>
+                <span class="text-xs muted">${i.comments} izoh</span>
+              </div>
+              <h3 style="margin:0 0 6px;font-size:16px">${i.title}</h3>
+              <p class="text-sm muted" style="margin:0 0 12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${i.desc}</p>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <div class="avatar avatar-sm">${UTIL.user(i.author).avatar}</div>
+                  <span class="text-xs muted">${UTIL.user(i.author).name}</span>
+                </div>
+                <span class="text-xs muted">${i.updated}</span>
+              </div>
+            </a>
+          `).join('') || '<p class="muted">Ushbu kategoriyada g\\'oya yo\\'q.</p>';
+        };
+        render('all');
+        document.querySelectorAll('.filter').forEach(b => b.onclick = () => {
+          document.querySelectorAll('.filter').forEach(x=>x.classList.remove('active'));
+          b.classList.add('active'); render(b.dataset.f);
+        });
+      }
+      if (name === 'members') {
+        const members = t.members.map(id => UTIL.user(id));
+        tabContent.innerHTML = `
+          <div class="card" style="padding:0;overflow:hidden">
+            <table class="table">
+              <thead><tr><th>A'zo</th><th>Rol</th><th>Qo'shilgan</th><th></th></tr></thead>
+              <tbody>
+                ${members.map(m => `
+                  <tr>
+                    <td><div class="flex items-center gap-3"><div class="avatar">${m.avatar}</div><div><div class="font-semibold">${m.name}</div><div class="text-xs muted">@${m.username}</div></div></div></td>
+                    <td>${m.id===t.lead?'<span class="badge badge-progress">Team Lead</span>':'<span class="badge">Member</span>'}</td>
+                    <td class="muted text-sm">${m.joined}</td>
+                    <td style="text-align:right">${meIsLead && m.id !== MOCK.currentUser.id ? `<button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Demo: menyu')">•••</button>`:''}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      }
+      if (name === 'chat') {
+        const msgs = MOCK.messages[t.id] || MOCK.messages.t1;
+        tabContent.innerHTML = `
+          <div class="chat">
+            <div class="chat-messages" id="chatBox">
+              ${msgs.map(m => {
+                const u = UTIL.user(m.user); const me = m.user === MOCK.currentUser.id;
+                return `<div class="msg ${me?'me':''}">
+                  <div class="avatar avatar-sm">${u.avatar}</div>
+                  <div><div class="meta">${u.name} · ${m.time}</div><div class="bubble">${m.text}</div></div>
+                </div>`;
+              }).join('')}
+            </div>
+            <div class="chat-input">
+              <input class="input" id="chatInput" placeholder="Xabar yozing... (@mention qo'llab-quvvatlanadi)">
+              <button class="btn btn-primary" onclick="sendMsg()">Yuborish</button>
+            </div>
+          </div>
+        `;
+        window.sendMsg = () => {
+          const inp = document.getElementById('chatInput');
+          if (!inp.value.trim()) return;
+          const box = document.getElementById('chatBox');
+          const time = new Date().toLocaleTimeString('uz-UZ', {hour:'2-digit',minute:'2-digit'});
+          box.insertAdjacentHTML('beforeend', `<div class="msg me"><div class="avatar avatar-sm">${MOCK.currentUser.avatar}</div><div><div class="meta">${MOCK.currentUser.name} · ${time}</div><div class="bubble">${inp.value.replace(/</g,'&lt;')}</div></div></div>`);
+          inp.value=''; box.scrollTop = box.scrollHeight;
+        };
+        const box = document.getElementById('chatBox'); box.scrollTop = box.scrollHeight;
+        document.getElementById('chatInput').addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+      }
+      if (name === 'kanban') {
+        const cols = [['raw','Xom'],['active','Faol'],['planned','Rejalashtirilgan'],['archived','Arxiv']];
+        const ideas = MOCK.ideas.filter(i => i.teamId === t.id);
+        tabContent.innerHTML = `<div class="kanban">${cols.map(([k,l]) => {
+          const list = ideas.filter(i => i.category===k);
+          return `<div class="kanban-col"><h4>${l}<span class="badge">${list.length}</span></h4>${list.map(i=>`
+            <a href="idea.html?id=${i.id}" class="kanban-card" style="display:block">
+              <div class="font-semibold text-sm">${i.title}</div>
+              <div class="flex items-center justify-between mt-2">
+                <div class="avatar avatar-sm">${UTIL.user(i.author).avatar}</div>
+                ${UTIL.statusBadge(i.status)}
+              </div>
+            </a>
+          `).join('')}</div>`;
+        }).join('')}</div>`;
+      }
+    };
+    renderTab('ideas');
+    document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+      tab.classList.add('active'); renderTab(tab.dataset.tab);
+    });
+    mountLayout('');
+  </script>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profil sozlamalari — Startap Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div><h1 class="page-title">Profil sozlamalari</h1><p class="page-subtitle">Hisobingiz, xavfsizlik va bildirishnomalar.</p></div>
+    </div>
+
+    <div class="grid" style="grid-template-columns: 1fr 2fr; gap:16px">
+      <div class="card">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="avatar avatar-lg">AK</div>
+          <div>
+            <div class="font-semibold">Aziz Karimov</div>
+            <div class="text-xs muted">@aziz_dev · Team Lead</div>
+          </div>
+        </div>
+        <button class="btn btn-ghost w-full">Rasmni o'zgartirish</button>
+        <hr class="sep">
+        <div class="text-sm" style="line-height:2">
+          <div class="flex justify-between"><span class="muted">Email</span><span>aziz@startup.uz</span></div>
+          <div class="flex justify-between"><span class="muted">Tasdiqlangan</span><span class="badge badge-active">Ha</span></div>
+          <div class="flex justify-between"><span class="muted">Qo'shilgan</span><span>2024-11-12</span></div>
+          <div class="flex justify-between"><span class="muted">Jamoalar</span><span>3</span></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card mb-4">
+          <h3 style="margin:0 0 14px;font-size:16px">Asosiy ma'lumotlar</h3>
+          <div class="grid grid-2" style="gap:12px">
+            <div><label class="label">Ism</label><input class="input" value="Aziz"></div>
+            <div><label class="label">Familiya</label><input class="input" value="Karimov"></div>
+          </div>
+          <div class="mt-3"><label class="label">Username</label><input class="input" value="aziz_dev"></div>
+          <div class="mt-3"><label class="label">Email</label><input class="input" type="email" value="aziz@startup.uz"></div>
+          <div class="mt-3"><label class="label">Bio</label><textarea class="textarea" rows="3">Startap g'oyalari va EdTech bilan shug'ullanaman.</textarea></div>
+          <div class="mt-3 flex justify-end"><button class="btn btn-primary" onclick="UTIL.toast('Saqlandi')">Saqlash</button></div>
+        </div>
+
+        <div class="card mb-4">
+          <h3 style="margin:0 0 14px;font-size:16px">Xavfsizlik</h3>
+          <label class="label">Joriy parol</label><input class="input mb-3" type="password">
+          <div class="grid grid-2" style="gap:12px">
+            <div><label class="label">Yangi parol</label><input class="input" type="password"></div>
+            <div><label class="label">Takrorlang</label><input class="input" type="password"></div>
+          </div>
+          <hr class="sep">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="font-semibold">Ikki faktorli autentifikatsiya (2FA)</div>
+              <div class="text-sm muted">Qo'shimcha xavfsizlik qatlami.</div>
+            </div>
+            <button class="btn btn-ghost" onclick="UTIL.toast('2FA sozlash (demo)')">Yoqish</button>
+          </div>
+          <div class="mt-3 flex justify-end"><button class="btn btn-primary" onclick="UTIL.toast('Parol yangilandi')">Parolni o'zgartirish</button></div>
+        </div>
+
+        <div class="card">
+          <h3 style="margin:0 0 14px;font-size:16px">Bildirishnomalar</h3>
+          ${['Yangi g\'oya','Chat xabarlari','Jamoaga qo\'shilish so\'rovlari','Tizim e\'lonlari'].map(t => `
+            <label class="flex items-center justify-between mb-2" style="padding:8px;border-radius:8px;background:var(--panel-2)">
+              <span class="text-sm">${t}</span><input type="checkbox" checked>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>mountLayout('profile');</script>
+</body>
+</html>

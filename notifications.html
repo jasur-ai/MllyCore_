@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bildirishnomalar — Startap Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div id="app">
+    <div class="topbar">
+      <div><h1 class="page-title">Bildirishnomalar</h1><p class="page-subtitle">Eng so'nggi faoliyat va yangiliklar.</p></div>
+      <button class="btn btn-ghost" onclick="document.querySelectorAll('.dot').forEach(d=>d.remove()); UTIL.toast('Hammasi o\\'qildi')">Hammasini o'qildi</button>
+    </div>
+    <div class="card" id="list"></div>
+  </div>
+  <script src="js/mock-data.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    document.getElementById('list').innerHTML = MOCK.notifications.map(n => `
+      <div class="flex gap-3 mb-3" style="padding:12px;border-radius:10px;background:${n.unread?'rgba(99,102,241,0.06)':'transparent'};border:1px solid ${n.unread?'rgba(99,102,241,0.2)':'var(--border)'}">
+        ${n.unread ? '<span class="dot" style="margin-top:8px"></span>' : '<span style="width:8px"></span>'}
+        <div style="flex:1">
+          <div>${n.text}</div>
+          <div class="text-xs muted mt-2">${n.time} · ${({idea:'G\\'oya',chat:'Chat',member:'A\\'zo',system:'Tizim'})[n.type]}</div>
+        </div>
+      </div>
+    `).join('');
+    mountLayout('notif');
+  </script>
+</body>
+</html>
