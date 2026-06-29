@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" class="auth-required">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -12,7 +12,7 @@
     <div class="topbar">
       <div>
         <h1 class="page-title" id="welcome">Xush kelibsiz!</h1>
-        <p class="page-subtitle">Jamoalar, g'oyalar va bildirishnomalar bir joyda.</p>
+        <p class="page-subtitle">Workspace, g'oyalar va bildirishnomalar bir joyda.</p>
         <div class="status-strip">
           <span class="badge badge-active">Firebase Auth ulangan</span>
           <span class="badge">Firestore ma'lumotlari tayyor</span>
@@ -21,10 +21,9 @@
       <div class="action-bar">
         <div class="search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input class="input" id="globalSearch" placeholder="G'oya yoki jamoa qidirish...">
+          <input class="input" id="globalSearch" placeholder="Faqat workspace ichidan qidirish...">
         </div>
-        <button class="btn btn-ghost" onclick="UTIL.openModal('joinModal')">Jamoaga qo'shilish</button>
-        <button class="btn btn-primary" onclick="UTIL.openModal('newTeamModal')">+ Yangi jamoa</button>
+        <button class="btn btn-primary" id="adminCreateTeam" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
       </div>
     </div>
 
@@ -33,8 +32,8 @@
     <div class="grid dashboard-grid">
       <div>
         <div class="section-head">
-          <h2>Faol jamoalar</h2>
-          <button class="btn btn-ghost btn-sm" onclick="UTIL.openModal('newTeamModal')">Yaratish</button>
+          <h2>Mening workspace'larim</h2>
+          <span class="badge" id="workspaceRoleHint">Team lead a'zo qo'shadi</span>
         </div>
         <div class="grid grid-2" id="teams"></div>
 
@@ -55,10 +54,10 @@
           <div class="section-head">
             <h3>Keyingi qadam</h3>
           </div>
-          <div class="notice">Avval jamoa tanlang, keyin g'oya qo'shing yoki mavjud g'oyani muhokama qiling.</div>
+          <div class="notice">Avval workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
           <div class="flex mt-3" style="flex-direction:column;gap:8px">
             <button class="btn btn-primary" style="justify-content:flex-start" onclick="UTIL.openModal('newIdeaModal')">+ G'oya qo'shish</button>
-            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="UTIL.openModal('joinModal')">Invite kod bilan qo'shilish</button>
+            <a class="btn btn-ghost" style="justify-content:flex-start" href="team.html?id=t1">Workspace'ga o'tish</a>
           </div>
         </div>
 
@@ -73,7 +72,7 @@
         <div class="card mt-4">
           <h3 style="margin:0 0 12px;font-size:16px">Tezkor havolalar</h3>
           <div class="flex" style="flex-direction:column;gap:8px">
-            <a href="team.html?id=t1" class="btn btn-ghost" style="justify-content:flex-start">EduTech jamoasi</a>
+            <a href="team.html?id=t1" class="btn btn-ghost" style="justify-content:flex-start">EduTech workspace</a>
             <a href="my-ideas.html" class="btn btn-ghost" style="justify-content:flex-start">G'oyalarim</a>
             <a href="profile.html" class="btn btn-ghost" style="justify-content:flex-start">Profil sozlamalari</a>
           </div>
@@ -84,10 +83,10 @@
 
   <div class="modal-backdrop" id="newTeamModal" onclick="if(event.target===this)UTIL.closeModal('newTeamModal')">
     <div class="modal">
-      <h3>Yangi jamoa yaratish</h3>
-      <p class="modal-sub">Jamoangizga nom va qisqacha tavsif bering.</p>
-      <label class="label">Jamoa nomi</label><input class="input mb-3" placeholder="Masalan: EduTech Innovators">
-      <label class="label">Tavsif</label><textarea class="textarea" rows="3" placeholder="Jamoangiz nima qiladi?"></textarea>
+      <h3>Yangi workspace yaratish</h3>
+      <p class="modal-sub">Workspace faqat admin tomonidan ochiladi. Team lead keyin a'zolarni taklif qiladi.</p>
+      <label class="label">Workspace nomi</label><input class="input mb-3" placeholder="Masalan: EduTech Innovators">
+      <label class="label">Tavsif</label><textarea class="textarea" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
         <button class="btn btn-primary" onclick="UTIL.closeModal('newTeamModal'); UTIL.toast('Jamoa yaratildi')">Yaratish</button>
@@ -95,23 +94,11 @@
     </div>
   </div>
 
-  <div class="modal-backdrop" id="joinModal" onclick="if(event.target===this)UTIL.closeModal('joinModal')">
-    <div class="modal">
-      <h3>Jamoaga qo'shilish</h3>
-      <p class="modal-sub">Jamoa rahbaridan olgan 16-raqamli invite kodni kiriting.</p>
-      <input class="input" placeholder="XXXX-XXXX-XXXX-XXXX" style="font-family:'JetBrains Mono',monospace;letter-spacing:2px;text-align:center">
-      <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="UTIL.closeModal('joinModal')">Bekor qilish</button>
-        <button class="btn btn-primary" onclick="UTIL.closeModal('joinModal'); UTIL.toast('Sorov yuborildi')">Qo'shilish</button>
-      </div>
-    </div>
-  </div>
-
   <div class="modal-backdrop" id="newIdeaModal" onclick="if(event.target===this)UTIL.closeModal('newIdeaModal')">
     <div class="modal">
       <h3>Yangi g'oya</h3>
-      <p class="modal-sub">G'oyangizni jamoangiz bilan bo'lishing.</p>
-      <label class="label">Jamoa</label>
+      <p class="modal-sub">G'oyangiz faqat tanlangan workspace ichida ko'rinadi.</p>
+      <label class="label">Workspace</label>
       <select class="select mb-3"><option>EduTech Innovators</option><option>FinFlow</option><option>GreenChain</option></select>
       <label class="label">G'oya nomi</label><input class="input mb-3">
       <label class="label">Qisqacha tavsif</label><textarea class="textarea" rows="4"></textarea>
@@ -123,14 +110,20 @@
   </div>
 
   <script src="js/app-data.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
+  <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
     document.getElementById('welcome').textContent = `Xush kelibsiz, ${MOCK.currentUser.name.split(' ')[0]}!`;
     const myTeams = MOCK.teams.filter(t => t.members.includes(MOCK.currentUser.id));
     const myIdeas = MOCK.ideas.filter(i => myTeams.find(t => t.id === i.teamId));
+    const isAdmin = MOCK.currentUser.role === 'admin';
+    document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
+    document.getElementById('workspaceRoleHint').textContent = isAdmin ? 'Admin workspace yaratadi' : "Team lead a'zo qo'shadi";
 
     document.getElementById('stats').innerHTML = [
-      { icon: 'T', n: myTeams.length, l: 'Jamoalarim' },
+      { icon: 'W', n: myTeams.length, l: "Workspace'larim" },
       { icon: 'I', n: myIdeas.length, l: "Jami g'oyalar" },
       { icon: 'A', n: myIdeas.filter(i=>i.category==='active').length, l: "Faol g'oyalar" },
       { icon: 'N', n: MOCK.notifications.filter(n=>n.unread).length, l: 'Yangi bildirishnomalar' },

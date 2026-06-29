@@ -60,6 +60,47 @@ window.MllyCore = {
     const state = await this.init();
     if (!state) return;
     return state.modules.authMod.signOut(state.auth);
+  },
+
+  async getUserProfile(uid) {
+    const state = await this.init();
+    if (!state) return null;
+
+    const { doc, getDoc } = state.modules.dbMod;
+    const snap = await getDoc(doc(state.db, 'users', uid));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  },
+
+  async requireAuth() {
+    const state = await this.init();
+    if (!state) {
+      location.href = 'login.html';
+      return null;
+    }
+
+    const { onAuthStateChanged } = state.modules.authMod;
+    return new Promise((resolve) => {
+      onAuthStateChanged(state.auth, async (user) => {
+        if (!user) {
+          location.href = 'login.html';
+          resolve(null);
+          return;
+        }
+
+        const profile = await this.getUserProfile(user.uid);
+        const requiredRole = document.documentElement.dataset.requiredRole;
+        if (requiredRole && profile?.role !== requiredRole) {
+          location.href = 'dashboard.html';
+          resolve(null);
+          return;
+        }
+
+        window.MLLYCORE_AUTH_USER = user;
+        window.MLLYCORE_PROFILE = profile;
+        document.documentElement.classList.add('auth-ready');
+        resolve(user);
+      });
+    });
   }
 };
 

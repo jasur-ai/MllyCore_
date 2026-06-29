@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" class="auth-required">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -21,11 +21,11 @@
 
   <div class="modal-backdrop" id="settingsModal" onclick="if(event.target===this)UTIL.closeModal('settingsModal')">
     <div class="modal">
-      <h3>Jamoa sozlamalari</h3>
-      <p class="modal-sub">Team Lead va Admin uchun.</p>
-      <label class="label">Jamoa nomi</label><input class="input mb-3" id="setName">
+      <h3>Workspace sozlamalari</h3>
+      <p class="modal-sub">Secret key reset qilish huquqi team lead va adminda bo'ladi.</p>
+      <label class="label">Workspace nomi</label><input class="input mb-3" id="setName">
       <label class="label">Tavsif</label><textarea class="textarea mb-3" rows="3" id="setDesc"></textarea>
-      <label class="label">Invite kod</label>
+      <label class="label">Secret key</label>
       <div class="flex gap-2 mb-3">
         <div class="invite-code" id="setCode" style="flex:1"></div>
         <button class="btn btn-ghost" onclick="document.getElementById('setCode').textContent=Array(4).fill().map(()=>Math.random().toString(36).slice(2,6).toUpperCase()).join('-'); UTIL.toast('Kod yangilandi')">Reset</button>
@@ -40,7 +40,7 @@
   <div class="modal-backdrop" id="inviteModal" onclick="if(event.target===this)UTIL.closeModal('inviteModal')">
     <div class="modal">
       <h3>A'zo taklif qilish</h3>
-      <p class="modal-sub">Quyidagi kodni do'stingizga yuboring yoki email orqali taklif qiling.</p>
+      <p class="modal-sub">Faqat team lead a'zo qo'shadi. Secret keyni ishonchli a'zolarga yuboring.</p>
       <div class="invite-code mb-3" id="inviteCode"></div>
       <button class="btn btn-ghost w-full mb-3" onclick="navigator.clipboard?.writeText(document.getElementById('inviteCode').textContent); UTIL.toast('Nusxalandi')">Kodni nusxalash</button>
       <hr class="sep">
@@ -53,6 +53,9 @@
   </div>
 
   <script src="js/app-data.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
+  <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
     const t = UTIL.team(UTIL.qs('id') || 't1') || MOCK.teams[0];
@@ -74,7 +77,7 @@
             </div>
           </div>
           <div class="flex gap-2">
-            <button class="btn btn-ghost" onclick="UTIL.openModal('inviteModal')">A'zo taklif qilish</button>
+            ${meIsLead ? `<button class="btn btn-ghost" onclick="UTIL.openModal('inviteModal')">A'zo taklif qilish</button>` : ''}
             ${meIsLead ? `<button class="btn btn-primary" onclick="UTIL.openModal('settingsModal')">Sozlamalar</button>` : ''}
           </div>
         </div>
@@ -99,7 +102,7 @@
               <button class="btn btn-ghost btn-sm filter" data-f="planned">Rejalashtirilgan (${ideas.filter(i=>i.category==='planned').length})</button>
               <button class="btn btn-ghost btn-sm filter" data-f="archived">Arxiv (${ideas.filter(i=>i.category==='archived').length})</button>
             </div>
-            <button class="btn btn-primary" onclick="UTIL.toast('Yangi goya oynasi tayyorlanmoqda')">+ Yangi goya</button>
+            <button class="btn btn-primary" onclick="UTIL.toast('Yangi goya oynasi tayyorlanmoqda')">+ Yangi g'oya</button>
           </div>
           <div class="grid grid-2" id="ideasList"></div>
         `;
@@ -141,7 +144,7 @@
                     <td><div class="flex items-center gap-3"><div class="avatar">${m.avatar}</div><div><div class="font-semibold">${m.name}</div><div class="text-xs muted">@${m.username}</div></div></div></td>
                     <td>${m.id===t.lead?'<span class="badge badge-progress">Team Lead</span>':'<span class="badge">Member</span>'}</td>
                     <td class="muted text-sm">${m.joined}</td>
-                    <td style="text-align:right">${meIsLead && m.id !== MOCK.currentUser.id ? `<button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Menyu ochildi')">•••</button>`:''}</td>
+                    <td style="text-align:right">${meIsLead && m.id !== MOCK.currentUser.id ? `<button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Menyu ochildi')">...</button>`:''}</td>
                   </tr>
                 `).join('')}
               </tbody>
@@ -158,7 +161,7 @@
                 const u = UTIL.user(m.user); const me = m.user === MOCK.currentUser.id;
                 return `<div class="msg ${me?'me':''}">
                   <div class="avatar avatar-sm">${u.avatar}</div>
-                  <div><div class="meta">${u.name} · ${m.time}</div><div class="bubble">${m.text}</div></div>
+                  <div><div class="meta">${u.name} / ${m.time}</div><div class="bubble">${m.text}</div></div>
                 </div>`;
               }).join('')}
             </div>
@@ -173,7 +176,7 @@
           if (!inp.value.trim()) return;
           const box = document.getElementById('chatBox');
           const time = new Date().toLocaleTimeString('uz-UZ', {hour:'2-digit',minute:'2-digit'});
-          box.insertAdjacentHTML('beforeend', `<div class="msg me"><div class="avatar avatar-sm">${MOCK.currentUser.avatar}</div><div><div class="meta">${MOCK.currentUser.name} · ${time}</div><div class="bubble">${inp.value.replace(/</g,'&lt;')}</div></div></div>`);
+          box.insertAdjacentHTML('beforeend', `<div class="msg me"><div class="avatar avatar-sm">${MOCK.currentUser.avatar}</div><div><div class="meta">${MOCK.currentUser.name} / ${time}</div><div class="bubble">${inp.value.replace(/</g,'&lt;')}</div></div></div>`);
           inp.value=''; box.scrollTop = box.scrollHeight;
         };
         const box = document.getElementById('chatBox'); box.scrollTop = box.scrollHeight;

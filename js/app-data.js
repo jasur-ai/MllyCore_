@@ -100,7 +100,7 @@ window.MOCK = {
   logs: [
     { time: '2025-06-29 10:14', user: 'Aziz Karimov', action: 'G\'oya yaratdi', target: 'AI-asoslangan shaxsiy o\'qituvchi' },
     { time: '2025-06-29 09:50', user: 'Sardor Aliyev', action: 'Foydalanuvchini bloklash', target: 'Nodira Tursunova' },
-    { time: '2025-06-28 18:22', user: 'Jasur Komilov', action: 'Invite kod reset', target: 'FinFlow' },
+    { time: '2025-06-28 18:22', user: 'Jasur Komilov', action: 'Secret key reset', target: 'FinFlow' },
     { time: '2025-06-28 14:05', user: 'Diyora Yusupova', action: 'Login', target: '—' },
     { time: '2025-06-27 11:10', user: 'Aziz Karimov', action: 'G\'oya statusini o\'zgartirdi', target: 'Tuproq namligi' },
   ],

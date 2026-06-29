@@ -71,7 +71,7 @@ window.renderLayout = function(active) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.name}</div>
         <div class="text-xs muted">@${u.username}</div>
       </div>
-      <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px">
+      <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 17l5-5-5-5M21 12H9M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/></svg>
       </a>
     </div>

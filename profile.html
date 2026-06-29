@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" class="auth-required">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -65,7 +65,7 @@
 
         <div class="card">
           <h3 style="margin:0 0 14px;font-size:16px">Bildirishnomalar</h3>
-          ${['Yangi g\'oya','Chat xabarlari','Jamoaga qo\'shilish so\'rovlari','Tizim e\'lonlari'].map(t => `
+          ${['Yangi g\'oya','Chat xabarlari','Workspace takliflari','Tizim e\'lonlari'].map(t => `
             <label class="flex items-center justify-between mb-2" style="padding:8px;border-radius:8px;background:var(--panel-2)">
               <span class="text-sm">${t}</span><input type="checkbox" checked>
             </label>
@@ -75,6 +75,9 @@
     </div>
   </div>
   <script src="js/app-data.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
+  <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>mountLayout('profile');</script>
 </body>
