@@ -52,7 +52,7 @@
     </div>
   </div>
 
-  <script src="js/mock-data.js"></script>
+  <script src="js/app-data.js"></script>
   <script src="js/layout.js"></script>
   <script>
     const t = UTIL.team(UTIL.qs('id') || 't1') || MOCK.teams[0];
@@ -99,7 +99,7 @@
               <button class="btn btn-ghost btn-sm filter" data-f="planned">Rejalashtirilgan (${ideas.filter(i=>i.category==='planned').length})</button>
               <button class="btn btn-ghost btn-sm filter" data-f="archived">Arxiv (${ideas.filter(i=>i.category==='archived').length})</button>
             </div>
-            <button class="btn btn-primary" onclick="UTIL.toast('Yangi goya modali (demo)')">+ Yangi goya</button>
+            <button class="btn btn-primary" onclick="UTIL.toast('Yangi goya oynasi tayyorlanmoqda')">+ Yangi goya</button>
           </div>
           <div class="grid grid-2" id="ideasList"></div>
         `;
@@ -141,7 +141,7 @@
                     <td><div class="flex items-center gap-3"><div class="avatar">${m.avatar}</div><div><div class="font-semibold">${m.name}</div><div class="text-xs muted">@${m.username}</div></div></div></td>
                     <td>${m.id===t.lead?'<span class="badge badge-progress">Team Lead</span>':'<span class="badge">Member</span>'}</td>
                     <td class="muted text-sm">${m.joined}</td>
-                    <td style="text-align:right">${meIsLead && m.id !== MOCK.currentUser.id ? `<button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Demo: menyu')">•••</button>`:''}</td>
+                    <td style="text-align:right">${meIsLead && m.id !== MOCK.currentUser.id ? `<button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Menyu ochildi')">•••</button>`:''}</td>
                   </tr>
                 `).join('')}
               </tbody>

@@ -12,12 +12,16 @@
     <div class="topbar">
       <div>
         <h1 class="page-title" id="welcome">Xush kelibsiz!</h1>
-        <p class="page-subtitle">Bugun nimani yaratamiz?</p>
+        <p class="page-subtitle">Jamoalar, g'oyalar va bildirishnomalar bir joyda.</p>
+        <div class="status-strip">
+          <span class="badge badge-active">Firebase Auth ulangan</span>
+          <span class="badge">Firestore ma'lumotlari tayyor</span>
+        </div>
       </div>
-      <div class="flex gap-2">
+      <div class="action-bar">
         <div class="search">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input class="input" placeholder="G'oya yoki jamoa qidirish...">
+          <input class="input" id="globalSearch" placeholder="G'oya yoki jamoa qidirish...">
         </div>
         <button class="btn btn-ghost" onclick="UTIL.openModal('joinModal')">Jamoaga qo'shilish</button>
         <button class="btn btn-primary" onclick="UTIL.openModal('newTeamModal')">+ Yangi jamoa</button>
@@ -26,36 +30,52 @@
 
     <div class="grid grid-4 mb-4" id="stats"></div>
 
-    <div class="grid" style="grid-template-columns: 2fr 1fr; gap:16px">
+    <div class="grid dashboard-grid">
       <div>
-        <div class="flex items-center justify-between mb-3">
-          <h2 style="margin:0;font-size:18px;font-weight:700">Faol jamoalar</h2>
-          <a href="#" class="skeleton-link">Barchasi</a>
+        <div class="section-head">
+          <h2>Faol jamoalar</h2>
+          <button class="btn btn-ghost btn-sm" onclick="UTIL.openModal('newTeamModal')">Yaratish</button>
         </div>
         <div class="grid grid-2" id="teams"></div>
-        <div class="flex items-center justify-between mb-3 mt-4">
-          <h2 style="margin:0;font-size:18px;font-weight:700">So'nggi g'oyalar</h2>
+
+        <div class="section-head mt-4">
+          <h2>So'nggi g'oyalar</h2>
           <a href="my-ideas.html" class="skeleton-link">Hammasini ko'rish</a>
         </div>
-        <div class="card" style="padding:0;overflow:hidden">
+        <div class="card table-wrap" style="padding:0">
           <table class="table">
             <thead><tr><th>G'oya</th><th>Jamoa</th><th>Status</th><th>Yangilangan</th></tr></thead>
             <tbody id="ideasTable"></tbody>
           </table>
         </div>
       </div>
+
       <div>
-        <div class="card">
-          <h3 style="margin:0 0 12px;font-size:16px">Bildirishnomalar</h3>
-          <div id="notifs"></div>
-          <a href="notifications.html" class="skeleton-link" style="display:block;margin-top:10px">Hammasi</a>
+        <div class="card mb-4">
+          <div class="section-head">
+            <h3>Keyingi qadam</h3>
+          </div>
+          <div class="notice">Avval jamoa tanlang, keyin g'oya qo'shing yoki mavjud g'oyani muhokama qiling.</div>
+          <div class="flex mt-3" style="flex-direction:column;gap:8px">
+            <button class="btn btn-primary" style="justify-content:flex-start" onclick="UTIL.openModal('newIdeaModal')">+ G'oya qo'shish</button>
+            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="UTIL.openModal('joinModal')">Invite kod bilan qo'shilish</button>
+          </div>
         </div>
+
+        <div class="card">
+          <div class="section-head">
+            <h3>Bildirishnomalar</h3>
+            <a href="notifications.html" class="skeleton-link">Hammasi</a>
+          </div>
+          <div id="notifs"></div>
+        </div>
+
         <div class="card mt-4">
-          <h3 style="margin:0 0 12px;font-size:16px">Tezkor harakatlar</h3>
+          <h3 style="margin:0 0 12px;font-size:16px">Tezkor havolalar</h3>
           <div class="flex" style="flex-direction:column;gap:8px">
-            <button class="btn btn-ghost" style="justify-content:flex-start" onclick="UTIL.openModal('newIdeaModal')">+ Yangi g'oya yaratish</button>
-            <a href="team.html?id=t1" class="btn btn-ghost" style="justify-content:flex-start">EduTech jamoasiga o'tish</a>
-            <a href="profile.html" class="btn btn-ghost" style="justify-content:flex-start">Profilni to'ldirish</a>
+            <a href="team.html?id=t1" class="btn btn-ghost" style="justify-content:flex-start">EduTech jamoasi</a>
+            <a href="my-ideas.html" class="btn btn-ghost" style="justify-content:flex-start">G'oyalarim</a>
+            <a href="profile.html" class="btn btn-ghost" style="justify-content:flex-start">Profil sozlamalari</a>
           </div>
         </div>
       </div>
@@ -102,12 +122,13 @@
     </div>
   </div>
 
-  <script src="js/mock-data.js"></script>
+  <script src="js/app-data.js"></script>
   <script src="js/layout.js"></script>
   <script>
     document.getElementById('welcome').textContent = `Xush kelibsiz, ${MOCK.currentUser.name.split(' ')[0]}!`;
     const myTeams = MOCK.teams.filter(t => t.members.includes(MOCK.currentUser.id));
     const myIdeas = MOCK.ideas.filter(i => myTeams.find(t => t.id === i.teamId));
+
     document.getElementById('stats').innerHTML = [
       { icon: 'T', n: myTeams.length, l: 'Jamoalarim' },
       { icon: 'I', n: myIdeas.length, l: "Jami g'oyalar" },
@@ -117,14 +138,21 @@
 
     document.getElementById('teams').innerHTML = myTeams.map(t => `
       <a href="team.html?id=${t.id}" class="card card-hover">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="team-logo ${t.color}">${t.logo}</div>
-          <div>
-            <div class="font-semibold">${t.name}</div>
-            <div class="text-xs muted">${t.members.length} a'zo · ${t.ideasCount} g'oya</div>
+        <div class="workspace-card">
+          <div class="flex items-center gap-3">
+            <div class="team-logo ${t.color}">${t.logo}</div>
+            <div>
+              <div class="font-semibold">${t.name}</div>
+              <div class="text-xs muted">${t.members.length} a'zo / ${t.ideasCount} g'oya</div>
+            </div>
           </div>
+          <span class="badge">${MOCK.ideas.filter(i=>i.teamId===t.id && i.category==='active').length} faol</span>
         </div>
-        <p class="text-sm muted" style="margin:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${t.description}</p>
+        <p class="text-sm muted" style="margin:12px 0 0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${t.description}</p>
+        <div class="workspace-meta">
+          <span class="badge">${MOCK.ideas.filter(i=>i.teamId===t.id && i.category==='raw').length} xom</span>
+          <span class="badge">${MOCK.ideas.filter(i=>i.teamId===t.id && i.category==='planned').length} reja</span>
+        </div>
       </a>
     `).join('');
 
@@ -147,6 +175,16 @@
         </div>
       </div>
     `).join('');
+
+    document.getElementById('globalSearch').addEventListener('input', (event) => {
+      const q = event.target.value.trim().toLowerCase();
+      document.querySelectorAll('#teams > a').forEach((card) => {
+        card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+      document.querySelectorAll('#ideasTable tr').forEach((row) => {
+        row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    });
 
     mountLayout('dashboard');
   </script>

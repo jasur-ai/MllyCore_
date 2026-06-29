@@ -25,8 +25,8 @@
         <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Xush kelibsiz</h1>
         <p class="muted text-sm mb-4">Davom etish uchun hisobingizga kiring.</p>
         <form id="loginForm">
-          <div class="mb-3"><label class="label">Email</label><input class="input" id="email" type="email" required value="aziz@startup.uz"></div>
-          <div class="mb-3"><label class="label">Parol</label><input class="input" id="password" type="password" required value="demo1234"></div>
+          <div class="mb-3"><label class="label">Email</label><input class="input" id="email" type="email" required autocomplete="email"></div>
+          <div class="mb-3"><label class="label">Parol</label><input class="input" id="password" type="password" required autocomplete="current-password"></div>
           <div class="flex items-center justify-between mb-4">
             <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" checked> Eslab qolish</label>
             <a href="#" class="text-sm" style="color:#a5b4fc">Parolni unutdingizmi?</a>
@@ -36,10 +36,6 @@
         </form>
         <hr class="sep">
         <p class="text-sm muted" style="text-align:center">Akkauntingiz yo'qmi? <a href="register.html" style="color:#a5b4fc;font-weight:600">Ro'yxatdan o'ting</a></p>
-        <div class="card mt-4" style="background:var(--panel-2);padding:12px">
-          <div class="text-xs muted">Demo kirish:</div>
-          <div class="text-sm">aziz@startup.uz / demo1234</div>
-        </div>
       </div>
     </section>
   </div>
@@ -57,7 +53,8 @@
           message.textContent = 'Firebase orqali tekshirilmoqda...';
           await window.MllyCore.login(email, password);
         } else {
-          message.textContent = 'Firebase config yoqilmagan, demo rejim ochilmoqda...';
+          message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
+          return;
         }
         location.href = 'dashboard.html';
       } catch (error) {

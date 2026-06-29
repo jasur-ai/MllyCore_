@@ -4,8 +4,27 @@ window.renderLayout = function(active) {
   const teams = MOCK.teams.filter(t => t.members.includes(u.id));
   const unread = MOCK.notifications.filter(n => n.unread).length;
   const isAdmin = u.role === 'admin' || MOCK.users.find(x => x.id===u.id)?.role === 'admin';
+  const teamLinks = teams.map(t => `
+        <a href="team.html?id=${t.id}" class="nav-item">
+          <div class="team-logo ${t.color}" style="width:26px;height:26px;border-radius:8px;font-size:11px">${t.logo}</div>
+          <span style="font-size:13px">${t.name}</span>
+        </a>
+      `).join('');
 
   return `
+  <header class="mobile-header">
+    <a href="dashboard.html" class="brand mobile-brand">
+      <div class="brand-logo">M</div>
+      <div>
+        <div class="brand-name">MllyCore</div>
+        <div class="text-xs muted">Boshqaruv paneli</div>
+      </div>
+    </a>
+    <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </header>
+  <div class="sidebar-backdrop" onclick="document.body.classList.remove('nav-open')"></div>
   <aside class="sidebar">
     <a href="dashboard.html" class="brand">
       <div class="brand-logo">M</div>
@@ -35,12 +54,7 @@ window.renderLayout = function(active) {
       </a>
 
       <div class="nav-section">Mening jamoalarim</div>
-      ${teams.map(t => `
-        <a href="team.html?id=${t.id}" class="nav-item">
-          <div class="team-logo ${t.color}" style="width:26px;height:26px;border-radius:8px;font-size:11px">${t.logo}</div>
-          <span style="font-size:13px">${t.name}</span>
-        </a>
-      `).join('')}
+      ${teamLinks}
 
       ${isAdmin ? `
         <div class="nav-section">Admin</div>

@@ -50,7 +50,7 @@ window.MllyCore = {
 
   async login(email, password) {
     const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan. Demo rejim ishlatiladi.');
+    if (!state) throw new Error('Firebase sozlanmagan.');
 
     const { signInWithEmailAndPassword } = state.modules.authMod;
     return signInWithEmailAndPassword(state.auth, email, password);

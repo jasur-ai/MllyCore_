@@ -22,7 +22,7 @@ if (!admin.apps.length) {
 
 const context = { window: {} };
 vm.createContext(context);
-vm.runInContext(fs.readFileSync(path.join(root, 'js', 'mock-data.js'), 'utf8'), context);
+vm.runInContext(fs.readFileSync(path.join(root, 'js', 'app-data.js'), 'utf8'), context);
 
 const data = context.window.MOCK;
 const db = admin.firestore();

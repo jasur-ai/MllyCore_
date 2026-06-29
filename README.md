@@ -1,6 +1,6 @@
 # MllyCore - Startup Ideas Platform
 
-Bu loyiha `startup_platform_master_plan.md` asosidagi MVP: frontend statik HTML/CSS/JS, backend sifatida Firebase Auth va Firestore ishlatiladi. Firebase sozlanmaguncha sahifalar mock data bilan demo rejimda ochiladi.
+MllyCore startap g'oyalarini jamoa bilan boshqarish, muhokama qilish va rivojlantirish uchun qurilgan web platforma. Frontend statik HTML/CSS/JS asosida, backend esa Firebase Auth va Firestore orqali ishlaydi.
 
 ## Firebase loyihasi
 
@@ -14,17 +14,18 @@ Bu loyiha `startup_platform_master_plan.md` asosidagi MVP: frontend statik HTML/
    ```bash
    npm install
    ```
-2. Firebase Console > Project settings > General > Your apps bo'limida Web app yarating.
-3. Web app konfiguratsiyasidagi `apiKey` va `appId` qiymatlarini `js/firebase-config.js` fayliga qo'ying.
-4. Lokal hosting/emulator:
+2. Lokal server:
    ```bash
-   npm run dev
+   python3 -m http.server 8000
    ```
-5. Oddiy statik ko'rish uchun `index.html` faylini brauzerda ochish ham mumkin.
+3. Brauzerda oching:
+   ```text
+   http://localhost:8000
+   ```
 
-## Firestore seed
+## Firestore boshlang'ich ma'lumotlari
 
-Mock ma'lumotlarni Firestore'ga yuklash uchun:
+Boshlang'ich ma'lumotlarni Firestore'ga yozish uchun:
 
 1. Firebase Console > Project settings > Service accounts orqali private key JSON yuklab oling.
 2. Faylni loyiha ildiziga `serviceAccountKey.json` nomi bilan qo'ying.
@@ -37,9 +38,16 @@ Mock ma'lumotlarni Firestore'ga yuklash uchun:
 
 ## Deploy
 
+Firestore rules va indexes:
+
 ```bash
-npm run deploy:rules
-npm run deploy:hosting
+npm run deploy:rules -- --project mllycore
+```
+
+Firebase Hosting:
+
+```bash
+npm run deploy:hosting -- --project mllycore
 ```
 
 Firebase CLI login kerak bo'lsa:
@@ -53,8 +61,8 @@ npx firebase login
 | Sahifa | Tavsif |
 |---|---|
 | `index.html` | Landing |
-| `login.html` | Kirish, Firebase Auth yoki demo fallback |
-| `register.html` | Ro'yxatdan o'tish, email verification |
+| `login.html` | Firebase Auth orqali kirish |
+| `register.html` | Ro'yxatdan o'tish va email verification |
 | `dashboard.html` | Boshqaruv paneli |
 | `team.html?id=t1` | Jamoa sahifasi |
 | `idea.html?id=i1` | G'oya sahifasi |

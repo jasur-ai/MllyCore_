@@ -1,4 +1,4 @@
-// Mock data va umumiy yordamchi funksiyalar
+// Boshlang'ich ma'lumotlar va umumiy yordamchi funksiyalar
 
 window.MOCK = {
   currentUser: {
@@ -72,7 +72,7 @@ window.MOCK = {
       { id: 'm2', user: 'u1', text: 'Ha, bugun soat 15:00 da review qilamiz.', time: '09:14' },
       { id: 'm3', user: 'u3', text: 'Men dataset tayyorladim, repoga yukladim.', time: '09:20' },
       { id: 'm4', user: 'u4', text: 'Dizayn maketlari Figma\'da: figma.com/edutech', time: '10:02' },
-      { id: 'm5', user: 'u1', text: 'Zo\'r! Demo uchun ham slaydlar kerak bo\'ladi.', time: '10:05' },
+      { id: 'm5', user: 'u1', text: 'Zo\'r! Taqdimot uchun ham slaydlar kerak bo\'ladi.', time: '10:05' },
     ],
   },
   notifications: [

@@ -25,7 +25,7 @@
     <div id="tab"></div>
   </div>
 
-  <script src="js/mock-data.js"></script>
+  <script src="js/app-data.js"></script>
   <script src="js/layout.js"></script>
   <script>
     MOCK.currentUser.role = 'admin';
@@ -47,7 +47,7 @@
             <td><span class="badge ${u.role==='admin'?'badge-progress':u.role==='team_lead'?'badge-active':''}">${u.role}</span></td>
             <td>${u.blocked?'<span class="badge badge-rejected">Bloklangan</span>':u.verified?'<span class="badge badge-active">Faol</span>':'<span class="badge badge-draft">Tasdiqlanmagan</span>'}</td>
             <td class="text-sm muted">${u.joined}</td>
-            <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Demo menu')">•••</button></td>
+            <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Menyu ochildi')">•••</button></td>
           </tr>`).join('')}</tbody></table></div>`;
       }
       if (name==='teams') {

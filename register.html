@@ -75,7 +75,8 @@
           });
           message.textContent = 'Tasdiqlash havolasi email manzilingizga yuborildi.';
         } else {
-          message.textContent = 'Firebase config yoqilmagan, demo ro'yxatdan o'tish bajarildi.';
+          message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
+          return;
         }
         setTimeout(() => { location.href = 'login.html'; }, 900);
       } catch (error) {
