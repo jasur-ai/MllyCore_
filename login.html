@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kirish — Startap Hub</title>
+  <title>Kirish - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -11,27 +11,28 @@
   <div class="auth-wrap">
     <aside class="auth-side">
       <a href="index.html" class="brand">
-        <div class="brand-logo">S</div>
-        <div class="brand-name">Startap Hub</div>
+        <div class="brand-logo">M</div>
+        <div class="brand-name">MllyCore</div>
       </a>
       <div>
-        <h2 style="font-size:34px;font-weight:800;line-height:1.15;margin:0 0 14px">G'oyangiz — jamoangiz kuchi bilan haqiqatga aylanadi.</h2>
+        <h2 style="font-size:34px;font-weight:800;line-height:1.15;margin:0 0 14px">G'oyangiz - jamoangiz kuchi bilan haqiqatga aylanadi.</h2>
         <p class="muted" style="font-size:15px;max-width:420px">Jamoangizga qo'shiling, g'oyalarni muhokama qiling va MVP'gacha boring.</p>
       </div>
-      <div class="text-sm muted">© 2025 Startap Hub. Barcha huquqlar himoyalangan.</div>
+      <div class="text-sm muted">2026 MllyCore. Barcha huquqlar himoyalangan.</div>
     </aside>
     <section class="auth-form">
       <div class="auth-form-inner">
         <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Xush kelibsiz</h1>
         <p class="muted text-sm mb-4">Davom etish uchun hisobingizga kiring.</p>
-        <form onsubmit="event.preventDefault(); location.href='dashboard.html'">
-          <div class="mb-3"><label class="label">Email</label><input class="input" type="email" required value="aziz@startup.uz"></div>
-          <div class="mb-3"><label class="label">Parol</label><input class="input" type="password" required value="demo1234"></div>
+        <form id="loginForm">
+          <div class="mb-3"><label class="label">Email</label><input class="input" id="email" type="email" required value="aziz@startup.uz"></div>
+          <div class="mb-3"><label class="label">Parol</label><input class="input" id="password" type="password" required value="demo1234"></div>
           <div class="flex items-center justify-between mb-4">
             <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" checked> Eslab qolish</label>
             <a href="#" class="text-sm" style="color:#a5b4fc">Parolni unutdingizmi?</a>
           </div>
           <button class="btn btn-primary w-full" type="submit">Kirish</button>
+          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:12px 0 0"></p>
         </form>
         <hr class="sep">
         <p class="text-sm muted" style="text-align:center">Akkauntingiz yo'qmi? <a href="register.html" style="color:#a5b4fc;font-weight:600">Ro'yxatdan o'ting</a></p>
@@ -42,5 +43,27 @@
       </div>
     </section>
   </div>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const message = document.getElementById('authMessage');
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        if (window.MLLYCORE_FIREBASE_ENABLED) {
+          message.textContent = 'Firebase orqali tekshirilmoqda...';
+          await window.MllyCore.login(email, password);
+        } else {
+          message.textContent = 'Firebase config yoqilmagan, demo rejim ochilmoqda...';
+        }
+        location.href = 'dashboard.html';
+      } catch (error) {
+        message.textContent = error.message || 'Kirishda xatolik yuz berdi.';
+      }
+    });
+  </script>
 </body>
 </html>

@@ -1,0 +1,106 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isTeamMember(teamId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid));
+    }
+
+    function isTeamLead(teamId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid))
+        && get(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid)).data.role in ['team_lead', 'admin'];
+    }
+
+    function isTeamCreator(teamId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/teams/$(teamId))
+        && get(/databases/$(database)/documents/teams/$(teamId)).data.createdByUserId == request.auth.uid;
+    }
+
+    function canReadIdea(ideaId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/ideas/$(ideaId))
+        && (isAdmin() || isTeamMember(get(/databases/$(database)/documents/ideas/$(ideaId)).data.teamId));
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAdmin() || isTeamMember(teamId);
+      allow create: if signedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow update: if isAdmin() || isTeamLead(teamId);
+      allow delete: if isAdmin();
+    }
+
+    match /teamMembers/{memberId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin()
+        || (signedIn() && request.resource.data.teamId is string && isTeamLead(request.resource.data.teamId))
+        || (signedIn()
+          && request.resource.data.teamId is string
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.role == 'team_lead'
+          && isTeamCreator(request.resource.data.teamId))
+        || (signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId));
+    }
+
+    match /ideas/{ideaId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if signedIn() && isTeamMember(request.resource.data.teamId);
+      allow update: if isAdmin()
+        || isTeamLead(resource.data.teamId)
+        || (signedIn() && resource.data.createdByUserId == request.auth.uid);
+      allow delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    match /ideaComments/{commentId} {
+      allow read: if canReadIdea(resource.data.ideaId);
+      allow create: if signedIn()
+        && request.resource.data.ideaId is string
+        && request.resource.data.userId == request.auth.uid
+        && canReadIdea(request.resource.data.ideaId);
+      allow update, delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /chatMessages/{messageId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if signedIn() && isTeamMember(request.resource.data.teamId);
+      allow update, delete: if isAdmin()
+        || isTeamLead(resource.data.teamId)
+        || (signedIn() && resource.data.senderUserId == request.auth.uid);
+    }
+
+    match /notifications/{notificationId} {
+      allow read, update: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create, delete: if isAdmin();
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

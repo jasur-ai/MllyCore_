@@ -8,9 +8,9 @@ window.renderLayout = function(active) {
   return `
   <aside class="sidebar">
     <a href="dashboard.html" class="brand">
-      <div class="brand-logo">S</div>
+      <div class="brand-logo">M</div>
       <div>
-        <div class="brand-name">Startap Hub</div>
+        <div class="brand-name">MllyCore</div>
         <div class="text-xs muted">G'oyalar platformasi</div>
       </div>
     </a>

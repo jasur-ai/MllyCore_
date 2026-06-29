@@ -1,0 +1,19 @@
+{
+  "name": "mllycore-startup-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MllyCore startup ideas platform frontend with Firebase backend integration.",
+  "scripts": {
+    "dev": "firebase emulators:start --only hosting,auth,firestore",
+    "serve": "firebase emulators:start --only hosting",
+    "seed": "node scripts/seed-firestore.js",
+    "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
+    "deploy:hosting": "firebase deploy --only hosting"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.10.0"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.22.3"
+  }
+}
