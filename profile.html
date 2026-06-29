@@ -20,8 +20,18 @@
       </div>
       <div class="card">
         <h3 style="margin:0 0 14px">Xavfsizlik</h3>
-        <p class="muted text-sm">Parol Firebase Authentication orqali boshqariladi.</p>
-        <button class="btn btn-ghost" id="resetPasswordBtn">Parolni tiklash</button>
+        <p class="muted text-sm">Team lead uchun boshlang'ich parol email bilan bir xil bo'ladi. Uni shu yerda darhol almashtiring.</p>
+        <label class="label">Hozirgi parol</label>
+        <input class="input mb-3" id="currentPassword" type="password" autocomplete="current-password">
+        <label class="label">Yangi parol</label>
+        <input class="input mb-3" id="newPassword" type="password" autocomplete="new-password">
+        <label class="label">Yangi parolni takrorlang</label>
+        <input class="input mb-3" id="confirmPassword" type="password" autocomplete="new-password">
+        <div class="action-bar">
+          <button class="btn btn-primary" id="changePasswordBtn">Parolni almashtirish</button>
+          <button class="btn btn-ghost" id="resetPasswordBtn">Email orqali link</button>
+        </div>
+        <p class="muted text-xs mt-3">Email orqali link Firebase Authentication tomonidan yuboriladi. Xat Firebase loyihasining Auth email template sozlamasidan ketadi, ba'zan Spam/Promotions ichiga tushishi mumkin.</p>
       </div>
     </div>
   </div>
@@ -50,10 +60,28 @@
           UTIL.toast(error.message || 'Profil saqlanmadi');
         }
       });
+      document.getElementById('changePasswordBtn').addEventListener('click', async () => {
+        const currentPassword = document.getElementById('currentPassword').value;
+        const newPassword = document.getElementById('newPassword').value;
+        const confirmPassword = document.getElementById('confirmPassword').value;
+        if (newPassword !== confirmPassword) {
+          UTIL.toast('Yangi parol takrori mos emas');
+          return;
+        }
+        try {
+          await MllyCore.changePassword({ currentPassword, newPassword });
+          document.getElementById('currentPassword').value = '';
+          document.getElementById('newPassword').value = '';
+          document.getElementById('confirmPassword').value = '';
+          UTIL.toast('Parol almashtirildi');
+        } catch (error) {
+          UTIL.toast(error.message || 'Parol almashtirilmadi');
+        }
+      });
       document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
         try {
           await MllyCore.sendPasswordReset();
-          UTIL.toast('Parol tiklash linki emailingizga yuborildi');
+          UTIL.toast('Firebase parol tiklash linkini emailingizga yubordi');
         } catch (error) {
           UTIL.toast(error.message || 'Parol tiklash xati yuborilmadi');
         }

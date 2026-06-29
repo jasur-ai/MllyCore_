@@ -86,7 +86,10 @@ service cloud.firestore {
 
     match /chatMessages/{messageId} {
       allow read: if isAdmin() || isTeamMember(resource.data.teamId);
-      allow create: if signedIn() && isTeamMember(request.resource.data.teamId);
+      allow create: if signedIn()
+        && request.resource.data.teamId is string
+        && request.resource.data.senderUserId == request.auth.uid
+        && isTeamMember(request.resource.data.teamId);
       allow update, delete: if isAdmin()
         || isTeamLead(resource.data.teamId)
         || (signedIn() && resource.data.senderUserId == request.auth.uid);

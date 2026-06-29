@@ -46,6 +46,8 @@ JSON Vercel inputida buzilsa, shu service account faylini base64 qilib env qiyma
 
 Admin workspace yaratganda team lead emailini kiritadi. Team lead uchun boshlang'ich parol email bilan bir xil bo'ladi, profil kirgandan keyin parolni yangilash eslatiladi.
 
+Email tasdiqlash majburiy: ro'yxatdan o'tgan yoki admin yaratgan foydalanuvchi emailini tasdiqlamaguncha dashboard va workspace sahifalariga kira olmaydi. Tasdiqlash xatini Firebase Authentication yuboradi; Firebase Console > Authentication > Templates va Authorized domains sozlamalari to'g'ri bo'lishi kerak.
+
 Firestore rules va indexes:
 
 ```bash
@@ -71,6 +73,7 @@ npx firebase login
 | `index.html` | Landing |
 | `login.html` | Firebase Auth orqali kirish |
 | `register.html` | Ro'yxatdan o'tish va email verification |
+| `verify-email.html` | Email tasdiqlash majburiy sahifasi |
 | `dashboard.html` | Boshqaruv paneli |
 | `team.html?id=t1` | Jamoa sahifasi |
 | `idea.html?id=i1` | G'oya sahifasi |

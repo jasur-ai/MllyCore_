@@ -125,18 +125,10 @@
       if (profile?.passwordResetRequired) {
         document.getElementById('securityReminder').innerHTML = `
           <div class="notice mb-4">
-            Xavfsizlik uchun boshlang'ich parolni almashtiring. Parol tiklash linkini emailingizga yuboramiz.
-            <button class="btn btn-ghost btn-sm" id="sendResetLink" style="margin-left:10px">Link yuborish</button>
+            Xavfsizlik uchun boshlang'ich parolni almashtiring. Profil sahifasida joriy parol va yangi parol bilan darhol yangilash mumkin.
+            <a class="btn btn-ghost btn-sm" href="profile.html" style="margin-left:10px">Parolni almashtirish</a>
           </div>
         `;
-        document.getElementById('sendResetLink').addEventListener('click', async () => {
-          try {
-            await MllyCore.sendPasswordReset();
-            UTIL.toast('Parol almashtirish linki emailingizga yuborildi');
-          } catch (error) {
-            UTIL.toast(error.message || 'Link yuborilmadi');
-          }
-        });
       }
 
       const teams = data.teams;

@@ -17,7 +17,23 @@
   <script src="js/layout.js"></script>
   <script>
     const qs = (key) => new URLSearchParams(location.search).get(key);
-    window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
+    const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+    const fmtDate = (value) => {
+      if (!value) return '';
+      const date = value.toDate ? value.toDate() : new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('uz-UZ');
+    };
+    window.UTIL = window.UTIL || {
+      toast: (msg) => {
+        const el = document.createElement('div');
+        el.className = 'toast'; el.textContent = msg; document.body.appendChild(el);
+        requestAnimationFrame(() => el.classList.add('show'));
+        setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); }, 2200);
+      }
+    };
+
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
@@ -27,54 +43,167 @@
       const teamId = qs('id');
       const data = teamId ? await MllyCore.getTeamData(teamId) : null;
       if (!data) {
-        document.getElementById('content').innerHTML = "<h1 class=\"page-title\">Workspace topilmadi</h1><p class=\"muted\">Siz bu workspace a'zosi emassiz yoki workspace mavjud emas.</p>";
+        document.getElementById('content').innerHTML = '<h1 class="page-title">Workspace topilmadi</h1><p class="muted">Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p>';
         return;
       }
-      const isLead = data.members.some((m) => m.userId === user.uid && ['team_lead', 'admin'].includes(m.role)) || window.MLLYCORE_PROFILE?.role === 'admin';
-      document.getElementById('content').innerHTML = `
-        <div class="topbar">
-          <div>
-            <h1 class="page-title">${data.team.name}</h1>
-            <p class="page-subtitle">${data.team.description || ''}</p>
-            <div class="status-strip"><span class="badge">${data.members.length} a'zo</span><span class="badge">${data.ideas.length} g'oya</span></div>
+
+      const membership = data.members.find((m) => m.userId === user.uid);
+      const isLead = ['team_lead', 'admin'].includes(membership?.role) || window.MLLYCORE_PROFILE?.role === 'admin';
+      const sortedMessages = [...data.messages].sort((a, b) => {
+        const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+        const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+        return aTime - bTime;
+      });
+
+      document.getElementById('content').outerHTML = `
+        <section class="workspace-shell">
+          <div class="workspace-hero">
+            <div class="flex items-center gap-4">
+              <div class="team-logo ${data.team.color || 'tl-1'}">${escapeHtml(data.team.logo || 'W')}</div>
+              <div>
+                <h1 class="page-title">${escapeHtml(data.team.name)}</h1>
+                <p class="page-subtitle">${escapeHtml(data.team.description || 'Workspace tavsifi yoq.')}</p>
+              </div>
+            </div>
+            <div class="workspace-actions">
+              <span class="badge">${data.members.length} a'zo</span>
+              ${isLead ? `<span class="invite-code">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
+            </div>
           </div>
-          <div class="action-bar">
-            ${isLead ? `<button class="btn btn-ghost" id="inviteMemberBtn">A'zo taklif qilish</button><button class="btn btn-primary" id="resetSecretBtn">Secret key reset</button>` : ''}
+
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-tab="ideas" type="button">G'oyalar</button>
+            <button class="tab" data-tab="members" type="button">A'zolar</button>
+            <button class="tab" data-tab="chat" type="button">Chat</button>
+            ${isLead ? `<button class="tab" data-tab="settings" type="button">Sozlamalar</button>` : ''}
           </div>
-        </div>
-        <div class="tabs"><div class="tab active">G'oyalar</div><div class="tab">A'zolar</div><div class="tab">Chat</div></div>
-        <div class="grid grid-2 mt-4">
-          <div class="card">
-            <h3 style="margin-top:0">G'oyalar</h3>
-            ${data.ideas.length ? data.ideas.map(i => `<a href="idea.html?id=${i.id}" class="kanban-card" style="display:block"><div class="font-semibold">${i.title}</div><div class="text-xs muted">${i.status || i.category || '-'}</div></a>`).join('') : "<p class=\"muted\">Hozircha g'oya yoq.</p>"}
+
+          <div class="tab-panel active" id="panel-ideas">
+            <div class="section-head">
+              <h2>Workspace g'oyalari</h2>
+              <span class="badge">Faqat workspace ichida</span>
+            </div>
+            <div class="grid grid-2">
+              ${data.ideas.length ? data.ideas.map((idea) => `
+                <a href="idea.html?id=${idea.id}" class="card card-hover">
+                  <div class="font-semibold">${escapeHtml(idea.title)}</div>
+                  <div class="text-xs muted mt-2">${escapeHtml(idea.status || idea.category || '-')}</div>
+                </a>
+              `).join('') : '<div class="card empty-state"><h3>G\'oya yoq</h3><p class="muted">Bu workspace ichida hali g\'oya yaratilmagan.</p></div>'}
+            </div>
           </div>
-          <div class="card">
-            <h3 style="margin-top:0">A'zolar</h3>
-            ${data.members.length ? data.members.map(m => `<div class="flex items-center justify-between mb-3"><div><div class="font-semibold text-sm">${m.user?.name || m.userId}</div><div class="text-xs muted">${m.user?.email || ''}</div></div><span class="badge">${m.role}</span></div>`).join('') : "<p class=\"muted\">A'zo yoq.</p>"}
+
+          <div class="tab-panel" id="panel-members">
+            <div class="grid ${isLead ? 'workspace-two-col' : 'grid-2'}">
+              <div class="workspace-panel">
+                <div class="section-head"><h2>A'zolar</h2><span class="badge">${data.members.length}</span></div>
+                ${data.members.map((member) => `
+                  <div class="member-row">
+                    <div class="avatar">${escapeHtml(member.user?.avatar || 'U')}</div>
+                    <div style="min-width:0">
+                      <div class="font-semibold text-sm">${escapeHtml(member.user?.name || member.user?.email || member.userId)}</div>
+                      <div class="text-xs muted">${escapeHtml(member.user?.email || '')}</div>
+                    </div>
+                    <span class="badge">${escapeHtml(member.role)}</span>
+                  </div>
+                `).join('')}
+              </div>
+              ${isLead ? `
+                <div class="workspace-panel">
+                  <h3 style="margin:0 0 12px">A'zo qo'shish</h3>
+                  <p class="muted text-sm">A'zo oldin ro'yxatdan o'tgan bo'lishi kerak. Emailini kiriting va workspace'ga qo'shing.</p>
+                  <label class="label">Email</label>
+                  <input class="input mb-3" id="memberEmail" type="email" placeholder="member@email.com">
+                  <button class="btn btn-primary w-full" id="addMemberBtn">Workspace'ga qo'shish</button>
+                </div>
+              ` : ''}
+            </div>
           </div>
-        </div>
+
+          <div class="tab-panel" id="panel-chat">
+            <div class="chat">
+              <div class="chat-messages" id="chatMessages">
+                ${sortedMessages.length ? sortedMessages.map((message) => `
+                  <div class="msg ${message.senderUserId === user.uid ? 'me' : ''}">
+                    <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
+                    <div class="bubble">
+                      <div class="meta">${escapeHtml(message.senderName || 'User')} · ${fmtDate(message.createdAt)}</div>
+                      <div>${escapeHtml(message.text)}</div>
+                    </div>
+                  </div>
+                `).join('') : '<div class="empty-state"><h3>Chat bo\'sh</h3><p class="muted">Birinchi xabarni yozing.</p></div>'}
+              </div>
+              <div class="chat-input">
+                <input class="input" id="chatText" placeholder="Xabar yozing...">
+                <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
+              </div>
+            </div>
+          </div>
+
+          ${isLead ? `
+            <div class="tab-panel" id="panel-settings">
+              <div class="grid grid-2">
+                <div class="workspace-panel">
+                  <h3 style="margin:0 0 12px">Secret key</h3>
+                  <div class="invite-code mb-3">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</div>
+                  <button class="btn btn-primary" id="resetSecretBtn">Secret key reset</button>
+                </div>
+                <div class="workspace-panel">
+                  <h3 style="margin:0 0 12px">Rollar</h3>
+                  <p class="muted text-sm">Admin workspace yaratadi. Team lead a'zolarni qo'shadi, secret key reset qiladi va workspace ichidagi ishlarni boshqaradi.</p>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+        </section>
       `;
-      if (isLead) {
-        document.getElementById('inviteMemberBtn').addEventListener('click', async () => {
-          const email = prompt("Qo'shiladigan a'zo emailini kiriting:");
-          if (!email) return;
-          try {
-            await MllyCore.addWorkspaceMember({ teamId: data.team.id, email });
-            UTIL.toast("A'zo workspace'ga qo'shildi");
-            setTimeout(() => location.reload(), 700);
-          } catch (error) {
-            UTIL.toast(error.message || "A'zo qo'shishda xatolik yuz berdi");
-          }
+
+      document.querySelectorAll('[data-tab]').forEach((tab) => {
+        tab.addEventListener('click', () => {
+          document.querySelectorAll('[data-tab]').forEach((item) => item.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`panel-${tab.dataset.tab}`)?.classList.add('active');
         });
-        document.getElementById('resetSecretBtn').addEventListener('click', async () => {
-          try {
-            const key = await MllyCore.resetWorkspaceSecret(data.team.id);
-            UTIL.toast(`Yangi secret key: ${key}`);
-          } catch (error) {
-            UTIL.toast(error.message || 'Secret key resetda xatolik yuz berdi');
-          }
-        });
-      }
+      });
+
+      document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
+        const input = document.getElementById('chatText');
+        const button = document.getElementById('sendChatBtn');
+        button.disabled = true;
+        try {
+          await MllyCore.sendChatMessage({ teamId: data.team.id, text: input.value });
+          input.value = '';
+          location.reload();
+        } catch (error) {
+          UTIL.toast(error.message || 'Xabar yuborilmadi');
+          button.disabled = false;
+        }
+      });
+      document.getElementById('chatText')?.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') document.getElementById('sendChatBtn')?.click();
+      });
+
+      document.getElementById('addMemberBtn')?.addEventListener('click', async () => {
+        const input = document.getElementById('memberEmail');
+        try {
+          await MllyCore.addWorkspaceMember({ teamId: data.team.id, email: input.value });
+          UTIL.toast("A'zo workspace'ga qo'shildi");
+          setTimeout(() => location.reload(), 700);
+        } catch (error) {
+          UTIL.toast(error.message || "A'zo qo'shishda xatolik yuz berdi");
+        }
+      });
+
+      document.getElementById('resetSecretBtn')?.addEventListener('click', async () => {
+        try {
+          const key = await MllyCore.resetWorkspaceSecret(data.team.id);
+          UTIL.toast(`Yangi secret key: ${key}`);
+          setTimeout(() => location.reload(), 900);
+        } catch (error) {
+          UTIL.toast(error.message || 'Secret key resetda xatolik yuz berdi');
+        }
+      });
     })();
   </script>
 </body>

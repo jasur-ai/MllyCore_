@@ -81,12 +81,12 @@
             email: document.getElementById('email').value.trim(),
             password
           });
-          message.textContent = "Ro'yxatdan o'tdingiz. Boshqaruv paneli ochilmoqda...";
+          message.textContent = "Ro'yxatdan o'tdingiz. Email tasdiqlash sahifasi ochilmoqda...";
         } else {
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
-        setTimeout(() => { location.replace('dashboard.html'); }, 900);
+        setTimeout(() => { location.replace('verify-email.html'); }, 900);
       } catch (error) {
         message.textContent = friendlyAuthError(error, "Ro'yxatdan o'tishda xatolik yuz berdi.");
       }
@@ -95,8 +95,8 @@
     function friendlyAuthError(error, fallback) {
       const code = error?.code || '';
       if (code === 'auth/email-already-in-use') return 'Bu email bilan akkaunt bor. Kirish sahifasidan foydalaning.';
-      if (code === 'auth/weak-password') return 'Parol kamida 8 ta belgidan iborat bo'lishi kerak.';
-      if (code === 'auth/invalid-email') return 'Email manzil noto'g'ri kiritilgan.';
+      if (code === 'auth/weak-password') return "Parol kamida 8 ta belgidan iborat bo'lishi kerak.";
+      if (code === 'auth/invalid-email') return "Email manzil noto'g'ri kiritilgan.";
       return fallback;
     }
 

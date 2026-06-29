@@ -134,6 +134,28 @@ window.MllyCore = {
     return { team, members, ideas, messages };
   },
 
+  async sendChatMessage({ teamId, text }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!teamId) throw new Error('Workspace topilmadi.');
+    const cleanText = String(text || '').trim();
+    if (!cleanText) throw new Error('Xabar matnini kiriting.');
+
+    const user = window.MLLYCORE_AUTH_USER;
+    const profile = window.MLLYCORE_PROFILE;
+    if (!user) throw new Error('Avval tizimga kiring.');
+
+    const { addDoc, collection, serverTimestamp } = state.modules.dbMod;
+    await addDoc(collection(state.db, 'chatMessages'), {
+      teamId,
+      senderUserId: user.uid,
+      senderName: profile?.name || user.email,
+      senderAvatar: profile?.avatar || initials(profile?.name || user.email || 'U'),
+      text: cleanText,
+      createdAt: serverTimestamp()
+    });
+  },
+
   async createWorkspace({ name, description, leadEmail }) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
@@ -238,6 +260,45 @@ window.MllyCore = {
     await sendPasswordResetEmail(state.auth, user.email);
   },
 
+  async sendEmailVerificationLink() {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const user = state.auth.currentUser;
+    if (!user?.email) throw new Error('Email topilmadi.');
+    if (user.emailVerified) return true;
+    const { sendEmailVerification } = state.modules.authMod;
+    await sendEmailVerification(user);
+    return true;
+  },
+
+  async reloadCurrentUser() {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const user = state.auth.currentUser;
+    if (!user) throw new Error('Avval tizimga kiring.');
+    await user.reload();
+    return state.auth.currentUser;
+  },
+
+  async changePassword({ currentPassword, newPassword }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const user = state.auth.currentUser;
+    if (!user?.email) throw new Error('Akkaunt topilmadi.');
+    if (!currentPassword) throw new Error('Hozirgi parolni kiriting.');
+    if (!newPassword || newPassword.length < 6) throw new Error("Yangi parol kamida 6 ta belgidan iborat bo'lishi kerak.");
+
+    const { EmailAuthProvider, reauthenticateWithCredential, updatePassword } = state.modules.authMod;
+    const { doc, serverTimestamp, updateDoc } = state.modules.dbMod;
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
+    await updateDoc(doc(state.db, 'users', user.uid), {
+      passwordResetRequired: false,
+      updatedAt: serverTimestamp()
+    });
+  },
+
   async reauthenticate(password) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
@@ -280,6 +341,13 @@ window.MllyCore = {
       onAuthStateChanged(state.auth, async (user) => {
         if (!user) {
           location.href = 'login.html';
+          resolve(null);
+          return;
+        }
+
+        const currentPage = location.pathname.split('/').pop() || 'index.html';
+        if (!user.emailVerified && currentPage !== 'verify-email.html') {
+          location.href = 'verify-email.html';
           resolve(null);
           return;
         }
