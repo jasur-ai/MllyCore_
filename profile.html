@@ -16,12 +16,12 @@
         <label class="label">Ism</label><input class="input mb-3" id="name">
         <label class="label">Username</label><input class="input mb-3" id="username">
         <label class="label">Email</label><input class="input mb-3" id="email" disabled>
-        <button class="btn btn-primary" onclick="UTIL.toast('Profil saqlash API keyingi bosqichda ulanadi')">Saqlash</button>
+        <button class="btn btn-primary" id="saveProfileBtn">Saqlash</button>
       </div>
       <div class="card">
         <h3 style="margin:0 0 14px">Xavfsizlik</h3>
         <p class="muted text-sm">Parol Firebase Authentication orqali boshqariladi.</p>
-        <button class="btn btn-ghost" onclick="UTIL.toast('Parol tiklash keyingi bosqichda ulanadi')">Parolni tiklash</button>
+        <button class="btn btn-ghost" id="resetPasswordBtn">Parolni tiklash</button>
       </div>
     </div>
   </div>
@@ -39,6 +39,25 @@
       document.getElementById('name').value = profile.name || '';
       document.getElementById('username').value = profile.username || '';
       document.getElementById('email').value = profile.email || user.email || '';
+      document.getElementById('saveProfileBtn').addEventListener('click', async () => {
+        try {
+          await MllyCore.updateUserProfile({
+            name: document.getElementById('name').value,
+            username: document.getElementById('username').value
+          });
+          UTIL.toast('Profil saqlandi');
+        } catch (error) {
+          UTIL.toast(error.message || 'Profil saqlanmadi');
+        }
+      });
+      document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
+        try {
+          await MllyCore.sendPasswordReset();
+          UTIL.toast('Parol tiklash linki emailingizga yuborildi');
+        } catch (error) {
+          UTIL.toast(error.message || 'Parol tiklash xati yuborilmadi');
+        }
+      });
     })();
   </script>
 </body>

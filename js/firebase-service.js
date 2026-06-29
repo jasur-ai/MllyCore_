@@ -128,6 +128,133 @@ window.MllyCore = {
     return { team, members, ideas, messages };
   },
 
+  async createWorkspace({ name, description, leadEmail }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+
+    const profile = window.MLLYCORE_PROFILE;
+    const authUser = window.MLLYCORE_AUTH_USER;
+    if (profile?.role !== 'admin') throw new Error('Workspace yaratish faqat admin uchun.');
+    if (!name?.trim()) throw new Error('Workspace nomini kiriting.');
+
+    const {
+      addDoc,
+      collection,
+      doc,
+      getDocs,
+      query,
+      serverTimestamp,
+      setDoc,
+      where
+    } = state.modules.dbMod;
+
+    let leadUserId = authUser.uid;
+    if (leadEmail?.trim()) {
+      const users = await getDocs(query(collection(state.db, 'users'), where('email', '==', leadEmail.trim())));
+      if (users.empty) throw new Error('Bu email bilan foydalanuvchi topilmadi.');
+      leadUserId = users.docs[0].id;
+    }
+
+    const code = generateSecretKey();
+    const teamRef = await addDoc(collection(state.db, 'teams'), {
+      name: name.trim(),
+      description: description?.trim() || '',
+      logo: name.trim().slice(0, 2).toUpperCase(),
+      color: 'tl-1',
+      createdByUserId: authUser.uid,
+      leadUserId,
+      invitationCode: code,
+      secretKey: code,
+      membersCount: 1,
+      archived: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    await setDoc(doc(state.db, 'teamMembers', `${teamRef.id}_${leadUserId}`), {
+      teamId: teamRef.id,
+      userId: leadUserId,
+      role: 'team_lead',
+      joinedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+
+    return { id: teamRef.id, secretKey: code };
+  },
+
+  async addWorkspaceMember({ teamId, email }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!teamId) throw new Error('Workspace topilmadi.');
+    if (!email?.trim()) throw new Error('Email kiriting.');
+
+    const {
+      collection,
+      doc,
+      getDocs,
+      increment,
+      query,
+      serverTimestamp,
+      setDoc,
+      updateDoc,
+      where
+    } = state.modules.dbMod;
+
+    const users = await getDocs(query(collection(state.db, 'users'), where('email', '==', email.trim())));
+    if (users.empty) throw new Error('Bu email bilan foydalanuvchi topilmadi.');
+    const userId = users.docs[0].id;
+
+    await setDoc(doc(state.db, 'teamMembers', `${teamId}_${userId}`), {
+      teamId,
+      userId,
+      role: 'member',
+      joinedAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    await updateDoc(doc(state.db, 'teams', teamId), {
+      membersCount: increment(1),
+      updatedAt: serverTimestamp()
+    });
+    return userId;
+  },
+
+  async resetWorkspaceSecret(teamId) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!teamId) throw new Error('Workspace topilmadi.');
+    const { doc, serverTimestamp, updateDoc } = state.modules.dbMod;
+    const secretKey = generateSecretKey();
+    await updateDoc(doc(state.db, 'teams', teamId), {
+      secretKey,
+      invitationCode: secretKey,
+      updatedAt: serverTimestamp()
+    });
+    return secretKey;
+  },
+
+  async updateUserProfile({ name, username }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const authUser = window.MLLYCORE_AUTH_USER;
+    if (!authUser) throw new Error('Avval tizimga kiring.');
+    const { doc, serverTimestamp, updateDoc } = state.modules.dbMod;
+    await updateDoc(doc(state.db, 'users', authUser.uid), {
+      name: name?.trim() || '',
+      username: username?.trim() || '',
+      avatar: initials(name || username || authUser.email || 'U'),
+      updatedAt: serverTimestamp()
+    });
+  },
+
+  async sendPasswordReset() {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const user = window.MLLYCORE_AUTH_USER;
+    if (!user?.email) throw new Error('Email topilmadi.');
+    const { sendPasswordResetEmail } = state.modules.authMod;
+    await sendPasswordResetEmail(state.auth, user.email);
+  },
+
   async requireAuth() {
     const state = await this.init();
     if (!state) {
@@ -179,4 +306,17 @@ function initials(name) {
     .join('')
     .slice(0, 2)
     .toUpperCase();
+}
+
+function generateSecretKey() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const parts = [];
+  for (let p = 0; p < 4; p += 1) {
+    let part = '';
+    for (let i = 0; i < 4; i += 1) {
+      part += chars[Math.floor(Math.random() * chars.length)];
+    }
+    parts.push(part);
+  }
+  return parts.join('-');
 }

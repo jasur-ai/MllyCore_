@@ -70,11 +70,13 @@
     <div class="modal">
       <h3>Yangi workspace yaratish</h3>
       <p class="modal-sub">Workspace faqat admin tomonidan ochiladi. Team lead keyin a'zolarni taklif qiladi.</p>
-      <label class="label">Workspace nomi</label><input class="input mb-3" placeholder="Masalan: MllyCore Workspace">
-      <label class="label">Tavsif</label><textarea class="textarea" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
+      <label class="label">Workspace nomi</label><input class="input mb-3" id="workspaceName" placeholder="Masalan: MllyCore Workspace">
+      <label class="label">Team lead email</label><input class="input mb-3" id="workspaceLeadEmail" type="email" placeholder="teamlead@email.com (ixtiyoriy)">
+      <label class="label">Tavsif</label><textarea class="textarea" id="workspaceDescription" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
+      <p class="text-sm muted" id="workspaceMessage" style="min-height:20px;margin:12px 0 0"></p>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
-        <button class="btn btn-primary" onclick="UTIL.closeModal('newTeamModal'); UTIL.toast('Workspace yaratish API keyingi bosqichda ulanadi')">Yaratish</button>
+        <button class="btn btn-primary" id="createWorkspaceBtn">Yaratish</button>
       </div>
     </div>
   </div>
@@ -173,6 +175,25 @@
         document.querySelectorAll('#ideasTable tr').forEach((row) => {
           row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
         });
+      });
+
+      document.getElementById('createWorkspaceBtn').addEventListener('click', async () => {
+        const message = document.getElementById('workspaceMessage');
+        const button = document.getElementById('createWorkspaceBtn');
+        button.disabled = true;
+        message.textContent = 'Workspace yaratilmoqda...';
+        try {
+          const created = await MllyCore.createWorkspace({
+            name: document.getElementById('workspaceName').value,
+            leadEmail: document.getElementById('workspaceLeadEmail').value,
+            description: document.getElementById('workspaceDescription').value
+          });
+          message.textContent = `Workspace yaratildi. Secret key: ${created.secretKey}`;
+          setTimeout(() => location.href = `team.html?id=${created.id}`, 900);
+        } catch (error) {
+          message.textContent = error.message || 'Workspace yaratishda xatolik yuz berdi.';
+          button.disabled = false;
+        }
       });
     })();
   </script>

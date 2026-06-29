@@ -39,7 +39,7 @@
             <div class="status-strip"><span class="badge">${data.members.length} a'zo</span><span class="badge">${data.ideas.length} g'oya</span></div>
           </div>
           <div class="action-bar">
-            ${isLead ? `<button class="btn btn-ghost" onclick="UTIL.toast('Azo taklif qilish API keyingi bosqichda ulanadi')">A'zo taklif qilish</button><button class="btn btn-primary" onclick="UTIL.toast('Secret key reset API keyingi bosqichda ulanadi')">Secret key reset</button>` : ''}
+            ${isLead ? `<button class="btn btn-ghost" id="inviteMemberBtn">A'zo taklif qilish</button><button class="btn btn-primary" id="resetSecretBtn">Secret key reset</button>` : ''}
           </div>
         </div>
         <div class="tabs"><div class="tab active">G'oyalar</div><div class="tab">A'zolar</div><div class="tab">Chat</div></div>
@@ -54,6 +54,27 @@
           </div>
         </div>
       `;
+      if (isLead) {
+        document.getElementById('inviteMemberBtn').addEventListener('click', async () => {
+          const email = prompt("Qo'shiladigan a'zo emailini kiriting:");
+          if (!email) return;
+          try {
+            await MllyCore.addWorkspaceMember({ teamId: data.team.id, email });
+            UTIL.toast("A'zo workspace'ga qo'shildi");
+            setTimeout(() => location.reload(), 700);
+          } catch (error) {
+            UTIL.toast(error.message || "A'zo qo'shishda xatolik yuz berdi");
+          }
+        });
+        document.getElementById('resetSecretBtn').addEventListener('click', async () => {
+          try {
+            const key = await MllyCore.resetWorkspaceSecret(data.team.id);
+            UTIL.toast(`Yangi secret key: ${key}`);
+          } catch (error) {
+            UTIL.toast(error.message || 'Secret key resetda xatolik yuz berdi');
+          }
+        });
+      }
     })();
   </script>
 </body>
