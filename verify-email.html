@@ -23,7 +23,7 @@
     <section class="auth-form">
       <div class="auth-form-inner">
         <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Emailni tasdiqlang</h1>
-        <p class="muted text-sm mb-4">Tasdiqlash linki emailingizga Firebase Authentication orqali yuboriladi.</p>
+        <p class="muted text-sm mb-4">Tasdiqlash linkini yuborish uchun pastdagi tugmani bosing. Link Firebase Authentication orqali keladi.</p>
         <div class="notice mb-4">
           Email: <strong id="userEmail">...</strong><br>
           Xat kelmasa Spam/Promotions papkasini tekshiring yoki linkni qayta yuboring.
@@ -59,17 +59,27 @@
           location.href = 'dashboard.html';
           return;
         }
-        await MllyCore.sendEmailVerificationLink().catch(() => {});
+        document.getElementById('verifyMessage').textContent = 'Emailga link yuborish uchun "Link yuborish" tugmasini bosing.';
       });
     })();
 
+    let resendLocked = false;
     document.getElementById('resendVerificationBtn').addEventListener('click', async () => {
       const message = document.getElementById('verifyMessage');
+      const button = document.getElementById('resendVerificationBtn');
+      if (resendLocked) return;
+      resendLocked = true;
+      button.disabled = true;
       try {
         await MllyCore.sendEmailVerificationLink();
         message.textContent = 'Tasdiqlash linki emailingizga yuborildi.';
       } catch (error) {
-        message.textContent = error.message || 'Link yuborilmadi.';
+        message.textContent = friendlyVerifyError(error);
+      } finally {
+        setTimeout(() => {
+          resendLocked = false;
+          button.disabled = false;
+        }, 60000);
       }
     });
 
@@ -91,6 +101,13 @@
       await MllyCore.logout();
       location.href = 'login.html';
     });
+
+    function friendlyVerifyError(error) {
+      if (error?.code === 'auth/too-many-requests') {
+        return "Juda ko'p marta link so'raldi. 1-2 daqiqadan keyin qayta urinib ko'ring.";
+      }
+      return error?.message || 'Link yuborilmadi.';
+    }
   </script>
 </body>
 </html>

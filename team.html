@@ -37,6 +37,10 @@
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
+      if (window.MLLYCORE_PROFILE?.role === 'admin') {
+        location.href = 'admin.html';
+        return;
+      }
       const dashboard = await MllyCore.getDashboardData(user.uid);
       mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
 
@@ -48,7 +52,7 @@
       }
 
       const membership = data.members.find((m) => m.userId === user.uid);
-      const isLead = ['team_lead', 'admin'].includes(membership?.role) || window.MLLYCORE_PROFILE?.role === 'admin';
+      const isLead = membership?.role === 'team_lead';
       const sortedMessages = [...data.messages].sort((a, b) => {
         const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
         const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
@@ -127,7 +131,7 @@
                   <div class="msg ${message.senderUserId === user.uid ? 'me' : ''}">
                     <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
                     <div class="bubble">
-                      <div class="meta">${escapeHtml(message.senderName || 'User')} · ${fmtDate(message.createdAt)}</div>
+                      <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt)}</div>
                       <div>${escapeHtml(message.text)}</div>
                     </div>
                   </div>

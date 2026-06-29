@@ -65,36 +65,25 @@
               <div class="font-semibold">${team.name}</div>
               <div class="text-xs muted">${team.membersCount || 0} a'zo</div>
             </div>
-            <label class="danger-toggle" title="Workspace'ni bazadan o'chirish">
-              <input type="checkbox" data-delete-workspace="${team.id}">
-              <span>O'chirish</span>
-            </label>
+            <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
           </div>
         </div>
       `).join('') : '<div class="card empty-state"><h3>Workspace yoq</h3><p class="muted">Yangi workspace dashboard orqali yaratiladi.</p></div>';
 
-      document.querySelectorAll('[data-delete-workspace]').forEach((toggle) => {
-        toggle.addEventListener('change', async () => {
-          if (!toggle.checked) return;
-          const teamId = toggle.dataset.deleteWorkspace;
+      document.querySelectorAll('[data-delete-workspace]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const teamId = button.dataset.deleteWorkspace;
           const team = teams.find((item) => item.id === teamId);
-          if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) {
-            toggle.checked = false;
-            return;
-          }
+          if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
           const password = prompt('Tasdiqlash uchun admin parolini qayta kiriting:');
-          if (!password) {
-            toggle.checked = false;
-            return;
-          }
-          toggle.disabled = true;
+          if (!password) return;
+          button.disabled = true;
           try {
             await MllyCore.deleteWorkspace(teamId, password);
             location.reload();
           } catch (error) {
             alert(error.message || "Workspace o'chirilmadi.");
-            toggle.disabled = false;
-            toggle.checked = false;
+            button.disabled = false;
           }
         });
       });

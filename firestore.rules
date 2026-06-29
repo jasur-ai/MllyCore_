@@ -20,7 +20,7 @@ service cloud.firestore {
     function isTeamLead(teamId) {
       return signedIn()
         && exists(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid))
-        && get(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid)).data.role in ['team_lead', 'admin'];
+        && get(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid)).data.role == 'team_lead';
     }
 
     function isTeamCreator(teamId) {
@@ -45,7 +45,7 @@ service cloud.firestore {
     match /teams/{teamId} {
       allow read: if isAdmin() || isTeamMember(teamId);
       allow create: if isAdmin();
-      allow update: if isAdmin() || isTeamLead(teamId);
+      allow update: if isTeamLead(teamId);
       allow delete: if isAdmin();
     }
 
