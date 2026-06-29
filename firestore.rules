@@ -51,17 +51,28 @@ service cloud.firestore {
 
     match /teamMembers/{memberId} {
       allow read: if signedIn();
-      allow create, update: if (isAdmin()
+      allow create: if (isAdmin()
           && request.resource.data.role == 'team_lead'
           && request.resource.data.teamId is string
           && request.resource.data.userId is string)
-        || (signedIn() && request.resource.data.teamId is string && isTeamLead(request.resource.data.teamId))
+        || (signedIn()
+          && request.resource.data.teamId is string
+          && request.resource.data.userId is string
+          && request.resource.data.role == 'member'
+          && isTeamLead(request.resource.data.teamId))
         || (signedIn()
           && request.resource.data.teamId is string
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.role == 'team_lead'
-          && isTeamCreator(request.resource.data.teamId))
-        || (signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId));
+          && isTeamCreator(request.resource.data.teamId));
+      allow update: if (isAdmin()
+          && request.resource.data.role == 'team_lead'
+          && request.resource.data.teamId is string
+          && request.resource.data.userId is string)
+        || (signedIn()
+          && resource.data.teamId is string
+          && request.resource.data.role == 'member'
+          && isTeamLead(resource.data.teamId));
       allow delete: if signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId);
     }
 
