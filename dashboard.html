@@ -28,6 +28,7 @@
     </div>
 
     <div class="grid grid-4 mb-4" id="stats"></div>
+    <div id="securityReminder"></div>
 
     <div class="grid dashboard-grid">
       <div>
@@ -69,9 +70,9 @@
   <div class="modal-backdrop" id="newTeamModal" onclick="if(event.target===this)UTIL.closeModal('newTeamModal')">
     <div class="modal">
       <h3>Yangi workspace yaratish</h3>
-      <p class="modal-sub">Workspace faqat admin tomonidan ochiladi. Team lead keyin a'zolarni taklif qiladi.</p>
+      <p class="modal-sub">Team lead emaili majburiy. Agar akkaunt yo'q bo'lsa, boshlang'ich parol email bilan bir xil bo'ladi.</p>
       <label class="label">Workspace nomi</label><input class="input mb-3" id="workspaceName" placeholder="Masalan: MllyCore Workspace">
-      <label class="label">Team lead email</label><input class="input mb-3" id="workspaceLeadEmail" type="email" placeholder="teamlead@email.com (ixtiyoriy)">
+      <label class="label">Team lead email</label><input class="input mb-3" id="workspaceLeadEmail" type="email" required placeholder="teamlead@email.com">
       <label class="label">Tavsif</label><textarea class="textarea" id="workspaceDescription" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
       <p class="text-sm muted" id="workspaceMessage" style="min-height:20px;margin:12px 0 0"></p>
       <div class="modal-actions">
@@ -120,6 +121,22 @@
       document.getElementById('nextStep').textContent = isAdmin
         ? "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang."
         : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni secret key orqali qo'shadi.";
+      if (profile?.passwordResetRequired) {
+        document.getElementById('securityReminder').innerHTML = `
+          <div class="notice mb-4">
+            Xavfsizlik uchun boshlang'ich parolni almashtiring. Parol tiklash linkini emailingizga yuboramiz.
+            <button class="btn btn-ghost btn-sm" id="sendResetLink" style="margin-left:10px">Link yuborish</button>
+          </div>
+        `;
+        document.getElementById('sendResetLink').addEventListener('click', async () => {
+          try {
+            await MllyCore.sendPasswordReset();
+            UTIL.toast('Parol almashtirish linki emailingizga yuborildi');
+          } catch (error) {
+            UTIL.toast(error.message || 'Link yuborilmadi');
+          }
+        });
+      }
 
       const teams = data.teams;
       const ideas = data.ideas;
@@ -188,8 +205,10 @@
             leadEmail: document.getElementById('workspaceLeadEmail').value,
             description: document.getElementById('workspaceDescription').value
           });
-          message.textContent = `Workspace yaratildi. Secret key: ${created.secretKey}`;
-          setTimeout(() => location.href = `team.html?id=${created.id}`, 900);
+          message.textContent = created.temporaryPassword
+            ? `Workspace yaratildi. Team lead paroli: ${created.temporaryPassword}. Secret key: ${created.secretKey}`
+            : `Workspace yaratildi. Secret key: ${created.secretKey}`;
+          setTimeout(() => location.href = `team.html?id=${created.id}`, 1600);
         } catch (error) {
           message.textContent = error.message || 'Workspace yaratishda xatolik yuz berdi.';
           button.disabled = false;

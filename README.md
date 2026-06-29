@@ -38,6 +38,12 @@ Boshlang'ich ma'lumotlarni Firestore'ga yozish uchun:
 
 ## Deploy
 
+Vercel serverless API workspace yaratish va team lead parolini boshqarish uchun Firebase Admin kalitini env orqali oladi. Vercel Project Settings > Environment Variables ichiga qo'shing:
+
+```text
+FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
+```
+
 Firestore rules va indexes:
 
 ```bash

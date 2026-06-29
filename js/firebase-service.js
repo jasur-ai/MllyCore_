@@ -136,50 +136,27 @@ window.MllyCore = {
     const authUser = window.MLLYCORE_AUTH_USER;
     if (profile?.role !== 'admin') throw new Error('Workspace yaratish faqat admin uchun.');
     if (!name?.trim()) throw new Error('Workspace nomini kiriting.');
+    if (!leadEmail?.trim()) throw new Error('Team lead emailini kiriting.');
 
-    const {
-      addDoc,
-      collection,
-      doc,
-      getDocs,
-      query,
-      serverTimestamp,
-      setDoc,
-      where
-    } = state.modules.dbMod;
+    const idToken = await authUser.getIdToken();
+    const response = await fetch('/api/create-workspace', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: name.trim(),
+        description: description?.trim() || '',
+        leadEmail: leadEmail.trim()
+      })
+    });
 
-    let leadUserId = authUser.uid;
-    if (leadEmail?.trim()) {
-      const users = await getDocs(query(collection(state.db, 'users'), where('email', '==', leadEmail.trim())));
-      if (users.empty) throw new Error('Bu email bilan foydalanuvchi topilmadi.');
-      leadUserId = users.docs[0].id;
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || 'Workspace yaratishda xatolik yuz berdi.');
     }
-
-    const code = generateSecretKey();
-    const teamRef = await addDoc(collection(state.db, 'teams'), {
-      name: name.trim(),
-      description: description?.trim() || '',
-      logo: name.trim().slice(0, 2).toUpperCase(),
-      color: 'tl-1',
-      createdByUserId: authUser.uid,
-      leadUserId,
-      invitationCode: code,
-      secretKey: code,
-      membersCount: 1,
-      archived: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-
-    await setDoc(doc(state.db, 'teamMembers', `${teamRef.id}_${leadUserId}`), {
-      teamId: teamRef.id,
-      userId: leadUserId,
-      role: 'team_lead',
-      joinedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
-
-    return { id: teamRef.id, secretKey: code };
+    return payload;
   },
 
   async addWorkspaceMember({ teamId, email }) {

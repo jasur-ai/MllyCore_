@@ -10,50 +10,49 @@
 <body>
   <div id="app">
     <div class="topbar">
-      <div><h1 class="page-title">Admin paneli</h1><p class="page-subtitle">Workspace yaratish va platformani boshqarish.</p></div>
+      <div>
+        <h1 class="page-title">Admin paneli</h1>
+        <p class="page-subtitle">Workspace yaratish va umumiy platforma statistikasi.</p>
+      </div>
       <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
     </div>
+
     <div class="grid grid-4 mb-4" id="stats"></div>
-    <div class="grid dashboard-grid">
-      <div class="card table-wrap" style="padding:0">
-        <table class="table">
-          <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Rol</th><th>Holat</th></tr></thead>
-          <tbody id="usersTable"></tbody>
-        </table>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <h3 style="margin:0 0 12px">Admin vazifasi</h3>
+        <div class="notice">Admin faqat workspace yaratadi va team lead emailini belgilaydi.</div>
       </div>
       <div class="card">
-        <h3 style="margin:0 0 12px">Workspace qoidasi</h3>
-        <div class="notice">Admin workspace yaratadi va team lead belgilaydi. Team lead a'zolarni qo'shadi va secret key reset qiladi.</div>
+        <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
+        <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni boshqarish team lead zimmasida.</p>
       </div>
     </div>
   </div>
+
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
-    window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
+
       const [users, teams, ideas] = await Promise.all([
         MllyCore.getCollection('users'),
         MllyCore.getCollection('teams'),
         MllyCore.getCollection('ideas')
       ]);
+
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
       document.getElementById('stats').innerHTML = [
-        { n: users.length, l: 'Foydalanuvchilar' },
         { n: teams.length, l: "Workspace'lar" },
-        { n: ideas.length, l: "G'oyalar" },
-        { n: users.filter(u => u.role === 'admin').length, l: 'Adminlar' }
+        { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar' },
+        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar' },
+        { n: ideas.length, l: "G'oyalar" }
       ].map(s => `<div class="card stat"><div class="stat-icon">${s.l[0]}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
-      document.getElementById('usersTable').innerHTML = users.map((u) => `<tr>
-        <td><div class="font-semibold">${u.name || '-'}</div><div class="text-xs muted">@${u.username || '-'}</div></td>
-        <td>${u.email || '-'}</td>
-        <td><span class="badge ${u.role === 'admin' ? 'badge-progress' : ''}">${u.role || 'member'}</span></td>
-        <td>${u.blocked ? '<span class="badge badge-rejected">Bloklangan</span>' : '<span class="badge badge-active">Faol</span>'}</td>
-      </tr>`).join('') || '<tr><td colspan="4" class="muted">Foydalanuvchi yoq.</td></tr>';
     })();
   </script>
 </body>
