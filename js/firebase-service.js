@@ -76,6 +76,12 @@ window.MllyCore = {
     if (!state) return { teams: [], ideas: [], notifications: [] };
 
     const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+    if (window.MLLYCORE_PROFILE?.role === 'admin') {
+      const teamsSnap = await getDocs(collection(state.db, 'teams'));
+      const teams = teamsSnap.docs.map((item) => ({ id: item.id, membershipRole: 'admin', ...item.data() }));
+      return { teams, ideas: [], notifications: [] };
+    }
+
     const memberSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid)));
     const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
     const teams = [];
@@ -230,6 +236,36 @@ window.MllyCore = {
     if (!user?.email) throw new Error('Email topilmadi.');
     const { sendPasswordResetEmail } = state.modules.authMod;
     await sendPasswordResetEmail(state.auth, user.email);
+  },
+
+  async reauthenticate(password) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const user = state.auth.currentUser;
+    if (!user?.email) throw new Error('Admin sessiyasi topilmadi.');
+    if (!password) throw new Error('Admin parolini kiriting.');
+    const { EmailAuthProvider, reauthenticateWithCredential } = state.modules.authMod;
+    const credential = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, credential);
+  },
+
+  async deleteWorkspace(teamId, adminPassword) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    await this.reauthenticate(adminPassword);
+    const authUser = window.MLLYCORE_AUTH_USER;
+    const idToken = await authUser.getIdToken(true);
+    const response = await fetch('/api/delete-workspace', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ teamId })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Workspace o'chirilmadi.");
+    return payload;
   },
 
   async requireAuth() {

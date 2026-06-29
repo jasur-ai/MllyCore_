@@ -118,9 +118,6 @@
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
       document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
       document.getElementById('workspaceRoleHint').textContent = isAdmin ? 'Admin workspace yaratadi' : "Team lead a'zo qo'shadi";
-      document.getElementById('nextStep').textContent = isAdmin
-        ? "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang."
-        : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni secret key orqali qo'shadi.";
       if (profile?.passwordResetRequired) {
         document.getElementById('securityReminder').innerHTML = `
           <div class="notice mb-4">
@@ -141,10 +138,17 @@
       const teams = data.teams;
       const ideas = data.ideas;
       const unread = data.notifications.filter((n) => n.unread || n.isRead === false).length;
+      document.getElementById('nextStep').textContent = isAdmin
+        ? (teams.length
+          ? "Workspace ochilgan. Admin panelida faqat a'zolar soni va o'chirish boshqaruvi ko'rinadi."
+          : "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang.")
+        : (teams.length
+          ? "Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi."
+          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni secret key orqali qo'shadi.");
       document.getElementById('stats').innerHTML = [
         { icon: 'W', n: teams.length, l: "Workspace'larim" },
-        { icon: 'I', n: ideas.length, l: "Jami g'oyalar" },
-        { icon: 'A', n: ideas.filter(i => i.category === 'active').length, l: "Faol g'oyalar" },
+        { icon: 'L', n: teams.filter(t => t.membershipRole === 'team_lead').length, l: "Lead workspace" },
+        { icon: 'M', n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar" },
         { icon: 'N', n: unread, l: 'Yangi bildirishnomalar' },
       ].map(s => `<div class="card stat"><div class="stat-icon">${s.icon}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
 
@@ -155,7 +159,7 @@
               <div class="team-logo ${team.color || 'tl-1'}">${team.logo || 'W'}</div>
               <div>
                 <div class="font-semibold">${team.name}</div>
-                <div class="text-xs muted">${team.membersCount || 0} a'zo / ${ideas.filter(i => i.teamId === team.id).length} g'oya</div>
+                <div class="text-xs muted">${team.membersCount || 0} a'zo</div>
               </div>
             </div>
             <span class="badge">${team.membershipRole || 'member'}</span>

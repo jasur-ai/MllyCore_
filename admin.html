@@ -17,9 +17,9 @@
       <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
     </div>
 
-    <div class="grid grid-4 mb-4" id="stats"></div>
+    <div class="grid grid-3 mb-4" id="stats"></div>
 
-    <div class="grid grid-2">
+    <div class="grid grid-2 mb-4">
       <div class="card">
         <h3 style="margin:0 0 12px">Admin vazifasi</h3>
         <div class="notice">Admin faqat workspace yaratadi va team lead emailini belgilaydi.</div>
@@ -29,6 +29,12 @@
         <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni boshqarish team lead zimmasida.</p>
       </div>
     </div>
+
+    <div class="section-head">
+      <h2>Workspace'lar</h2>
+      <span class="badge">Faqat a'zolar soni ko'rinadi</span>
+    </div>
+    <div class="grid grid-2" id="workspaceList"></div>
   </div>
 
   <script src="js/firebase-config.js"></script>
@@ -40,19 +46,58 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
 
-      const [users, teams, ideas] = await Promise.all([
+      const [users, teams] = await Promise.all([
         MllyCore.getCollection('users'),
-        MllyCore.getCollection('teams'),
-        MllyCore.getCollection('ideas')
+        MllyCore.getCollection('teams')
       ]);
 
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
       document.getElementById('stats').innerHTML = [
         { n: teams.length, l: "Workspace'lar" },
         { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar' },
-        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar' },
-        { n: ideas.length, l: "G'oyalar" }
+        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar' }
       ].map(s => `<div class="card stat"><div class="stat-icon">${s.l[0]}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
+
+      document.getElementById('workspaceList').innerHTML = teams.length ? teams.map((team) => `
+        <div class="card">
+          <div class="workspace-card">
+            <div>
+              <div class="font-semibold">${team.name}</div>
+              <div class="text-xs muted">${team.membersCount || 0} a'zo</div>
+            </div>
+            <label class="danger-toggle" title="Workspace'ni bazadan o'chirish">
+              <input type="checkbox" data-delete-workspace="${team.id}">
+              <span>O'chirish</span>
+            </label>
+          </div>
+        </div>
+      `).join('') : '<div class="card empty-state"><h3>Workspace yoq</h3><p class="muted">Yangi workspace dashboard orqali yaratiladi.</p></div>';
+
+      document.querySelectorAll('[data-delete-workspace]').forEach((toggle) => {
+        toggle.addEventListener('change', async () => {
+          if (!toggle.checked) return;
+          const teamId = toggle.dataset.deleteWorkspace;
+          const team = teams.find((item) => item.id === teamId);
+          if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) {
+            toggle.checked = false;
+            return;
+          }
+          const password = prompt('Tasdiqlash uchun admin parolini qayta kiriting:');
+          if (!password) {
+            toggle.checked = false;
+            return;
+          }
+          toggle.disabled = true;
+          try {
+            await MllyCore.deleteWorkspace(teamId, password);
+            location.reload();
+          } catch (error) {
+            alert(error.message || "Workspace o'chirilmadi.");
+            toggle.disabled = false;
+            toggle.checked = false;
+          }
+        });
+      });
     })();
   </script>
 </body>

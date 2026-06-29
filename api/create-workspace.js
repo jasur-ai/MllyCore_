@@ -1,18 +1,27 @@
 const admin = require('firebase-admin');
+const fs = require('fs');
+const path = require('path');
 
 function initAdmin() {
   if (admin.apps.length) return admin.app();
 
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  if (!raw) {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON env sozlanmagan.');
+  const localPath = path.join(process.cwd(), 'serviceAccountKey.json');
+  if (!raw && !fs.existsSync(localPath)) {
+    throw new Error('Vercel env FIREBASE_SERVICE_ACCOUNT_JSON sozlanmagan.');
   }
 
-  const serviceAccount = JSON.parse(raw);
+  const serviceAccount = raw ? parseServiceAccount(raw) : require(localPath);
   return admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
     projectId: serviceAccount.project_id || 'mllycore'
   });
+}
+
+function parseServiceAccount(value) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('{')) return JSON.parse(trimmed);
+  return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
 }
 
 function generateSecretKey() {

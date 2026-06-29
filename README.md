@@ -23,15 +23,13 @@ MllyCore startap g'oyalarini jamoa bilan boshqarish, muhokama qilish va rivojlan
    http://localhost:8000
    ```
 
-## Firestore boshlang'ich ma'lumotlari
-
-Boshlang'ich ma'lumotlarni Firestore'ga yozish uchun:
+## Firestore production reset
 
 1. Firebase Console > Project settings > Service accounts orqali private key JSON yuklab oling.
 2. Faylni loyiha ildiziga `serviceAccountKey.json` nomi bilan qo'ying.
-3. Seed skriptni ishga tushiring:
+3. Kerak bo'lsa production bazani faqat admin bilan qayta boshlang:
    ```bash
-   npm run seed
+   node scripts/reset-production-data.js
    ```
 
 `serviceAccountKey.json` `.gitignore` ichida, repoga qo'shilmaydi.
@@ -43,6 +41,10 @@ Vercel serverless API workspace yaratish va team lead parolini boshqarish uchun 
 ```text
 FIREBASE_SERVICE_ACCOUNT_JSON={"type":"service_account",...}
 ```
+
+JSON Vercel inputida buzilsa, shu service account faylini base64 qilib env qiymatiga qo'yish ham ishlaydi. Env bo'lmasa workspace yaratish/o'chirish API ishlamaydi.
+
+Admin workspace yaratganda team lead emailini kiritadi. Team lead uchun boshlang'ich parol email bilan bir xil bo'ladi, profil kirgandan keyin parolni yangilash eslatiladi.
 
 Firestore rules va indexes:
 
