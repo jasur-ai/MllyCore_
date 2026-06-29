@@ -58,9 +58,19 @@
         }
         location.href = 'dashboard.html';
       } catch (error) {
-        message.textContent = error.message || 'Kirishda xatolik yuz berdi.';
+        message.textContent = friendlyAuthError(error);
       }
     });
+
+    function friendlyAuthError(error) {
+      const code = error?.code || '';
+      if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
+        return "Email yoki parol noto'g'ri. Agar akkauntingiz bo'lmasa, avval ro'yxatdan o'ting.";
+      }
+      if (code === 'auth/invalid-email') return "Email manzil noto'g'ri kiritilgan.";
+      if (code === 'auth/too-many-requests') return "Urinishlar ko'payib ketdi. Birozdan keyin qayta urinib ko'ring.";
+      return error?.message || 'Kirishda xatolik yuz berdi.';
+    }
   </script>
 </body>
 </html>

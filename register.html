@@ -73,16 +73,24 @@
             email: document.getElementById('email').value.trim(),
             password
           });
-          message.textContent = 'Tasdiqlash havolasi email manzilingizga yuborildi.';
+          message.textContent = 'Akkaunt yaratildi. Boshqaruv paneli ochilmoqda...';
         } else {
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
-        setTimeout(() => { location.href = 'login.html'; }, 900);
+        setTimeout(() => { location.href = 'dashboard.html'; }, 500);
       } catch (error) {
-        message.textContent = error.message || 'Ro'yxatdan o'tishda xatolik yuz berdi.';
+        message.textContent = friendlyAuthError(error, "Ro'yxatdan o'tishda xatolik yuz berdi.");
       }
     });
+
+    function friendlyAuthError(error, fallback) {
+      const code = error?.code || '';
+      if (code === 'auth/email-already-in-use') return 'Bu email bilan akkaunt bor. Kirish sahifasidan foydalaning.';
+      if (code === 'auth/weak-password') return 'Parol kamida 8 ta belgidan iborat bo'lishi kerak.';
+      if (code === 'auth/invalid-email') return 'Email manzil noto'g'ri kiritilgan.';
+      return fallback;
+    }
   </script>
 </body>
 </html>
