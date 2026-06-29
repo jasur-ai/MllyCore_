@@ -9,44 +9,23 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar">
-      <div><h1 class="page-title">G'oyalarim</h1><p class="page-subtitle">Siz yaratgan yoki ishtirok etgan g'oyalar.</p></div>
-      <div class="search">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input class="input" id="q" placeholder="G'oya qidirish...">
-      </div>
-    </div>
-    <div class="card" style="padding:0;overflow:hidden">
-      <table class="table">
-        <thead><tr><th>Nomi</th><th>Jamoa</th><th>Kategoriya</th><th>Status</th><th>Izohlar</th><th>Yangilangan</th></tr></thead>
-        <tbody id="rows"></tbody>
-      </table>
-    </div>
+    <div class="topbar"><div><h1 class="page-title">G'oyalarim</h1><p class="page-subtitle">Faqat siz a'zo bo'lgan workspace g'oyalari.</p></div></div>
+    <div class="grid grid-2" id="ideas"></div>
   </div>
-  <script src="js/app-data.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
-    const myTeams = MOCK.teams.filter(t => t.members.includes(MOCK.currentUser.id));
-    const ideas = MOCK.ideas.filter(i => myTeams.find(t=>t.id===i.teamId));
-    const render = (q='') => {
-      const list = ideas.filter(i => i.title.toLowerCase().includes(q.toLowerCase()));
-      document.getElementById('rows').innerHTML = list.map(i => `
-        <tr style="cursor:pointer" onclick="location.href='idea.html?id=${i.id}'">
-          <td><div class="font-semibold">${i.title}</div><div class="text-xs muted">${UTIL.user(i.author).name}</div></td>
-          <td>${UTIL.team(i.teamId).name}</td>
-          <td>${UTIL.catBadge(i.category)}</td>
-          <td>${UTIL.statusBadge(i.status)}</td>
-          <td>${i.comments}</td>
-          <td class="muted text-sm">${i.updated}</td>
-        </tr>
-      `).join('') || `<tr><td colspan="6" class="muted" style="text-align:center;padding:40px">Hech narsa topilmadi.</td></tr>`;
-    };
-    render();
-    document.getElementById('q').addEventListener('input', e => render(e.target.value));
-    mountLayout('ideas');
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const data = await MllyCore.getDashboardData(user.uid);
+      mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+      document.getElementById('ideas').innerHTML = data.ideas.length ? data.ideas.map((i) => `
+        <a href="idea.html?id=${i.id}" class="card card-hover"><span class="badge">${i.status || i.category || '-'}</span><h3>${i.title}</h3><p class="muted text-sm">${i.description || ''}</p></a>
+      `).join('') : "<div class=\"card empty-state\"><h3>G'oya yoq</h3><p class=\"muted\">Workspace yaratilgandan keyin g'oyalar shu yerda ko'rinadi.</p></div>";
+    })();
   </script>
 </body>
 </html>

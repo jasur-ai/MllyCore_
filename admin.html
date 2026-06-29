@@ -10,104 +10,51 @@
 <body>
   <div id="app">
     <div class="topbar">
-      <div><h1 class="page-title">Admin paneli</h1><p class="page-subtitle">Admin workspace yaratadi, a'zolarni esa team lead taklif qiladi.</p></div>
-      <button class="btn btn-primary" onclick="UTIL.toast('Workspace yaratish oynasi tayyorlanmoqda')">+ Workspace yaratish</button>
+      <div><h1 class="page-title">Admin paneli</h1><p class="page-subtitle">Workspace yaratish va platformani boshqarish.</p></div>
+      <button class="btn btn-primary" onclick="UTIL.toast('Workspace yaratish API keyingi bosqichda ulanadi')">+ Workspace yaratish</button>
     </div>
-
     <div class="grid grid-4 mb-4" id="stats"></div>
-
-    <div class="tabs">
-      <div class="tab active" data-tab="users">Foydalanuvchilar</div>
-      <div class="tab" data-tab="teams">Workspace'lar</div>
-      <div class="tab" data-tab="ideas">G'oyalar</div>
-      <div class="tab" data-tab="logs">Audit loglar</div>
-      <div class="tab" data-tab="settings">Tizim sozlamalari</div>
+    <div class="grid dashboard-grid">
+      <div class="card table-wrap" style="padding:0">
+        <table class="table">
+          <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Rol</th><th>Holat</th></tr></thead>
+          <tbody id="usersTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 12px">Workspace qoidasi</h3>
+        <div class="notice">Admin workspace yaratadi va team lead belgilaydi. Team lead a'zolarni qo'shadi va secret key reset qiladi.</div>
+      </div>
     </div>
-    <div id="tab"></div>
   </div>
-
-  <script src="js/app-data.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
-    MOCK.currentUser.role = 'admin';
-    document.getElementById('stats').innerHTML = [
-      {n:MOCK.users.length, l:'Foydalanuvchilar'},
-      {n:MOCK.teams.length, l:"Workspace'lar"},
-      {n:MOCK.ideas.length, l:"G'oyalar"},
-      {n:MOCK.users.filter(u=>u.blocked).length, l:'Bloklangan'},
-    ].map(s=>`<div class="card stat"><div class="stat-icon">${s.l[0]}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
-
-    const t = document.getElementById('tab');
-    const render = (name) => {
-      if (name==='users') {
-        t.innerHTML = `<div class="card" style="padding:0;overflow:hidden"><table class="table">
-          <thead><tr><th>Foydalanuvchi</th><th>Email</th><th>Rol</th><th>Holat</th><th>Qo'shilgan</th><th></th></tr></thead>
-          <tbody>${MOCK.users.map(u=>`<tr>
-            <td><div class="flex items-center gap-2"><div class="avatar avatar-sm">${u.avatar}</div><div><div class="font-semibold text-sm">${u.name}</div><div class="text-xs muted">@${u.username}</div></div></div></td>
-            <td class="text-sm">${u.email}</td>
-            <td><span class="badge ${u.role==='admin'?'badge-progress':u.role==='team_lead'?'badge-active':''}">${u.role}</span></td>
-            <td>${u.blocked?'<span class="badge badge-rejected">Bloklangan</span>':u.verified?'<span class="badge badge-active">Faol</span>':'<span class="badge badge-draft">Tasdiqlanmagan</span>'}</td>
-            <td class="text-sm muted">${u.joined}</td>
-            <td style="text-align:right"><button class="btn btn-ghost btn-sm" onclick="UTIL.toast('Menyu ochildi')">...</button></td>
-          </tr>`).join('')}</tbody></table></div>`;
-      }
-      if (name==='teams') {
-        t.innerHTML = `<div class="card" style="padding:0;overflow:hidden"><table class="table">
-          <thead><tr><th>Workspace</th><th>Team lead</th><th>A'zolar</th><th>G'oyalar</th><th>Secret key</th><th></th></tr></thead>
-          <tbody>${MOCK.teams.map(team=>`<tr>
-            <td><div class="flex items-center gap-2"><div class="team-logo ${team.color}" style="width:32px;height:32px;font-size:12px">${team.logo}</div><div class="font-semibold text-sm">${team.name}</div></div></td>
-            <td class="text-sm">${UTIL.user(team.lead).name}</td>
-            <td>${team.members.length}</td>
-            <td>${team.ideasCount}</td>
-            <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${team.code}</td>
-            <td style="text-align:right"><span class="badge">Team lead boshqaradi</span></td>
-          </tr>`).join('')}</tbody></table></div>`;
-      }
-      if (name==='ideas') {
-        t.innerHTML = `<div class="card" style="padding:0;overflow:hidden"><table class="table">
-          <thead><tr><th>G'oya</th><th>Workspace</th><th>Yaratuvchi</th><th>Kategoriya</th><th>Status</th><th>Yangilangan</th></tr></thead>
-          <tbody>${MOCK.ideas.map(i=>`<tr style="cursor:pointer" onclick="location.href='idea.html?id=${i.id}'">
-            <td class="font-semibold text-sm">${i.title}</td>
-            <td class="text-sm">${UTIL.team(i.teamId).name}</td>
-            <td class="text-sm">${UTIL.user(i.author).name}</td>
-            <td>${UTIL.catBadge(i.category)}</td>
-            <td>${UTIL.statusBadge(i.status)}</td>
-            <td class="text-sm muted">${i.updated}</td>
-          </tr>`).join('')}</tbody></table></div>`;
-      }
-      if (name==='logs') {
-        t.innerHTML = `<div class="card" style="padding:0;overflow:hidden"><table class="table">
-          <thead><tr><th>Vaqt</th><th>Foydalanuvchi</th><th>Harakat</th><th>Maqsad</th></tr></thead>
-          <tbody>${MOCK.logs.map(l=>`<tr>
-            <td class="text-sm muted">${l.time}</td><td class="text-sm">${l.user}</td><td class="text-sm">${l.action}</td><td class="text-sm">${l.target}</td>
-          </tr>`).join('')}</tbody></table></div>`;
-      }
-      if (name==='settings') {
-        t.innerHTML = `<div class="card">
-          <h3 style="margin:0 0 14px;font-size:16px">Umumiy sozlamalar</h3>
-          ${[
-            {n:"Yangi foydalanuvchilar ro'yxatdan o'tishi",d:'Vaqtinchalik to\\'xtatish mumkin',v:true},
-            {n:'Email tasdiqlash majburiy',d:'Yangi akkauntlar email tasdiqlashi kerak',v:true},
-            {n:'2FA majburiy (adminlar uchun)',d:'Adminlar 2FA yoqishi shart',v:false},
-            {n:'Kontent moderatsiyasi',d:'AI orqali zararli kontent filtrlanadi',v:true},
-            {n:'Workspace yaratish faqat admin uchun',d:"Team lead a'zolarni taklif qiladi",v:true},
-          ].map(s=>`<label class="flex items-center justify-between mb-2" style="padding:12px;border-radius:10px;background:var(--panel-2)">
-            <div><div class="font-semibold text-sm">${s.n}</div><div class="text-xs muted">${s.d}</div></div>
-            <input type="checkbox" ${s.v?'checked':''}>
-          </label>`).join('')}
-          <div class="flex justify-end mt-3"><button class="btn btn-primary" onclick="UTIL.toast('Saqlandi')">Saqlash</button></div>
-        </div>`;
-      }
-    };
-    render('users');
-    document.querySelectorAll('.tab').forEach(tab=>tab.onclick=()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      tab.classList.add('active'); render(tab.dataset.tab);
-    });
-    mountLayout('admin');
+    window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const [users, teams, ideas] = await Promise.all([
+        MllyCore.getCollection('users'),
+        MllyCore.getCollection('teams'),
+        MllyCore.getCollection('ideas')
+      ]);
+      mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
+      document.getElementById('stats').innerHTML = [
+        { n: users.length, l: 'Foydalanuvchilar' },
+        { n: teams.length, l: "Workspace'lar" },
+        { n: ideas.length, l: "G'oyalar" },
+        { n: users.filter(u => u.role === 'admin').length, l: 'Adminlar' }
+      ].map(s => `<div class="card stat"><div class="stat-icon">${s.l[0]}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
+      document.getElementById('usersTable').innerHTML = users.map((u) => `<tr>
+        <td><div class="font-semibold">${u.name || '-'}</div><div class="text-xs muted">@${u.username || '-'}</div></td>
+        <td>${u.email || '-'}</td>
+        <td><span class="badge ${u.role === 'admin' ? 'badge-progress' : ''}">${u.role || 'member'}</span></td>
+        <td>${u.blocked ? '<span class="badge badge-rejected">Bloklangan</span>' : '<span class="badge badge-active">Faol</span>'}</td>
+      </tr>`).join('') || '<tr><td colspan="4" class="muted">Foydalanuvchi yoq.</td></tr>';
+    })();
   </script>
 </body>
 </html>

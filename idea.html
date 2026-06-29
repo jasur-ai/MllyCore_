@@ -8,108 +8,18 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div id="app">
-    <div id="ideaContent"></div>
-  </div>
-  <script src="js/app-data.js"></script>
+  <div id="app"><div class="card"><h1 class="page-title">G'oya</h1><p class="muted">G'oya tafsilotlari Firestore bilan keyingi bosqichda to'liq ulanadi.</p></div></div>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
-    const i = UTIL.idea(UTIL.qs('id') || 'i1') || MOCK.ideas[0];
-    const team = UTIL.team(i.teamId);
-    const author = UTIL.user(i.author);
-    const cmts = MOCK.comments[i.id] || [];
-    const tasks = MOCK.tasks[i.id] || [];
-    const res = MOCK.resources[i.id] || [];
-
-    document.getElementById('ideaContent').innerHTML = `
-      <div class="mb-3"><a href="team.html?id=${team.id}" class="skeleton-link">← ${team.name}</a></div>
-      <div class="flex items-center justify-between gap-3 mb-4" style="flex-wrap:wrap">
-        <div>
-          <div class="flex gap-2 mb-2">${UTIL.catBadge(i.category)}${UTIL.statusBadge(i.status)}</div>
-          <h1 class="page-title">${i.title}</h1>
-          <p class="page-subtitle">Yaratuvchi: ${author.name} · ${i.created} · Oxirgi yangilash: ${i.updated}</p>
-        </div>
-        <div class="flex gap-2">
-          <select class="select" style="width:auto" onchange="UTIL.toast('Kategoriya: '+this.value)">
-            <option ${i.category==='raw'?'selected':''}>raw</option>
-            <option ${i.category==='active'?'selected':''}>active</option>
-            <option ${i.category==='planned'?'selected':''}>planned</option>
-            <option ${i.category==='archived'?'selected':''}>archived</option>
-          </select>
-          <button class="btn btn-ghost">Tahrirlash</button>
-          <button class="btn btn-danger">O'chirish</button>
-        </div>
-      </div>
-
-      <div class="grid" style="grid-template-columns: 2fr 1fr; gap:16px">
-        <div>
-          <div class="card mb-4">
-            <h3 style="margin:0 0 10px;font-size:16px">Tavsif</h3>
-            <p class="muted" style="line-height:1.7">${i.desc}</p>
-            ${i.problem ? `<h4 style="margin:18px 0 6px;font-size:14px">Muammo</h4><p class="muted text-sm">${i.problem}</p>`:''}
-            ${i.solution ? `<h4 style="margin:14px 0 6px;font-size:14px">Yechim</h4><p class="muted text-sm">${i.solution}</p>`:''}
-            ${i.market ? `<h4 style="margin:14px 0 6px;font-size:14px">Bozor</h4><p class="muted text-sm">${i.market}</p>`:''}
-          </div>
-
-          <div class="card mb-4">
-            <h3 style="margin:0 0 10px;font-size:16px">Vazifalar (${tasks.filter(t=>t.done).length}/${tasks.length})</h3>
-            ${tasks.length ? tasks.map(tk => `
-              <label class="flex items-center gap-3 mb-2" style="padding:8px;border-radius:8px;background:var(--panel-2)">
-                <input type="checkbox" ${tk.done?'checked':''} onchange="UTIL.toast('Yangilandi')">
-                <span style="flex:1;${tk.done?'text-decoration:line-through;color:var(--muted)':''}">${tk.title}</span>
-                <div class="avatar avatar-sm">${UTIL.user(tk.assignee).avatar}</div>
-              </label>
-            `).join('') : '<p class="muted text-sm">Hozircha vazifa yo\\'q.</p>'}
-            <button class="btn btn-ghost btn-sm mt-2">+ Vazifa qo'shish</button>
-          </div>
-
-          <div class="card">
-            <h3 style="margin:0 0 14px;font-size:16px">Izohlar (${cmts.length})</h3>
-            ${cmts.map(c => {
-              const u = UTIL.user(c.user);
-              return `<div class="flex gap-3 mb-3" style="padding-bottom:14px;border-bottom:1px solid var(--border)">
-                <div class="avatar">${u.avatar}</div>
-                <div style="flex:1">
-                  <div class="flex items-center gap-2 mb-1"><span class="font-semibold text-sm">${u.name}</span><span class="text-xs muted">${c.date}</span></div>
-                  <div class="text-sm">${c.text}</div>
-                </div>
-              </div>`;
-            }).join('') || '<p class="muted text-sm">Hozircha izoh yo\\'q.</p>'}
-            <div class="flex gap-2 mt-3">
-              <input class="input" id="cInput" placeholder="Izoh qoldiring...">
-              <button class="btn btn-primary" onclick="UTIL.toast('Izoh yuborildi'); document.getElementById('cInput').value=''">Yuborish</button>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div class="card mb-4">
-            <h3 style="margin:0 0 12px;font-size:16px">Ma'lumotlar</h3>
-            <div class="text-sm" style="line-height:2">
-              <div class="flex justify-between"><span class="muted">Jamoa</span><a href="team.html?id=${team.id}">${team.name}</a></div>
-              <div class="flex justify-between"><span class="muted">Yaratuvchi</span><span>${author.name}</span></div>
-              <div class="flex justify-between"><span class="muted">Kategoriya</span><span>${i.category}</span></div>
-              <div class="flex justify-between"><span class="muted">Status</span><span>${i.status}</span></div>
-              <div class="flex justify-between"><span class="muted">Izohlar</span><span>${i.comments}</span></div>
-            </div>
-          </div>
-
-          <div class="card">
-            <h3 style="margin:0 0 12px;font-size:16px">Resurslar</h3>
-            ${res.length ? res.map(r => `
-              <a href="#" class="flex items-center gap-2 mb-2 text-sm" style="padding:8px;border-radius:8px;background:var(--panel-2)">
-                ${r.type==='file'?'📄':'🔗'} <span>${r.name}</span>
-              </a>
-            `).join('') : '<p class="muted text-sm">Resurs biriktirilmagan.</p>'}
-            <button class="btn btn-ghost btn-sm w-full mt-2">+ Resurs qo'shish</button>
-          </div>
-        </div>
-      </div>
-    `;
-    mountLayout('');
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const data = await MllyCore.getDashboardData(user.uid);
+      mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+    })();
   </script>
 </body>
 </html>

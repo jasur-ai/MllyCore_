@@ -77,4 +77,4 @@ npx firebase login
 - Firestore collections: `users`, `teams`, `teamMembers`, `ideas`, `ideaComments`, `chatMessages`, `notifications`, `auditLogs`, `settings`
 - Security rules: `firestore.rules`
 - Indexes: `firestore.indexes.json`
-- Seed script: `scripts/seed-firestore.js`
+- Production reset script: `scripts/reset-production-data.js`

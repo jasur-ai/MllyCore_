@@ -9,28 +9,26 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar">
-      <div><h1 class="page-title">Bildirishnomalar</h1><p class="page-subtitle">Eng so'nggi faoliyat va yangiliklar.</p></div>
-      <button class="btn btn-ghost" onclick="document.querySelectorAll('.dot').forEach(d=>d.remove()); UTIL.toast('Hammasi o\\'qildi')">Hammasini o'qildi</button>
-    </div>
+    <div class="topbar"><div><h1 class="page-title">Bildirishnomalar</h1><p class="page-subtitle">Workspace va g'oyalar yangiliklari.</p></div></div>
     <div class="card" id="list"></div>
   </div>
-  <script src="js/app-data.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
-    document.getElementById('list').innerHTML = MOCK.notifications.map(n => `
-      <div class="flex gap-3 mb-3" style="padding:12px;border-radius:10px;background:${n.unread?'rgba(99,102,241,0.06)':'transparent'};border:1px solid ${n.unread?'rgba(99,102,241,0.2)':'var(--border)'}">
-        ${n.unread ? '<span class="dot" style="margin-top:8px"></span>' : '<span style="width:8px"></span>'}
-        <div style="flex:1">
-          <div>${n.text}</div>
-          <div class="text-xs muted mt-2">${n.time} · ${({idea:'G\\'oya',chat:'Chat',member:'A\\'zo',system:'Tizim'})[n.type]}</div>
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const data = await MllyCore.getDashboardData(user.uid);
+      mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+      document.getElementById('list').innerHTML = data.notifications.length ? data.notifications.map((n) => `
+        <div class="flex gap-3 mb-3" style="padding-bottom:12px;border-bottom:1px solid var(--border)">
+          ${(n.unread || n.isRead === false) ? '<span class="dot" style="margin-top:6px"></span>' : '<span style="width:8px"></span>'}
+          <div><div class="font-semibold text-sm">${n.content || n.text}</div><div class="text-xs muted">${n.type || 'notification'}</div></div>
         </div>
-      </div>
-    `).join('');
-    mountLayout('notif');
+      `).join('') : '<p class="muted">Bildirishnoma yoq.</p>';
+    })();
   </script>
 </body>
 </html>

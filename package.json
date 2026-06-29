@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "firebase emulators:start --only hosting,auth,firestore",
     "serve": "firebase emulators:start --only hosting",
-    "seed": "node scripts/seed-firestore.js",
+    "reset:prod": "node scripts/reset-production-data.js",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:hosting": "firebase deploy --only hosting"
   },

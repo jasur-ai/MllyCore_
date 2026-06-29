@@ -44,7 +44,7 @@ window.MllyCore = {
       joinedAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
-    await sendEmailVerification(cred.user);
+    sendEmailVerification(cred.user).catch(() => {});
     return cred.user;
   },
 
@@ -71,6 +71,63 @@ window.MllyCore = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 
+  async getDashboardData(uid) {
+    const state = await this.init();
+    if (!state) return { teams: [], ideas: [], notifications: [] };
+
+    const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+    const memberSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid)));
+    const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+    const teams = [];
+
+    for (const membership of memberships) {
+      const teamDoc = await getDoc(doc(state.db, 'teams', membership.teamId));
+      if (teamDoc.exists()) {
+        teams.push({ id: teamDoc.id, membershipRole: membership.role, ...teamDoc.data() });
+      }
+    }
+
+    const ideas = [];
+    for (const team of teams) {
+      const ideaSnap = await getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', team.id)));
+      ideaSnap.docs.forEach((item) => ideas.push({ id: item.id, ...item.data() }));
+    }
+
+    const notificationSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid)));
+    const notifications = notificationSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+
+    return { teams, ideas, notifications };
+  },
+
+  async getCollection(name) {
+    const state = await this.init();
+    if (!state) return [];
+    const { collection, getDocs } = state.modules.dbMod;
+    const snap = await getDocs(collection(state.db, name));
+    return snap.docs.map((item) => ({ id: item.id, ...item.data() }));
+  },
+
+  async getTeamData(teamId) {
+    const state = await this.init();
+    if (!state) return null;
+    const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+    const teamSnap = await getDoc(doc(state.db, 'teams', teamId));
+    if (!teamSnap.exists()) return null;
+    const team = { id: teamSnap.id, ...teamSnap.data() };
+    const memberSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId)));
+    const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+    const members = [];
+    for (const membership of memberships) {
+      const userSnap = await getDoc(doc(state.db, 'users', membership.userId));
+      members.push({ ...membership, user: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null });
+    }
+    const ideaSnap = await getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId)));
+    const ideas = ideaSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+    const messageSnap = await getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId)));
+    const messages = messageSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+    return { team, members, ideas, messages };
+  },
+
   async requireAuth() {
     const state = await this.init();
     if (!state) {
@@ -87,7 +144,17 @@ window.MllyCore = {
           return;
         }
 
-        const profile = await this.getUserProfile(user.uid);
+        let profile = await this.getUserProfile(user.uid);
+        if (!profile) {
+          profile = {
+            id: user.uid,
+            name: user.displayName || user.email,
+            username: (user.email || 'user').split('@')[0],
+            email: user.email,
+            role: 'member',
+            avatar: initials(user.displayName || user.email || 'U')
+          };
+        }
         const requiredRole = document.documentElement.dataset.requiredRole;
         if (requiredRole && profile?.role !== requiredRole) {
           location.href = 'dashboard.html';

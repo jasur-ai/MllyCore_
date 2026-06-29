@@ -1,8 +1,9 @@
-(async () => {
+window.MLLYCORE_AUTH_READY = (async () => {
   try {
-    await window.MllyCore.requireAuth();
+    return await window.MllyCore.requireAuth();
   } catch (error) {
     console.error(error);
     location.href = 'login.html';
+    return null;
   }
 })();

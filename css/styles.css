@@ -48,6 +48,9 @@ button { font-family: inherit; }
 }
 .input:focus, .select:focus, .textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.2); }
 .label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+.password-field { position: relative; }
+.password-field .input { padding-right: 76px; }
+.password-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #a5b4fc; font-size: 12px; cursor: pointer; padding: 6px; }
 
 .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
 .card-hover { transition: transform .15s ease, border-color .15s ease; }
@@ -97,6 +100,7 @@ button { font-family: inherit; }
 .status-strip { display:flex; gap:8px; flex-wrap:wrap; margin: 10px 0 0; }
 .notice { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.25); color: #bae6fd; border-radius: 8px; padding: 12px 14px; font-size: 13px; }
 .table-wrap { overflow-x: auto; }
+.empty-state { grid-column: 1 / -1; }
 .grid-3 { grid-template-columns: repeat(3, minmax(0,1fr)); }
 .grid-2 { grid-template-columns: repeat(2, minmax(0,1fr)); }
 .grid-4 { grid-template-columns: repeat(4, minmax(0,1fr)); }

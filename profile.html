@@ -9,76 +9,37 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar">
-      <div><h1 class="page-title">Profil sozlamalari</h1><p class="page-subtitle">Hisobingiz, xavfsizlik va bildirishnomalar.</p></div>
-    </div>
-
-    <div class="grid" style="grid-template-columns: 1fr 2fr; gap:16px">
+    <div class="topbar"><div><h1 class="page-title">Profil sozlamalari</h1><p class="page-subtitle">Akkaunt ma'lumotlari.</p></div></div>
+    <div class="grid grid-2">
       <div class="card">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="avatar avatar-lg">AK</div>
-          <div>
-            <div class="font-semibold">Aziz Karimov</div>
-            <div class="text-xs muted">@aziz_dev · Team Lead</div>
-          </div>
-        </div>
-        <button class="btn btn-ghost w-full">Rasmni o'zgartirish</button>
-        <hr class="sep">
-        <div class="text-sm" style="line-height:2">
-          <div class="flex justify-between"><span class="muted">Email</span><span>aziz@startup.uz</span></div>
-          <div class="flex justify-between"><span class="muted">Tasdiqlangan</span><span class="badge badge-active">Ha</span></div>
-          <div class="flex justify-between"><span class="muted">Qo'shilgan</span><span>2024-11-12</span></div>
-          <div class="flex justify-between"><span class="muted">Jamoalar</span><span>3</span></div>
-        </div>
+        <h3 style="margin:0 0 14px">Profil</h3>
+        <label class="label">Ism</label><input class="input mb-3" id="name">
+        <label class="label">Username</label><input class="input mb-3" id="username">
+        <label class="label">Email</label><input class="input mb-3" id="email" disabled>
+        <button class="btn btn-primary" onclick="UTIL.toast('Profil saqlash API keyingi bosqichda ulanadi')">Saqlash</button>
       </div>
-
-      <div>
-        <div class="card mb-4">
-          <h3 style="margin:0 0 14px;font-size:16px">Asosiy ma'lumotlar</h3>
-          <div class="grid grid-2" style="gap:12px">
-            <div><label class="label">Ism</label><input class="input" value="Aziz"></div>
-            <div><label class="label">Familiya</label><input class="input" value="Karimov"></div>
-          </div>
-          <div class="mt-3"><label class="label">Username</label><input class="input" value="aziz_dev"></div>
-          <div class="mt-3"><label class="label">Email</label><input class="input" type="email" value="aziz@startup.uz"></div>
-          <div class="mt-3"><label class="label">Bio</label><textarea class="textarea" rows="3">Startap g'oyalari va EdTech bilan shug'ullanaman.</textarea></div>
-          <div class="mt-3 flex justify-end"><button class="btn btn-primary" onclick="UTIL.toast('Saqlandi')">Saqlash</button></div>
-        </div>
-
-        <div class="card mb-4">
-          <h3 style="margin:0 0 14px;font-size:16px">Xavfsizlik</h3>
-          <label class="label">Joriy parol</label><input class="input mb-3" type="password">
-          <div class="grid grid-2" style="gap:12px">
-            <div><label class="label">Yangi parol</label><input class="input" type="password"></div>
-            <div><label class="label">Takrorlang</label><input class="input" type="password"></div>
-          </div>
-          <hr class="sep">
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="font-semibold">Ikki faktorli autentifikatsiya (2FA)</div>
-              <div class="text-sm muted">Qo'shimcha xavfsizlik qatlami.</div>
-            </div>
-            <button class="btn btn-ghost" onclick="UTIL.toast('2FA sozlash oynasi tayyorlanmoqda')">Yoqish</button>
-          </div>
-          <div class="mt-3 flex justify-end"><button class="btn btn-primary" onclick="UTIL.toast('Parol yangilandi')">Parolni o'zgartirish</button></div>
-        </div>
-
-        <div class="card">
-          <h3 style="margin:0 0 14px;font-size:16px">Bildirishnomalar</h3>
-          ${['Yangi g\'oya','Chat xabarlari','Workspace takliflari','Tizim e\'lonlari'].map(t => `
-            <label class="flex items-center justify-between mb-2" style="padding:8px;border-radius:8px;background:var(--panel-2)">
-              <span class="text-sm">${t}</span><input type="checkbox" checked>
-            </label>
-          `).join('')}
-        </div>
+      <div class="card">
+        <h3 style="margin:0 0 14px">Xavfsizlik</h3>
+        <p class="muted text-sm">Parol Firebase Authentication orqali boshqariladi.</p>
+        <button class="btn btn-ghost" onclick="UTIL.toast('Parol tiklash keyingi bosqichda ulanadi')">Parolni tiklash</button>
       </div>
     </div>
   </div>
-  <script src="js/app-data.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
-  <script>mountLayout('profile');</script>
+  <script>
+    window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const profile = window.MLLYCORE_PROFILE;
+      mountLayout('profile', { profile, teams: [], notifications: [] });
+      document.getElementById('name').value = profile.name || '';
+      document.getElementById('username').value = profile.username || '';
+      document.getElementById('email').value = profile.email || user.email || '';
+    })();
+  </script>
 </body>
 </html>
