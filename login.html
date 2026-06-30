@@ -4,41 +4,74 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kirish - MllyCore</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <div class="auth-wrap">
-    <aside class="auth-side">
-      <a href="index.html" class="brand">
-        <div class="brand-logo">M</div>
-        <div class="brand-name">MllyCore</div>
+<body class="auth-page">
+  <div class="auth-shell-pro">
+    <aside class="auth-panel-side">
+      <a href="index.html" class="auth-panel-brand">
+        <span class="auth-panel-mark">M</span>
+        <span>
+          <span class="auth-panel-name">MllyCore</span>
+          <span class="auth-panel-tag">Workspace execution system</span>
+        </span>
       </a>
       <div>
-        <h2 style="font-size:34px;font-weight:800;line-height:1.15;margin:0 0 14px">G'oyangiz - jamoangiz kuchi bilan haqiqatga aylanadi.</h2>
-        <p class="muted" style="font-size:15px;max-width:420px">Jamoangizga qo'shiling, g'oyalarni muhokama qiling va MVP'gacha boring.</p>
+        <h1>Jamoa ishini tartibga soladigan workspace ichiga kiring.</h1>
+        <p>Admin control, team lead execution va member collaboration bitta product ichida boshqariladi.</p>
       </div>
-      <div class="text-sm muted">2026 MllyCore. Barcha huquqlar himoyalangan.</div>
+      <div class="auth-feature-stack">
+        <div class="auth-feature-card">
+          <strong>Workspace-first UX</strong>
+          <span>Har bir foydalanuvchi faqat o'ziga tegishli oqimni ko'radi.</span>
+        </div>
+        <div class="auth-feature-card">
+          <strong>Private idea flow</strong>
+          <span>G'oyalar public emas, faqat workspace ichida ishlaydi.</span>
+        </div>
+        <div class="auth-feature-card">
+          <strong>Lead-controlled access</strong>
+          <span>Secret key, member qo'shish va xavfsizlik team lead qo'lida.</span>
+        </div>
+      </div>
+      <div class="auth-side-proof">
+        <span>Email verification</span>
+        <span>Realtime chat</span>
+        <span>Role-based access</span>
+      </div>
     </aside>
-    <section class="auth-form">
-      <div class="auth-form-inner">
-        <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Xush kelibsiz</h1>
-        <p class="muted text-sm mb-4">Davom etish uchun hisobingizga kiring.</p>
-        <form id="loginForm">
-          <div class="mb-3"><label class="label">Email</label><input class="input" id="email" type="email" required autocomplete="email"></div>
-          <div class="mb-3"><label class="label">Parol</label><div class="password-field"><input class="input" id="password" type="password" required autocomplete="current-password"><button type="button" class="password-toggle" data-target="password">Ko'rsat</button></div></div>
-          <div class="flex items-center justify-between mb-4">
+
+    <section class="auth-panel-main">
+      <div class="auth-panel-card">
+        <h2>Xush kelibsiz</h2>
+        <p>Davom etish uchun MllyCore hisobingizga kiring.</p>
+        <form id="loginForm" class="workspace-form-grid" style="margin-top:20px">
+          <div>
+            <label class="label">Email</label>
+            <input class="input" id="email" type="email" required autocomplete="email">
+          </div>
+          <div>
+            <label class="label">Parol</label>
+            <div class="password-field">
+              <input class="input" id="password" type="password" required autocomplete="current-password">
+              <button type="button" class="password-toggle" data-target="password">Ko'rsat</button>
+            </div>
+          </div>
+          <div class="workspace-form-inline">
             <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" checked> Eslab qolish</label>
-            <a href="#" class="text-sm" style="color:#a5b4fc">Parolni unutdingizmi?</a>
+            <a href="verify-email.html" class="text-sm" style="color:#7dd3fc">Email tasdiqlash</a>
           </div>
           <button class="btn btn-primary w-full" type="submit">Kirish</button>
-          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:12px 0 0"></p>
+          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0"></p>
         </form>
-        <hr class="sep">
-        <p class="text-sm muted" style="text-align:center">Akkauntingiz yo'qmi? <a href="register.html" style="color:#a5b4fc;font-weight:600">Ro'yxatdan o'ting</a></p>
+        <div class="auth-helper">
+          Akkauntingiz yo'qmi? <a href="register.html">Ro'yxatdan o'ting</a>
+        </div>
       </div>
     </section>
   </div>
+
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script>

@@ -4,51 +4,94 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ro'yxatdan o'tish - MllyCore</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <div class="auth-wrap">
-    <aside class="auth-side">
-      <a href="index.html" class="brand">
-        <div class="brand-logo">M</div>
-        <div class="brand-name">MllyCore</div>
+<body class="auth-page">
+  <div class="auth-shell-pro">
+    <aside class="auth-panel-side">
+      <a href="index.html" class="auth-panel-brand">
+        <span class="auth-panel-mark">M</span>
+        <span>
+          <span class="auth-panel-name">MllyCore</span>
+          <span class="auth-panel-tag">Startup workspace onboarding</span>
+        </span>
       </a>
       <div>
-        <h2 style="font-size:32px;font-weight:800;line-height:1.15">Bepul akkaunt yarating va birinchi jamoangizni quring.</h2>
-        <ul class="muted mt-4" style="font-size:14px;line-height:2;list-style:none;padding:0">
-          <li>+ Cheksiz g'oyalar</li>
-          <li>+ Real-time jamoa chati</li>
-          <li>+ Vazifa va resurs boshqaruvi</li>
-          <li>+ 16 raqamli xavfsiz invite kod</li>
-        </ul>
+        <h1>Akkaunt yarating va private workspace oqimiga kiring.</h1>
+        <p>Ro'yxatdan o'tishdan keyin email tasdiqlanadi, keyin sizga tegishli role bo'yicha ichki panel ochiladi.</p>
       </div>
-      <div class="text-sm muted">2026 MllyCore</div>
+      <div class="auth-feature-stack">
+        <div class="auth-feature-card">
+          <strong>Email verification majburiy</strong>
+          <span>Tasdiqlanmaguncha dashboard va workspace ichiga kirilmaydi.</span>
+        </div>
+        <div class="auth-feature-card">
+          <strong>Workspace privacy</strong>
+          <span>Faqat siz a'zo bo'lgan workspace ichidagi ma'lumotlarni ko'rasiz.</span>
+        </div>
+        <div class="auth-feature-card">
+          <strong>Role-based onboarding</strong>
+          <span>Admin, team lead va member ko'rinishlari alohida boshqariladi.</span>
+        </div>
+      </div>
+      <div class="auth-side-proof">
+        <span>Private ideas</span>
+        <span>Secret key flow</span>
+        <span>Realtime collaboration</span>
+      </div>
     </aside>
-    <section class="auth-form">
-      <div class="auth-form-inner">
-        <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Akkaunt yaratish</h1>
-        <p class="muted text-sm mb-4">30 soniyada boshlang.</p>
-        <form id="registerForm">
-          <div class="grid grid-2" style="gap:12px">
-            <div><label class="label">Ism</label><input class="input" id="firstName" required placeholder="Aziz"></div>
-            <div><label class="label">Familiya</label><input class="input" id="lastName" required placeholder="Karimov"></div>
+
+    <section class="auth-panel-main">
+      <div class="auth-panel-card">
+        <h2>Akkaunt yaratish</h2>
+        <p>Bir necha qadamda MllyCore workspace tizimiga qo'shiling.</p>
+        <form id="registerForm" class="workspace-form-grid" style="margin-top:20px">
+          <div class="auth-grid-2">
+            <div>
+              <label class="label">Ism</label>
+              <input class="input" id="firstName" required placeholder="Aziz">
+            </div>
+            <div>
+              <label class="label">Familiya</label>
+              <input class="input" id="lastName" required placeholder="Karimov">
+            </div>
           </div>
-          <div class="mt-3"><label class="label">Username</label><input class="input" id="username" required placeholder="username"></div>
-          <div class="mt-3"><label class="label">Email</label><input class="input" id="email" type="email" required></div>
-          <div class="grid grid-2 mt-3" style="gap:12px">
-            <div><label class="label">Parol</label><div class="password-field"><input class="input" id="password" type="password" required minlength="8" placeholder="kamida 8 ta belgi"><button type="button" class="password-toggle" data-target="password">Ko'rsat</button></div></div>
-            <div><label class="label">Parolni takrorlang</label><div class="password-field"><input class="input" id="passwordConfirm" type="password" required minlength="8"><button type="button" class="password-toggle" data-target="passwordConfirm">Ko'rsat</button></div></div>
+          <div>
+            <label class="label">Username</label>
+            <input class="input" id="username" required placeholder="username">
           </div>
-          <label class="flex items-center gap-2 text-sm muted mt-3 mb-3"><input type="checkbox" required> <span><a href="#" id="termsLink" style="color:#a5b4fc">Foydalanish shartlari</a>ga roziman</span></label>
+          <div>
+            <label class="label">Email</label>
+            <input class="input" id="email" type="email" required>
+          </div>
+          <div class="auth-grid-2">
+            <div>
+              <label class="label">Parol</label>
+              <div class="password-field">
+                <input class="input" id="password" type="password" required minlength="8" placeholder="kamida 8 ta belgi">
+                <button type="button" class="password-toggle" data-target="password">Ko'rsat</button>
+              </div>
+            </div>
+            <div>
+              <label class="label">Parolni takrorlang</label>
+              <div class="password-field">
+                <input class="input" id="passwordConfirm" type="password" required minlength="8">
+                <button type="button" class="password-toggle" data-target="passwordConfirm">Ko'rsat</button>
+              </div>
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" required> <span><a href="#" id="termsLink" style="color:#7dd3fc">Foydalanish shartlari</a>ga roziman</span></label>
           <button class="btn btn-primary w-full" type="submit">Ro'yxatdan o'tish</button>
-          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:12px 0 0"></p>
+          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0"></p>
         </form>
-        <hr class="sep">
-        <p class="text-sm muted" style="text-align:center">Akkauntingiz bormi? <a href="login.html" style="color:#a5b4fc;font-weight:600">Kirish</a></p>
+        <div class="auth-helper">
+          Akkauntingiz bormi? <a href="login.html">Kirish</a>
+        </div>
       </div>
     </section>
   </div>
+
   <div class="modal-backdrop" id="termsModal" onclick="if(event.target===this)this.classList.remove('open')">
     <div class="modal">
       <h3>Foydalanish shartlari</h3>
@@ -57,6 +100,7 @@
       <div class="modal-actions"><button class="btn btn-primary" onclick="document.getElementById('termsModal').classList.remove('open')">Tushunarli</button></div>
     </div>
   </div>
+
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script>

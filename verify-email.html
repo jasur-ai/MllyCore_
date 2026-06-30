@@ -4,36 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Email tasdiqlash - MllyCore</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <div class="auth-wrap">
-    <aside class="auth-side">
-      <a href="index.html" class="brand">
-        <div class="brand-logo">M</div>
-        <div class="brand-name">MllyCore</div>
+<body class="auth-page">
+  <div class="auth-shell-pro">
+    <aside class="auth-panel-side">
+      <a href="index.html" class="auth-panel-brand">
+        <span class="auth-panel-mark">M</span>
+        <span>
+          <span class="auth-panel-name">MllyCore</span>
+          <span class="auth-panel-tag">Verified entry required</span>
+        </span>
       </a>
       <div>
-        <h2 style="font-size:26px;font-weight:800;line-height:1.15;margin:0 0 14px">Email tasdiqlangandan keyin platforma ochiladi.</h2>
-        <p class="muted" style="font-size:15px;max-width:420px">Bu workspace va akkaunt xavfsizligi uchun majburiy qadam.</p>
+        <h1>Email tasdiqlangandan keyin platforma ochiladi.</h1>
+        <p>Bu qadam workspace maxfiyligi va role-based access xavfsizligi uchun majburiy.</p>
       </div>
-      <div class="text-sm muted">2026 MllyCore</div>
+      <div class="auth-feature-stack">
+        <div class="auth-feature-card">
+          <strong>Secure entry</strong>
+          <span>Email tasdiqlanmaguncha dashboard va workspace ichiga kirilmaydi.</span>
+        </div>
+        <div class="auth-feature-card">
+          <strong>Private workspace model</strong>
+          <span>Faqat to'g'ri user private workspace oqimini ko'radi.</span>
+        </div>
+      </div>
+      <div class="auth-side-proof">
+        <span>Verified account</span>
+        <span>Private ideas</span>
+        <span>Controlled onboarding</span>
+      </div>
     </aside>
-    <section class="auth-form">
-      <div class="auth-form-inner">
-        <h1 style="font-size:26px;font-weight:700;margin:0 0 6px">Emailni tasdiqlang</h1>
-        <p class="muted text-sm mb-4">Tasdiqlash linkini yuborish uchun pastdagi tugmani bosing. Link Firebase Authentication orqali keladi.</p>
-        <div class="notice mb-4">
+
+    <section class="auth-panel-main">
+      <div class="auth-panel-card">
+        <h2>Emailni tasdiqlang</h2>
+        <p>Tasdiqlash linkini yuborish uchun pastdagi tugmani bosing. Link Firebase Authentication orqali keladi.</p>
+        <div class="workspace-note-bar" style="margin-top:18px">
           Email: <strong id="userEmail">...</strong><br>
-          Xat kelmasa Spam/Promotions papkasini tekshiring yoki linkni qayta yuboring.
+          Xat kelmasa Spam/Promotions papkasini tekshiring yoki 1 daqiqadan keyin qayta so'rang.
         </div>
-        <div class="grid grid-2">
-          <button class="btn btn-primary" id="checkVerifiedBtn">Tasdiqladim</button>
-          <button class="btn btn-ghost" id="resendVerificationBtn">Link yuborish</button>
+        <div class="workspace-form-grid" style="margin-top:20px">
+          <div class="auth-grid-2">
+            <button class="btn btn-primary" id="checkVerifiedBtn">Tasdiqladim</button>
+            <button class="btn btn-ghost" id="resendVerificationBtn">Link yuborish</button>
+          </div>
+          <button class="btn btn-ghost w-full" id="logoutBtn">Boshqa akkaunt bilan kirish</button>
+          <p class="text-sm muted" id="verifyMessage" style="min-height:20px;margin:0"></p>
         </div>
-        <button class="btn btn-ghost w-full mt-3" id="logoutBtn">Boshqa akkaunt bilan kirish</button>
-        <p class="text-sm muted" id="verifyMessage" style="min-height:20px;margin:12px 0 0"></p>
       </div>
     </section>
   </div>
