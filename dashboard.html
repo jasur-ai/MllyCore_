@@ -27,7 +27,7 @@
       <section class="workspace-overview" id="stats"></section>
       <div id="securityReminder"></div>
 
-      <section class="workspace-layout" id="memberDashboard">
+      <section class="workspace-main-stack" id="memberDashboard">
         <div class="workspace-main-stack">
           <div class="workspace-surface">
             <div class="workspace-surface-head">
@@ -41,6 +41,11 @@
               </div>
             </div>
             <div class="workspace-card-grid cols-2" id="teams"></div>
+          </div>
+
+          <div class="workspace-surface pad">
+            <div class="section-head"><h3>Keyingi qadam</h3></div>
+            <div class="workspace-note-bar" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
           </div>
 
           <div class="workspace-surface">
@@ -58,13 +63,6 @@
               </table>
             </div>
           </div>
-        </div>
-
-        <aside class="workspace-side-stack">
-          <div class="workspace-surface pad">
-            <div class="section-head"><h3>Keyingi qadam</h3></div>
-            <div class="workspace-note-bar" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
-          </div>
 
           <div class="workspace-surface">
             <div class="workspace-surface-head">
@@ -76,7 +74,7 @@
             </div>
             <div class="workspace-card-grid" id="notifs"></div>
           </div>
-        </aside>
+        </div>
       </section>
 
       <div id="adminOnlyPanel"></div>
@@ -156,6 +154,10 @@
         ? 'Statistika, workspace yaratish va production boshqaruvi shu yerda.'
         : "Workspace, g'oya va activity oqimi bitta ekranda.";
       document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
+      document.getElementById('globalSearch').closest('.search').style.display = isAdmin ? '' : 'none';
+      if (!isAdmin) {
+        document.querySelector('.workspace-command-tools').style.justifyContent = 'flex-start';
+      }
       document.getElementById('workspaceRoleHint').textContent = isAdmin
         ? 'Admin faqat workspace lifecycle ni boshqaradi.'
         : "Team lead a'zo qo'shadi, member esa faqat ichki oqimni ko'radi.";
@@ -286,7 +288,7 @@
           : "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang.")
         : (teams.length
           ? "Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi."
-          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni email bo'yicha qo'shadi yoki secret key oqimini boshqaradi.");
+          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni taklif qiladi, keyin bildirishnomadan secret key bilan kirasiz.");
 
       document.getElementById('teams').innerHTML = teams.length ? teams.map((team) => `
         <a href="team.html?id=${team.id}" class="workspace-record">
