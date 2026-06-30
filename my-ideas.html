@@ -13,41 +13,156 @@
       <section class="workspace-command">
         <div>
           <h1 class="workspace-command-title">Idea registry</h1>
-          <p class="workspace-command-copy">Faqat siz a'zo bo'lgan workspace ichidagi g'oyalar shu yerda jamlanadi.</p>
+          <p class="workspace-command-copy">Shaxsiy g'oyalarni yig'ing, keyin kerak bo'lsa workspace ichiga import qiling.</p>
         </div>
       </section>
-      <section class="workspace-surface">
-        <div class="workspace-surface-head">
-          <div>
-            <h2>G'oyalarim</h2>
-            <div class="workspace-surface-copy">Private workspace idea oqimi.</div>
+
+      <section class="workspace-layout">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Shaxsiy g'oya yaratish</h2>
+                <div class="workspace-surface-copy">Bu yerda yaratilgan g'oya avval faqat sizga ko'rinadi.</div>
+              </div>
+              <span class="badge">Private</span>
+            </div>
+            <div class="workspace-surface-body compact">
+              <div class="workspace-form-stack">
+                <div>
+                  <label class="label">G'oya nomi</label>
+                  <input class="input" id="personalIdeaTitle" placeholder="Masalan: AI roadmap assistant">
+                </div>
+                <div>
+                  <label class="label">Tavsif</label>
+                  <textarea class="textarea" id="personalIdeaDescription" rows="3" placeholder="Qisqa tavsif"></textarea>
+                </div>
+                <div class="workspace-form-actions">
+                  <button class="btn btn-primary" id="createPersonalIdeaBtn">Saqlash</button>
+                </div>
+                <div class="text-sm muted" id="personalIdeaMessage"></div>
+              </div>
+            </div>
           </div>
-          <span class="badge" id="ideaCount">0</span>
+
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Shaxsiy g'oyalarim</h2>
+                <div class="workspace-surface-copy">Kerakli workspace tanlab import qilishingiz mumkin.</div>
+              </div>
+              <span class="badge" id="personalIdeaCount">0</span>
+            </div>
+            <div class="workspace-card-grid cols-2" id="personalIdeas"></div>
+          </div>
+
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Team ichidagi g'oyalarim</h2>
+                <div class="workspace-surface-copy">Workspace ichiga kirib bo'lgan g'oyalar.</div>
+              </div>
+              <span class="badge" id="ideaCount">0</span>
+            </div>
+            <div class="workspace-card-grid cols-2" id="ideas"></div>
+          </div>
         </div>
-        <div class="workspace-card-grid cols-2" id="ideas"></div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Import qoidasi</h3>
+            <p class="muted text-sm" style="margin:0">Faqat siz a'zo bo'lgan workspace ichiga import qilasiz. Import qilinganda team a'zolariga bildirishnoma yuboriladi.</p>
+          </div>
+        </aside>
       </section>
     </div>
   </div>
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
+    const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const data = await MllyCore.getDashboardData(user.uid);
+      const personalIdeas = await MllyCore.getPersonalIdeas();
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+
+      const teams = data.teams || [];
       document.getElementById('ideaCount').textContent = data.ideas.length;
+      document.getElementById('personalIdeaCount').textContent = personalIdeas.length;
+
+      document.getElementById('personalIdeas').innerHTML = personalIdeas.length ? personalIdeas.map((idea) => `
+        <div class="workspace-record">
+          <div class="workspace-record-top">
+            <h3>${escapeHtml(idea.title)}</h3>
+            <span class="badge">Private</span>
+          </div>
+          <p>${escapeHtml(idea.description || 'Tavsif kiritilmagan.')}</p>
+          <div class="workspace-subgrid cols-2 mt-3">
+            <select class="select" data-team-select="${idea.id}">
+              <option value="">Workspace tanlang</option>
+              ${teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join('')}
+            </select>
+            <button class="btn btn-ghost" data-import-idea="${idea.id}">Teamga import</button>
+          </div>
+        </div>
+      `).join('') : "<div class=\"workspace-empty\"><h3>Shaxsiy g'oya yo'q</h3><p>Birinchi shaxsiy g'oyangizni yarating.</p></div>";
+
       document.getElementById('ideas').innerHTML = data.ideas.length ? data.ideas.map((i) => `
         <a href="idea.html?id=${i.id}" class="workspace-record">
           <div class="workspace-record-top">
-            <h3>${i.title}</h3>
-            <span class="badge">${i.status || i.category || '-'}</span>
+            <h3>${escapeHtml(i.title)}</h3>
+            <span class="badge">${escapeHtml(i.status || i.category || '-')}</span>
           </div>
-          <p>${i.description || 'Idea tavsifi kiritilmagan.'}</p>
+          <p>${escapeHtml(i.description || 'Idea tavsifi kiritilmagan.')}</p>
         </a>
-      `).join('') : "<div class=\"workspace-empty\"><h3>G'oya yoq</h3><p>Workspace yaratilgandan keyin g'oyalar shu yerda ko'rinadi.</p></div>";
+      `).join('') : "<div class=\"workspace-empty\"><h3>Team g'oya yo'q</h3><p>Workspace ichiga import qilingan yoki yaratilgan g'oyalar shu yerda ko'rinadi.</p></div>";
+
+      document.getElementById('createPersonalIdeaBtn').addEventListener('click', async () => {
+        const message = document.getElementById('personalIdeaMessage');
+        const button = document.getElementById('createPersonalIdeaBtn');
+        message.className = 'text-sm muted feedback-info';
+        button.disabled = true;
+        try {
+          await MllyCore.createPersonalIdea({
+            title: document.getElementById('personalIdeaTitle').value,
+            description: document.getElementById('personalIdeaDescription').value
+          });
+          message.className = 'text-sm muted feedback-success';
+          message.textContent = "Shaxsiy g'oya saqlandi.";
+          location.reload();
+        } catch (error) {
+          message.className = 'text-sm muted feedback-error';
+          message.textContent = error.message || "Shaxsiy g'oya saqlanmadi.";
+          button.disabled = false;
+        }
+      });
+
+      document.querySelectorAll('[data-import-idea]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const ideaId = button.dataset.importIdea;
+          const teamId = document.querySelector(`[data-team-select="${ideaId}"]`)?.value;
+          if (!teamId) {
+            alert('Avval workspace tanlang.');
+            return;
+          }
+          button.disabled = true;
+          try {
+            await MllyCore.importPersonalIdea({ personalIdeaId: ideaId, teamId });
+            location.reload();
+          } catch (error) {
+            alert(error.message || 'Import amalga oshmadi.');
+            button.disabled = false;
+          }
+        });
+      });
     })();
   </script>
 </body>

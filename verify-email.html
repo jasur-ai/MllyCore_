@@ -9,6 +9,9 @@
 </head>
 <body class="auth-page">
   <div class="auth-shell-pro">
+    <div style="position:absolute;top:18px;right:18px;z-index:5">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()"><span data-theme-label>Light mode</span></button>
+    </div>
     <aside class="auth-panel-side">
       <a href="index.html" class="auth-panel-brand">
         <span class="auth-panel-mark">M</span>
@@ -58,6 +61,7 @@
     </section>
   </div>
 
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script>

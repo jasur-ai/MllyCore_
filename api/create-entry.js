@@ -1,28 +1,4 @@
-const admin = require('firebase-admin');
-const fs = require('fs');
-const path = require('path');
-
-function initAdmin() {
-  if (admin.apps.length) return admin.app();
-
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  const localPath = path.join(process.cwd(), 'serviceAccountKey.json');
-  if (!raw && !fs.existsSync(localPath)) {
-    throw new Error('Vercel env FIREBASE_SERVICE_ACCOUNT_JSON sozlanmagan.');
-  }
-
-  const serviceAccount = raw ? parseServiceAccount(raw) : require(localPath);
-  return admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id || 'mllycore'
-  });
-}
-
-function parseServiceAccount(value) {
-  const trimmed = value.trim();
-  if (trimmed.startsWith('{')) return JSON.parse(trimmed);
-  return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
-}
+const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -31,16 +7,12 @@ module.exports = async (req, res) => {
   }
 
   try {
-    initAdmin();
-    const token = (req.headers.authorization || '').replace('Bearer ', '');
-    if (!token) throw new Error('Token yoq.');
-
-    const decoded = await admin.auth().verifyIdToken(token);
-    const db = admin.firestore();
-    const { teamId, title, description = '', type = 'idea' } = req.body || {};
-    const cleanType = String(type || 'idea').trim().toLowerCase();
-    const cleanTitle = String(title || '').trim();
-    const cleanDescription = String(description || '').trim();
+    const { db, decoded } = await requireUser(req);
+    const { teamId, title, description = '', type = 'idea', ownerUserId = '' } = req.body || {};
+    const cleanType = cleanText(type || 'idea').toLowerCase();
+    const cleanTitle = cleanText(title);
+    const cleanDescription = cleanText(description);
+    const cleanOwnerUserId = cleanText(ownerUserId);
 
     if (!teamId) throw new Error('Workspace topilmadi.');
     if (!cleanTitle) throw new Error(cleanType === 'startup' ? 'Startup nomini kiriting.' : "G'oya nomini kiriting.");
@@ -59,9 +31,20 @@ module.exports = async (req, res) => {
       return;
     }
 
+    let ownerProfile = null;
+    if (cleanType === 'startup' && cleanOwnerUserId) {
+      const ownerMemberSnap = await db.collection('teamMembers').doc(`${teamId}_${cleanOwnerUserId}`).get();
+      if (!ownerMemberSnap.exists) {
+        res.status(400).json({ error: 'Mas\'ul foydalanuvchi workspace a\'zosi emas.' });
+        return;
+      }
+      const ownerUserSnap = await db.collection('users').doc(cleanOwnerUserId).get();
+      ownerProfile = ownerUserSnap.exists ? ownerUserSnap.data() : null;
+    }
+
     const userSnap = await db.collection('users').doc(decoded.uid).get();
     const profile = userSnap.exists ? userSnap.data() : {};
-    const now = admin.firestore.FieldValue.serverTimestamp();
+    const now = serverNow();
 
     const ideaRef = await db.collection('ideas').add({
       teamId,
@@ -72,15 +55,17 @@ module.exports = async (req, res) => {
       entryType: cleanType,
       createdByUserId: decoded.uid,
       createdByName: profile.name || decoded.email || 'User',
+      ownerUserId: cleanType === 'startup' ? (cleanOwnerUserId || '') : decoded.uid,
+      ownerName: cleanType === 'startup'
+        ? (ownerProfile?.name || ownerProfile?.email || '')
+        : (profile.name || decoded.email || 'User'),
       createdAt: now,
       updatedAt: now
     });
 
     const memberSnaps = await db.collection('teamMembers').where('teamId', '==', teamId).get();
-    const batch = db.batch();
-    memberSnaps.docs.forEach((doc) => {
-      const targetUserId = doc.data().userId;
-      batch.set(db.collection('notifications').doc(), {
+    const targetUsers = memberSnaps.docs.map((doc) => doc.data().userId);
+    await notifyUsers(db, targetUsers, (targetUserId) => ({
         userId: targetUserId,
         teamId,
         type: cleanType === 'startup' ? 'startup_created' : 'idea_created',
@@ -91,9 +76,7 @@ module.exports = async (req, res) => {
         unread: targetUserId !== decoded.uid,
         isRead: targetUserId === decoded.uid,
         createdAt: now
-      });
-    });
-    await batch.commit();
+    }));
 
     res.status(200).json({
       id: ideaRef.id,

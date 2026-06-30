@@ -9,6 +9,9 @@
 </head>
 <body class="auth-page">
   <div class="auth-shell-pro">
+    <div style="position:absolute;top:18px;right:18px;z-index:5">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()"><span data-theme-label>Light mode</span></button>
+    </div>
     <aside class="auth-panel-side">
       <a href="index.html" class="auth-panel-brand">
         <span class="auth-panel-mark">M</span>
@@ -101,6 +104,7 @@
     </div>
   </div>
 
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script>
@@ -109,6 +113,7 @@
       const message = document.getElementById('authMessage');
       const password = document.getElementById('password').value;
       const passwordConfirm = document.getElementById('passwordConfirm').value;
+      message.className = 'text-sm muted feedback-error';
 
       if (password !== passwordConfirm) {
         message.textContent = 'Parollar bir xil emas.';
@@ -117,7 +122,8 @@
 
       try {
         if (window.MLLYCORE_FIREBASE_ENABLED) {
-          message.textContent = 'Akkaunt Firebase Auth orqali yaratilmoqda...';
+          message.className = 'text-sm muted feedback-info';
+          message.textContent = 'Akkaunt yaratilmoqda...';
           await window.MllyCore.register({
             firstName: document.getElementById('firstName').value.trim(),
             lastName: document.getElementById('lastName').value.trim(),
@@ -125,13 +131,16 @@
             email: document.getElementById('email').value.trim(),
             password
           });
+          message.className = 'text-sm muted feedback-success';
           message.textContent = "Ro'yxatdan o'tdingiz. Email tasdiqlash sahifasi ochilmoqda...";
         } else {
+          message.className = 'text-sm muted feedback-error';
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
         setTimeout(() => { location.replace('verify-email.html'); }, 900);
       } catch (error) {
+        message.className = 'text-sm muted feedback-error';
         message.textContent = friendlyAuthError(error, "Ro'yxatdan o'tishda xatolik yuz berdi.");
       }
     });
@@ -141,7 +150,7 @@
       if (code === 'auth/email-already-in-use') return 'Bu email bilan akkaunt bor. Kirish sahifasidan foydalaning.';
       if (code === 'auth/weak-password') return "Parol kamida 8 ta belgidan iborat bo'lishi kerak.";
       if (code === 'auth/invalid-email') return "Email manzil noto'g'ri kiritilgan.";
-      return fallback;
+      return error?.message || fallback;
     }
 
     document.querySelectorAll('.password-toggle').forEach((button) => {

@@ -13,39 +13,124 @@
       <section class="workspace-command">
         <div>
           <h1 class="workspace-command-title">Notification center</h1>
-          <p class="workspace-command-copy">Workspace, member va g'oya activity bo'yicha so'nggi signal va update'lar.</p>
+          <p class="workspace-command-copy">Takliflar, chat signal'lari va team activity shu yerda to'planadi.</p>
         </div>
       </section>
-      <section class="workspace-surface">
-        <div class="workspace-surface-head">
-          <div>
-            <h2>Bildirishnomalar</h2>
-            <div class="workspace-surface-copy">Unread itemlar va activity oqimi.</div>
+
+      <section class="workspace-layout">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Team takliflari</h2>
+                <div class="workspace-surface-copy">Secret key to'g'ri kiritilgandan keyin workspace ochiladi.</div>
+              </div>
+              <span class="badge" id="inviteCount">0</span>
+            </div>
+            <div class="workspace-card-grid" id="invites"></div>
           </div>
-          <span class="badge" id="notificationCount">0</span>
+
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Bildirishnomalar</h2>
+                <div class="workspace-surface-copy">Unread itemlar va activity oqimi.</div>
+              </div>
+              <span class="badge" id="notificationCount">0</span>
+            </div>
+            <div class="workspace-card-grid" id="list"></div>
+          </div>
         </div>
-        <div class="workspace-card-grid" id="list"></div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Xatolik ko'rsatish</h3>
+            <p class="muted text-sm" style="margin:0">Secret key yoki boshqa kritikal maydonlar xato kiritilsa qizil yozuv bilan ko'rsatiladi.</p>
+          </div>
+        </aside>
       </section>
     </div>
   </div>
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
+    const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    }[char]));
+    const fmtDate = (value) => {
+      if (!value) return '-';
+      const date = value.toDate ? value.toDate() : new Date(value);
+      return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('uz-UZ');
+    };
+
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const data = await MllyCore.getDashboardData(user.uid);
       mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+
+      const invites = data.pendingInvites || [];
+      document.getElementById('inviteCount').textContent = invites.length;
       document.getElementById('notificationCount').textContent = data.notifications.length;
+
+      document.getElementById('invites').innerHTML = invites.length ? invites.map((invite) => `
+        <div class="workspace-record">
+          <div class="workspace-record-top">
+            <div>
+              <h3>${escapeHtml(invite.teamName || 'Workspace')}</h3>
+              <div class="workspace-inline-meta">
+                <span>Taklif keldi</span>
+                <span>${fmtDate(invite.createdAt)}</span>
+              </div>
+            </div>
+            <span class="badge badge-progress">Pending</span>
+          </div>
+          <div class="workspace-form-stack mt-3">
+            <div>
+              <label class="label">Secret key</label>
+              <input class="input" data-secret-key="${invite.id}" placeholder="XXXX-XXXX-XXXX-XXXX">
+            </div>
+            <div class="workspace-form-actions">
+              <button class="btn btn-primary" data-accept-invite="${invite.id}">Qo'shilish</button>
+            </div>
+            <div class="text-sm muted" data-invite-error="${invite.id}"></div>
+          </div>
+        </div>
+      `).join('') : '<div class="workspace-empty"><h3>Taklif yo\'q</h3><p>Yangi team taklifi shu yerda chiqadi.</p></div>';
+
       document.getElementById('list').innerHTML = data.notifications.length ? data.notifications.map((n) => `
         <div class="workspace-message-item">
-          <strong>${n.content || n.text}</strong>
-          <div class="text-xs muted">${n.type || 'notification'}</div>
+          <strong>${escapeHtml(n.content || n.text || 'Bildirishnoma')}</strong>
+          <div class="text-xs muted">${escapeHtml(n.type || 'notification')} / ${fmtDate(n.createdAt)}</div>
           <span>${(n.unread || n.isRead === false) ? 'Unread' : 'Read'}</span>
         </div>
-      `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity paydo bo\'lganda shu yerda ko\'rinadi.</p></div>';
+      `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity paydo bo\'lganda shu yerda ko\'rinadi.</p></div>';
+
+      document.querySelectorAll('[data-accept-invite]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const inviteId = button.dataset.acceptInvite;
+          const input = document.querySelector(`[data-secret-key="${inviteId}"]`);
+          const errorBox = document.querySelector(`[data-invite-error="${inviteId}"]`);
+          errorBox.className = 'text-sm muted feedback-error';
+          errorBox.textContent = '';
+          button.disabled = true;
+          try {
+            const result = await MllyCore.acceptWorkspaceInvite({
+              inviteId,
+              secretKey: input.value
+            });
+            errorBox.className = 'text-sm muted feedback-success';
+            errorBox.textContent = 'Workspacega qo\'shildingiz.';
+            setTimeout(() => { location.href = `team.html?id=${result.teamId}`; }, 800);
+          } catch (error) {
+            errorBox.textContent = error.message || 'Taklif qabul qilinmadi.';
+            button.disabled = false;
+          }
+        });
+      });
     })();
   </script>
 </body>

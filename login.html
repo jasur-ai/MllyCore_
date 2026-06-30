@@ -9,6 +9,9 @@
 </head>
 <body class="auth-page">
   <div class="auth-shell-pro">
+    <div style="position:absolute;top:18px;right:18px;z-index:5">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()"><span data-theme-label>Light mode</span></button>
+    </div>
     <aside class="auth-panel-side">
       <a href="index.html" class="auth-panel-brand">
         <span class="auth-panel-mark">M</span>
@@ -45,11 +48,11 @@
     <section class="auth-panel-main">
       <div class="auth-panel-card">
         <h2>Xush kelibsiz</h2>
-        <p>Davom etish uchun MllyCore hisobingizga kiring.</p>
+        <p>Davom etish uchun username va parolingizni kiriting.</p>
         <form id="loginForm" class="workspace-form-grid" style="margin-top:20px">
           <div>
-            <label class="label">Email</label>
-            <input class="input" id="email" type="email" required autocomplete="email">
+            <label class="label">Username</label>
+            <input class="input" id="identifier" required autocomplete="username">
           </div>
           <div>
             <label class="label">Parol</label>
@@ -72,30 +75,35 @@
     </section>
   </div>
 
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script>
     document.getElementById('loginForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = document.getElementById('authMessage');
-      const email = document.getElementById('email').value.trim();
+      const identifier = document.getElementById('identifier').value.trim();
       const password = document.getElementById('password').value;
+      message.className = 'text-sm muted feedback-info';
 
       try {
         if (window.MLLYCORE_FIREBASE_ENABLED) {
-          message.textContent = 'Firebase orqali tekshirilmoqda...';
-          const cred = await window.MllyCore.login(email, password);
+          message.textContent = 'Akkaunt tekshirilmoqda...';
+          const cred = await window.MllyCore.login(identifier, password);
           if (!cred.user.emailVerified) {
+            message.className = 'text-sm muted feedback-error';
             message.textContent = 'Avval emailingizni tasdiqlang.';
             location.href = 'verify-email.html';
             return;
           }
         } else {
+          message.className = 'text-sm muted feedback-error';
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
         location.href = 'dashboard.html';
       } catch (error) {
+        message.className = 'text-sm muted feedback-error';
         message.textContent = friendlyAuthError(error);
       }
     });
@@ -103,7 +111,7 @@
     function friendlyAuthError(error) {
       const code = error?.code || '';
       if (code === 'auth/invalid-credential' || code === 'auth/user-not-found' || code === 'auth/wrong-password') {
-        return "Email yoki parol noto'g'ri. Agar akkauntingiz bo'lmasa, avval ro'yxatdan o'ting.";
+        return "Username yoki parol noto'g'ri.";
       }
       if (code === 'auth/invalid-email') return "Email manzil noto'g'ri kiritilgan.";
       if (code === 'auth/too-many-requests') return "Urinishlar ko'payib ketdi. Birozdan keyin qayta urinib ko'ring.";

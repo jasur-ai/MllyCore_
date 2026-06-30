@@ -9,8 +9,9 @@
 </head>
 <body>
   <div id="app">
-    <div id="content" class="workspace-app"><div class="workspace-empty"><h3>Workspace yuklanmoqda</h3><p>Ma'lumotlar olinmoqda...</p></div></div>
+    <div id="content" class="workspace-app"><div class="workspace-empty loading-copy"><h3>Yuklanmoqda...</h3><p>Workspace tayyorlanmoqda.</p></div></div>
   </div>
+  <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
@@ -21,9 +22,14 @@
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     }[char]));
     const fmtDate = (value) => {
-      if (!value) return '';
+      if (!value) return '-';
       const date = value.toDate ? value.toDate() : new Date(value);
-      return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('uz-UZ');
+      return Number.isNaN(date.getTime()) ? '-' : date.toLocaleString('uz-UZ');
+    };
+    const fmtDateInput = (value) => {
+      if (!value) return '';
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16);
     };
 
     window.UTIL = window.UTIL || {
@@ -41,112 +47,253 @@
     };
 
     let chatUnsubscribe = null;
+    let workspaceState = null;
+
+    function setFeedback(id, text, tone = 'error') {
+      const node = document.getElementById(id);
+      if (!node) return;
+      node.className = `text-sm muted feedback-${tone}`;
+      node.textContent = text || '';
+    }
+
+    function memberOptions(members, includeLead = true) {
+      return members
+        .filter((member) => includeLead || member.role !== 'team_lead')
+        .map((member) => `<option value="${member.userId}">${escapeHtml(member.user?.name || member.user?.email || member.userId)}</option>`)
+        .join('');
+    }
 
     function renderChat(messages, currentUserId) {
       const target = document.getElementById('chatMessages');
       if (!target) return;
-
       target.innerHTML = messages.length ? messages.map((message) => `
         <div class="msg ${message.senderUserId === currentUserId ? 'me' : ''}">
           <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
           <div class="bubble">
-            <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt)}</div>
+            <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt || message.clientCreatedAt)}</div>
             <div>${escapeHtml(message.text)}</div>
           </div>
         </div>
       `).join('') : '<div class="chat-empty">Chat hali bo\'sh. Birinchi xabarni yozing.</div>';
-
       target.scrollTop = target.scrollHeight;
-      const counter = document.getElementById('chatCount');
-      if (counter) counter.textContent = messages.length;
+      const count = document.getElementById('chatCount');
+      if (count) count.textContent = messages.length;
       const stat = document.getElementById('chatStat');
       if (stat) stat.textContent = messages.length;
     }
 
-    function renderEntries(entries) {
-      const ideas = entries.filter((entry) => entry.entryType !== 'startup');
-      const startups = entries.filter((entry) => entry.entryType === 'startup');
+    function renderMembers(data, currentUserId) {
+      const target = document.getElementById('membersList');
+      if (!target) return;
+      target.innerHTML = data.members.map((member) => `
+        <div class="workspace-list-row">
+          <div class="avatar">${escapeHtml(member.user?.avatar || 'U')}</div>
+          <div class="workspace-list-copy">
+            <strong>${escapeHtml(member.user?.name || member.user?.email || member.userId)}</strong>
+            <span>@${escapeHtml(member.user?.username || 'user')} / ${escapeHtml(member.user?.email || '')}</span>
+          </div>
+          <div class="workspace-stack-tight" style="justify-items:end">
+            <span class="badge ${member.role === 'team_lead' ? 'badge-active' : ''}">${escapeHtml(member.role)}</span>
+            ${member.userId === currentUserId ? '<span class="workspace-pill-note">Bu siz</span>' : ''}
+          </div>
+        </div>
+      `).join('');
+    }
 
-      const ideasWrap = document.getElementById('ideasList');
-      const startupsWrap = document.getElementById('startupList');
-      const ideaStat = document.getElementById('ideaStat');
-      const startupStat = document.getElementById('startupStat');
-      const ideasCount = document.getElementById('ideasCount');
-      const startupsCount = document.getElementById('startupsCount');
+    function renderEntries(data, currentUserId, isLead) {
+      const ideas = data.ideas.filter((entry) => entry.entryType !== 'startup');
+      const startups = data.ideas.filter((entry) => entry.entryType === 'startup');
+      document.getElementById('ideaStat').textContent = ideas.length;
+      document.getElementById('startupStat').textContent = startups.length;
+      document.getElementById('ideasCount').textContent = `${ideas.length} ta`;
+      document.getElementById('startupsCount').textContent = `${startups.length} ta`;
 
-      if (ideaStat) ideaStat.textContent = ideas.length;
-      if (startupStat) startupStat.textContent = startups.length;
-      if (ideasCount) ideasCount.textContent = `${ideas.length} ta`;
-      if (startupsCount) startupsCount.textContent = `${startups.length} ta`;
+      document.getElementById('startupList').innerHTML = startups.length ? startups.map((item) => `
+        <div class="workspace-record workspace-record-startup workspace-record-accent">
+          <div class="workspace-record-top">
+            <div>
+              <h3>${escapeHtml(item.title)}</h3>
+              <div class="workspace-inline-meta">
+                <span>Startup</span>
+                <span>Mas'ul: ${escapeHtml(item.ownerName || 'Belgilanmagan')}</span>
+              </div>
+            </div>
+            <span class="badge badge-active">${escapeHtml(item.status || 'Startup')}</span>
+          </div>
+          <p>${escapeHtml(item.description || 'Startup tafsiloti kiritilmagan.')}</p>
+          ${isLead ? `
+            <div class="workspace-subgrid cols-2 mt-3">
+              <select class="select" data-owner-select="${item.id}">
+                <option value="">Mas'ul tanlang</option>
+                ${memberOptions(data.members, true)}
+              </select>
+              <button class="btn btn-ghost" data-owner-save="${item.id}">Mas'ulni saqlash</button>
+            </div>
+            <div class="text-sm muted" data-owner-feedback="${item.id}"></div>
+          ` : ''}
+        </div>
+      `).join('') : '<div class="workspace-empty"><h3>Startup yo\'q</h3><p>Hozircha team lead startup qo\'shmagan.</p></div>';
 
-      if (startupsWrap) {
-        startupsWrap.innerHTML = startups.length ? startups.map((item) => `
-          <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-startup workspace-record-accent">
-            <div class="workspace-record-top">
+      document.getElementById('ideasList').innerHTML = ideas.length ? ideas.map((item) => `
+        <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-idea">
+          <div class="workspace-record-top">
+            <div>
+              <h3>${escapeHtml(item.title)}</h3>
+              <div class="workspace-inline-meta">
+                <span>G'oya</span>
+                <span>Mas'ul: ${escapeHtml(item.ownerName || item.createdByName || 'Belgilanmagan')}</span>
+              </div>
+            </div>
+            <span class="badge">${escapeHtml(item.status || 'Raw')}</span>
+          </div>
+          <p>${escapeHtml(item.description || 'G\'oya tavsifi kiritilmagan.')}</p>
+        </a>
+      `).join('') : '<div class="workspace-empty"><h3>G\'oya yo\'q</h3><p>Workspace ichida hali g\'oya yaratilmagan.</p></div>';
+
+      document.querySelectorAll('[data-owner-save]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const ideaId = button.dataset.ownerSave;
+          const ownerUserId = document.querySelector(`[data-owner-select="${ideaId}"]`)?.value;
+          const feedback = document.querySelector(`[data-owner-feedback="${ideaId}"]`);
+          if (feedback) {
+            feedback.className = 'text-sm muted feedback-error';
+            feedback.textContent = '';
+          }
+          button.disabled = true;
+          try {
+            await MllyCore.updateStartupOwner({ teamId: data.team.id, ideaId, ownerUserId });
+            if (feedback) {
+              feedback.className = 'text-sm muted feedback-success';
+              feedback.textContent = "Mas'ul yangilandi.";
+            }
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            if (feedback) feedback.textContent = error.message || "Mas'ul yangilanmadi.";
+            button.disabled = false;
+          }
+        });
+      });
+    }
+
+    function renderTasks(data, currentUserId, isLead) {
+      const tasks = data.tasks || [];
+      const submissions = data.taskSubmissions || [];
+      const target = document.getElementById('tasksList');
+      const count = document.getElementById('taskCount');
+      if (count) count.textContent = `${tasks.length} ta`;
+
+      target.innerHTML = tasks.length ? tasks.map((task) => {
+        const taskSubs = submissions.filter((item) => item.taskId === task.id);
+        const hasSubmitted = taskSubs.some((item) => item.userId === currentUserId);
+        const isAssignedToCurrent = task.assignedUserId === currentUserId;
+        const canClaim = task.assignmentMode === 'open' && !task.assignedUserId;
+        const canSubmit = (
+          (task.assignmentMode === 'team') ||
+          ((task.assignmentMode === 'direct' || task.assignmentMode === 'open') && isAssignedToCurrent)
+        ) && !hasSubmitted && task.status !== 'completed';
+
+        return `
+          <div class="workspace-task-card">
+            <div class="workspace-task-head">
               <div>
-                <h3>${escapeHtml(item.title)}</h3>
-                <div class="workspace-inline-meta">
-                  <span>Startup</span>
-                  <span>${escapeHtml(item.createdByName || 'User')}</span>
+                <h3 style="margin:0">${escapeHtml(task.title)}</h3>
+                <div class="workspace-task-meta">
+                  <span class="badge">${escapeHtml(task.assignmentMode || 'open')}</span>
+                  <span class="badge">${escapeHtml(task.status || 'open')}</span>
+                  <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo\'q')}</span>
                 </div>
               </div>
-              <span class="badge badge-active">${escapeHtml(item.status || 'Startup')}</span>
+              <span class="badge badge-progress">${task.progressCount || 0}/${task.requiredCount || (task.assignmentMode === 'team' ? '65%' : 1)}</span>
             </div>
-            <p>${escapeHtml(item.description || 'Startup tafsiloti kiritilmagan.')}</p>
-          </a>
-        `).join('') : '<div class="workspace-empty"><h3>Startup yo\'q</h3><p>Hozircha team lead startup qo\'shmagan.</p></div>';
-      }
-
-      if (ideasWrap) {
-        ideasWrap.innerHTML = ideas.length ? ideas.map((item) => `
-          <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-idea">
-            <div class="workspace-record-top">
-              <div>
-                <h3>${escapeHtml(item.title)}</h3>
-                <div class="workspace-inline-meta">
-                  <span>G'oya</span>
-                  <span>${escapeHtml(item.createdByName || 'User')}</span>
-                </div>
+            <p class="workspace-helper">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</p>
+            <div class="workspace-detail-list">
+              <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(task.assignedUserName || (task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
+              <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
+            </div>
+            ${taskSubs.length ? `
+              <div class="workspace-message-stack">
+                ${taskSubs.map((sub) => `
+                  <div class="workspace-message-item">
+                    <strong>${escapeHtml(sub.userName)}</strong>
+                    <span>${escapeHtml(sub.resultText)}</span>
+                  </div>
+                `).join('')}
               </div>
-              <span class="badge">${escapeHtml(item.status || 'Raw')}</span>
+            ` : ''}
+            <div class="workspace-task-footer">
+              ${canClaim ? `<button class="btn btn-ghost" data-task-claim="${task.id}">Topshiriqni olish</button>` : '<span class="workspace-helper">Topshiriq oqimi faol</span>'}
+              ${canSubmit ? `
+                <div class="workspace-subgrid cols-2" style="flex:1">
+                  <input class="input" data-task-result="${task.id}" placeholder="Natijani yozing">
+                  <button class="btn btn-primary" data-task-submit="${task.id}">Tugatdim</button>
+                </div>
+              ` : ''}
             </div>
-            <p>${escapeHtml(item.description || 'G\'oya tavsifi kiritilmagan.')}</p>
-          </a>
-        `).join('') : '<div class="workspace-empty"><h3>G\'oya yo\'q</h3><p>Workspace ichida hali g\'oya yaratilmagan.</p></div>';
+            <div class="text-sm muted" data-task-feedback="${task.id}"></div>
+          </div>
+        `;
+      }).join('') : '<div class="workspace-empty"><h3>Topshiriq yo\'q</h3><p>Lead yoki jamoa yangi topshiriq qo\'shganda shu yerda ko\'rinadi.</p></div>';
+
+      document.querySelectorAll('[data-task-claim]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const taskId = button.dataset.taskClaim;
+          const feedback = document.querySelector(`[data-task-feedback="${taskId}"]`);
+          if (feedback) {
+            feedback.className = 'text-sm muted feedback-error';
+            feedback.textContent = '';
+          }
+          button.disabled = true;
+          try {
+            await MllyCore.claimOpenTask(taskId);
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            if (feedback) feedback.textContent = error.message || 'Topshiriq olinmadi.';
+            button.disabled = false;
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-task-submit]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const taskId = button.dataset.taskSubmit;
+          const resultText = document.querySelector(`[data-task-result="${taskId}"]`)?.value || '';
+          const feedback = document.querySelector(`[data-task-feedback="${taskId}"]`);
+          if (feedback) {
+            feedback.className = 'text-sm muted feedback-error';
+            feedback.textContent = '';
+          }
+          button.disabled = true;
+          try {
+            await MllyCore.submitTaskResult({ taskId, resultText });
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            if (feedback) feedback.textContent = error.message || 'Natija yuborilmadi.';
+            button.disabled = false;
+          }
+        });
+      });
+
+      if (isLead) {
+        const assignmentMode = document.getElementById('taskAssignmentMode');
+        const assigneeWrap = document.getElementById('taskAssigneeWrap');
+        const toggleAssignee = () => {
+          if (!assignmentMode || !assigneeWrap) return;
+          assigneeWrap.style.display = assignmentMode.value === 'direct' ? '' : 'none';
+        };
+        assignmentMode?.addEventListener('change', toggleAssignee);
+        toggleAssignee();
       }
     }
 
-    async function refreshEntries(teamId) {
-      const fresh = await MllyCore.getTeamData(teamId);
-      if (fresh) renderEntries(fresh.ideas || []);
-    }
-
-    (async () => {
-      const user = await window.MLLYCORE_AUTH_READY;
-      if (!user) return;
-      if (window.MLLYCORE_PROFILE?.role === 'admin') {
-        location.href = 'admin.html';
-        return;
-      }
-
-      const dashboard = await MllyCore.getDashboardData(user.uid);
-      mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
-
-      const teamId = qs('id');
-      const data = teamId ? await MllyCore.getTeamData(teamId) : null;
-      if (!data) {
-        document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
-        return;
-      }
-
-      const membership = data.members.find((m) => m.userId === user.uid);
+    async function renderWorkspace(data, currentUserId) {
+      const membership = data.members.find((member) => member.userId === currentUserId);
       const isLead = membership?.role === 'team_lead';
 
       document.getElementById('content').innerHTML = `
         <section class="workspace-command">
           <div>
             <h1 class="workspace-command-title">${escapeHtml(data.team.name)}</h1>
-            <p class="workspace-command-copy">${escapeHtml(data.team.description || 'Workspace ichidagi g\'oya, startup va chat oqimi.')}</p>
+            <p class="workspace-command-copy">${escapeHtml(data.team.description || 'Workspace ichidagi idea, startup, task va chat oqimi.')}</p>
           </div>
           <div class="workspace-command-tools">
             <span class="badge badge-active">${escapeHtml(membership?.role || 'member')}</span>
@@ -171,7 +318,7 @@
             <span class="workspace-stat-note">Faqat team lead qo'shadi</span>
           </div>
           <div class="workspace-stat">
-            <span class="workspace-stat-label">Chat xabarlari</span>
+            <span class="workspace-stat-label">Chat</span>
             <span class="workspace-stat-value" id="chatStat">${data.messages.length}</span>
             <span class="workspace-stat-note">Realtime oqim</span>
           </div>
@@ -185,19 +332,20 @@
               <span class="badge">Realtime chat</span>
               <span class="badge">${isLead ? 'Lead control' : 'Member access'}</span>
             </div>
-            <p class="muted text-sm" style="margin:14px 0 0">Bu sahifada faqat shu workspace ichidagi a'zolar, g'oyalar, startuplar va chat ko'rinadi. G'oya qo'shilsa yoki startup ochilsa barcha a'zolarga bildirishnoma yuboriladi.</p>
+            <p class="muted text-sm" style="margin:14px 0 0">A'zo taklif qilinsa userga bildirishnoma tushadi, u secret key to'g'ri kiritsa keyingina kiradi. Chat, idea, startup va task activity hamma a'zolarga bildirishnoma yuboradi.</p>
           </div>
           <div class="workspace-action-stack">
             ${isLead ? `
               <div class="workspace-surface pad">
                 <h3 style="margin:0 0 12px">Lead actions</h3>
-                <div class="workspace-form-grid">
+                <div class="workspace-form-stack">
                   <div>
                     <label class="label">Yangi a'zo emaili</label>
                     <div class="workspace-form-inline">
                       <input class="input" id="memberEmail" type="email" placeholder="member@email.com">
-                      <button class="btn btn-primary" id="addMemberBtn">Qo'shish</button>
+                      <button class="btn btn-primary" id="inviteMemberBtn">Taklif yuborish</button>
                     </div>
+                    <div class="text-sm muted" id="memberInviteFeedback"></div>
                   </div>
                   <button class="btn btn-ghost" id="resetSecretBtn">Secret key reset</button>
                 </div>
@@ -205,7 +353,7 @@
             ` : `
               <div class="workspace-surface pad">
                 <h3 style="margin:0 0 12px">Member view</h3>
-                <p class="muted text-sm" style="margin:0">Siz g'oya qo'sha olasiz va chatda ishlaysiz. A'zo qo'shish, secret key reset va startup ochish faqat team lead uchun ochiq.</p>
+                <p class="muted text-sm" style="margin:0">Siz g'oya qo'sha olasiz, jamoaviy taskga natija yuklaysiz va chatda ishlaysiz.</p>
               </div>
             `}
           </div>
@@ -218,7 +366,7 @@
                 <div class="workspace-surface-head">
                   <div>
                     <h2>Startup qo'shish</h2>
-                    <div class="workspace-surface-copy">Startup yozuvi faqat team lead tomonidan yaratiladi.</div>
+                    <div class="workspace-surface-copy">Startup faqat team lead tomonidan qo'shiladi.</div>
                   </div>
                   <span class="badge badge-active">Lead only</span>
                 </div>
@@ -232,9 +380,17 @@
                       <label class="label">Tavsif</label>
                       <textarea class="textarea" id="startupDescription" rows="3" placeholder="Startup nima qiladi?"></textarea>
                     </div>
+                    <div>
+                      <label class="label">Mas'ul shaxs</label>
+                      <select class="select" id="startupOwnerUserId">
+                        <option value="">Keyinroq belgilanadi</option>
+                        ${memberOptions(data.members, true)}
+                      </select>
+                    </div>
                     <div class="workspace-form-actions">
                       <button class="btn btn-primary" id="createStartupBtn">Startup qo'shish</button>
                     </div>
+                    <div class="text-sm muted" id="startupFeedback"></div>
                   </div>
                 </div>
               </div>
@@ -261,7 +417,60 @@
                   <div class="workspace-form-actions">
                     <button class="btn btn-primary" id="createIdeaBtn">G'oya qo'shish</button>
                   </div>
+                  <div class="text-sm muted" id="ideaFeedback"></div>
                 </div>
+              </div>
+            </div>
+
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Topshiriqlar</h2>
+                  <div class="workspace-surface-copy">Umumiy, individual va jamoaviy topshiriqlar.</div>
+                </div>
+                <span class="badge" id="taskCount">0 ta</span>
+              </div>
+              <div class="workspace-surface-body compact">
+                ${isLead ? `
+                  <div class="workspace-form-stack" style="margin-bottom:16px">
+                    <div>
+                      <label class="label">Topshiriq nomi</label>
+                      <input class="input" id="taskTitle" placeholder="Masalan: Investor pitch tayyorlash">
+                    </div>
+                    <div>
+                      <label class="label">Tavsif</label>
+                      <textarea class="textarea" id="taskDescription" rows="2" placeholder="Topshiriq tafsiloti"></textarea>
+                    </div>
+                    <div class="workspace-subgrid cols-2">
+                      <div>
+                        <label class="label">Topshiriq turi</label>
+                        <select class="select" id="taskAssignmentMode">
+                          <option value="open">Umumiy</option>
+                          <option value="direct">Bir kishiga</option>
+                          <option value="team">Jamoaviy</option>
+                        </select>
+                      </div>
+                      <div id="taskAssigneeWrap">
+                        <label class="label">Mas'ul</label>
+                        <select class="select" id="taskAssignedUserId">
+                          <option value="">A'zo tanlang</option>
+                          ${memberOptions(data.members, true)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="label">Deadline</label>
+                      <input class="input" id="taskDeadline" type="datetime-local" value="${fmtDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000))}">
+                    </div>
+                    <div class="workspace-form-actions">
+                      <button class="btn btn-primary" id="createTaskBtn">Topshiriq qo'shish</button>
+                    </div>
+                    <div class="text-sm muted" id="taskCreateFeedback"></div>
+                  </div>
+                ` : `
+                  <div class="workspace-note-bar" style="margin-bottom:16px">Jamoaviy topshiriqqa natija yuklashingiz mumkin. Umumiy topshiriqni esa olib keyin tugatishingiz mumkin.</div>
+                `}
+                <div class="workspace-stack-tight" id="tasksList"></div>
               </div>
             </div>
 
@@ -309,39 +518,28 @@
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
-                  <h3>A'zolar</h3>
-                  <div class="workspace-surface-copy">Workspace ichidagi role map.</div>
+                  <h3>Members</h3>
+                  <div class="workspace-surface-copy">Ism, username, email va role xaritasi.</div>
                 </div>
                 <span class="badge">${data.members.length}</span>
               </div>
-              <div class="workspace-card-grid">
-                ${data.members.map((member) => `
-                  <div class="workspace-list-row">
-                    <div class="avatar">${escapeHtml(member.user?.avatar || 'U')}</div>
-                    <div class="workspace-list-copy">
-                      <strong>${escapeHtml(member.user?.name || member.user?.email || member.userId)}</strong>
-                      <span>${escapeHtml(member.user?.email || '')}</span>
-                    </div>
-                    <span class="badge ${member.role === 'team_lead' ? 'badge-active' : ''}">${escapeHtml(member.role)}</span>
-                  </div>
-                `).join('')}
-              </div>
+              <div class="workspace-card-grid" id="membersList"></div>
             </div>
 
             <div class="workspace-surface pad">
               <h3 style="margin:0 0 12px">Workspace notes</h3>
               <div class="workspace-message-stack">
                 <div class="workspace-message-item">
-                  <strong>Visibility</strong>
-                  <span>Faqat workspace ichidagi userlar bu ma'lumotlarni ko'radi.</span>
+                  <strong>Invite flow</strong>
+                  <span>Taklif olgan user avval secret keyni to'g'ri kiritishi kerak.</span>
                 </div>
                 <div class="workspace-message-item">
                   <strong>Startup policy</strong>
-                  <span>Startup faqat team lead tomonidan qo'shiladi va barcha a'zolarga xabar yuboriladi.</span>
+                  <span>Startup faqat team lead tomonidan qo'shiladi. Mas'ul keyin ham o'zgartiriladi.</span>
                 </div>
                 <div class="workspace-message-item">
-                  <strong>Idea policy</strong>
-                  <span>G'oya qo'shish barcha a'zolar uchun ochiq.</span>
+                  <strong>Task policy</strong>
+                  <span>Natija yozilmasa "Tugatdim" ishlamaydi. 12 soat ichida olinmagan umumiy topshiriq avtomatik biriktiriladi.</span>
                 </div>
               </div>
             </div>
@@ -349,15 +547,13 @@
         </section>
       `;
 
-      renderEntries(data.ideas);
-      renderChat([...data.messages].sort((a, b) => {
-        const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-        const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-        return aTime - bTime;
-      }), user.uid);
+      renderEntries(data, currentUserId, isLead);
+      renderTasks(data, currentUserId, isLead);
+      renderMembers(data, currentUserId);
+      renderChat(data.messages || [], currentUserId);
 
       if (chatUnsubscribe) chatUnsubscribe();
-      chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, (messages) => renderChat(messages, user.uid));
+      chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, (messages) => renderChat(messages, currentUserId));
 
       document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('chatText');
@@ -383,6 +579,7 @@
 
       document.getElementById('createIdeaBtn')?.addEventListener('click', async () => {
         const button = document.getElementById('createIdeaBtn');
+        setFeedback('ideaFeedback', '', 'error');
         button.disabled = true;
         try {
           await MllyCore.createWorkspaceEntry({
@@ -391,48 +588,74 @@
             title: document.getElementById('ideaTitle').value,
             description: document.getElementById('ideaDescription').value
           });
-          UTIL.toast("G'oya qo'shildi va a'zolarga bildirishnoma yuborildi");
+          setFeedback('ideaFeedback', "G'oya qo'shildi va a'zolarga bildirishnoma yuborildi.", 'success');
           document.getElementById('ideaTitle').value = '';
           document.getElementById('ideaDescription').value = '';
-          await refreshEntries(data.team.id);
+          await refreshWorkspace(data.team.id, currentUserId);
         } catch (error) {
-          UTIL.toast(error.message || "G'oya qo'shilmadi");
-        } finally {
+          setFeedback('ideaFeedback', error.message || "G'oya qo'shilmadi.", 'error');
           button.disabled = false;
         }
       });
 
       document.getElementById('createStartupBtn')?.addEventListener('click', async () => {
         const button = document.getElementById('createStartupBtn');
+        setFeedback('startupFeedback', '', 'error');
         button.disabled = true;
         try {
           await MllyCore.createWorkspaceEntry({
             teamId: data.team.id,
             type: 'startup',
             title: document.getElementById('startupTitle').value,
-            description: document.getElementById('startupDescription').value
+            description: document.getElementById('startupDescription').value,
+            ownerUserId: document.getElementById('startupOwnerUserId').value
           });
-          UTIL.toast("Startup qo'shildi va a'zolarga bildirishnoma yuborildi");
+          setFeedback('startupFeedback', "Startup qo'shildi va a'zolarga bildirishnoma yuborildi.", 'success');
           document.getElementById('startupTitle').value = '';
           document.getElementById('startupDescription').value = '';
-          await refreshEntries(data.team.id);
+          document.getElementById('startupOwnerUserId').value = '';
+          await refreshWorkspace(data.team.id, currentUserId);
         } catch (error) {
-          UTIL.toast(error.message || "Startup qo'shilmadi");
+          setFeedback('startupFeedback', error.message || "Startup qo'shilmadi.", 'error');
+          button.disabled = false;
+        }
+      });
+
+      document.getElementById('inviteMemberBtn')?.addEventListener('click', async () => {
+        const input = document.getElementById('memberEmail');
+        const button = document.getElementById('inviteMemberBtn');
+        setFeedback('memberInviteFeedback', '', 'error');
+        button.disabled = true;
+        try {
+          await MllyCore.inviteWorkspaceMember({ teamId: data.team.id, email: input.value });
+          setFeedback('memberInviteFeedback', "Taklif yuborildi. User secret key orqali qo'shiladi.", 'success');
+          input.value = '';
+        } catch (error) {
+          setFeedback('memberInviteFeedback', error.message || "Taklif yuborilmadi.", 'error');
         } finally {
           button.disabled = false;
         }
       });
 
-      document.getElementById('addMemberBtn')?.addEventListener('click', async () => {
-        const input = document.getElementById('memberEmail');
-        const button = document.getElementById('addMemberBtn');
+      document.getElementById('createTaskBtn')?.addEventListener('click', async () => {
+        const button = document.getElementById('createTaskBtn');
+        setFeedback('taskCreateFeedback', '', 'error');
         button.disabled = true;
         try {
-          await MllyCore.addWorkspaceMember({ teamId: data.team.id, email: input.value });
-          UTIL.toast("A'zo workspace'ga qo'shildi");
-          setTimeout(() => location.reload(), 700);
+          await MllyCore.createTask({
+            teamId: data.team.id,
+            title: document.getElementById('taskTitle').value,
+            description: document.getElementById('taskDescription').value,
+            assignmentMode: document.getElementById('taskAssignmentMode').value,
+            assignedUserId: document.getElementById('taskAssignedUserId')?.value || '',
+            deadline: document.getElementById('taskDeadline').value
+          });
+          setFeedback('taskCreateFeedback', "Topshiriq qo'shildi.", 'success');
+          document.getElementById('taskTitle').value = '';
+          document.getElementById('taskDescription').value = '';
+          await refreshWorkspace(data.team.id, currentUserId);
         } catch (error) {
-          UTIL.toast(error.message || "A'zo qo'shishda xatolik yuz berdi");
+          setFeedback('taskCreateFeedback', error.message || "Topshiriq qo'shilmadi.", 'error');
           button.disabled = false;
         }
       });
@@ -443,12 +666,40 @@
         try {
           const key = await MllyCore.resetWorkspaceSecret(data.team.id);
           UTIL.toast(`Yangi secret key: ${key}`);
-          setTimeout(() => location.reload(), 900);
+          await refreshWorkspace(data.team.id, currentUserId);
         } catch (error) {
           UTIL.toast(error.message || 'Secret key resetda xatolik yuz berdi');
           button.disabled = false;
         }
       });
+    }
+
+    async function refreshWorkspace(teamId, currentUserId) {
+      await MllyCore.syncTeamTasks(teamId).catch(() => {});
+      workspaceState = await MllyCore.getTeamData(teamId);
+      if (workspaceState) {
+        await renderWorkspace(workspaceState, currentUserId);
+      }
+    }
+
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      if (window.MLLYCORE_PROFILE?.role === 'admin') {
+        location.href = 'admin.html';
+        return;
+      }
+
+      const teamId = qs('id');
+      await MllyCore.syncTeamTasks(teamId).catch(() => {});
+      const dashboard = await MllyCore.getDashboardData(user.uid);
+      mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
+      workspaceState = teamId ? await MllyCore.getTeamData(teamId) : null;
+      if (!workspaceState) {
+        document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
+        return;
+      }
+      await renderWorkspace(workspaceState, user.uid);
     })();
 
     window.addEventListener('beforeunload', () => {

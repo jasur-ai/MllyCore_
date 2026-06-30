@@ -61,8 +61,11 @@ module.exports = async (req, res) => {
       await deleteQuery(db, 'ideaComments', 'ideaId', idea.id);
     }
     await deleteQuery(db, 'ideas', 'teamId', teamId);
+    await deleteQuery(db, 'tasks', 'teamId', teamId);
+    await deleteQuery(db, 'taskSubmissions', 'teamId', teamId);
     await deleteQuery(db, 'teamMembers', 'teamId', teamId);
     await deleteQuery(db, 'chatMessages', 'teamId', teamId);
+    await deleteQuery(db, 'workspaceInvites', 'teamId', teamId);
     await deleteQuery(db, 'notifications', 'relatedEntityId', teamId);
     await db.collection('teams').doc(teamId).delete();
 

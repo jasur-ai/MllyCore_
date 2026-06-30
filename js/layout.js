@@ -41,9 +41,12 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-xs muted">Boshqaruv paneli</div>
       </div>
     </a>
-    <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-    </button>
+    <div class="flex items-center gap-2">
+      <button class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()"><span data-theme-label>Light mode</span></button>
+      <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+    </div>
   </header>
   <div class="sidebar-backdrop" onclick="document.body.classList.remove('nav-open')"></div>
   <aside class="sidebar">
@@ -65,6 +68,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${profile.name || profile.email}</div>
         <div class="text-xs muted">@${profile.username || 'user'}</div>
       </div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()" style="padding:6px 10px"><span data-theme-label>Light mode</span></button>
       <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
         Chiqish
       </a>
@@ -78,4 +82,6 @@ window.mountLayout = function(active, context) {
   const root = document.getElementById('app');
   const main = root.innerHTML;
   root.outerHTML = `<div class="app" id="app">${renderLayout(active, context)}<main class="main">${main}</main></div>`;
+  const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
+  window.MllyCoreTheme?.apply?.(theme);
 };

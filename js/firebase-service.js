@@ -17,28 +17,54 @@ window.MllyCore = {
 
     firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
     firebaseState.auth = authMod.getAuth(firebaseState.app);
+    await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
     firebaseState.db = dbMod.getFirestore(firebaseState.app);
     firebaseState.modules = { authMod, dbMod };
     firebaseState.ready = true;
     return firebaseState;
   },
 
+  async getUserByUsername(username) {
+    const state = await this.init();
+    if (!state) return null;
+    const { collection, getDocs, query, where } = state.modules.dbMod;
+    const clean = normalizeUsername(username);
+    if (!clean) return null;
+    const snap = await getDocs(query(collection(state.db, 'users'), where('username', '==', clean)));
+    if (snap.empty) return null;
+    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+  },
+
+  async ensureUniqueUsername(username, excludeUserId = '') {
+    const existing = await this.getUserByUsername(username);
+    if (existing && existing.id !== excludeUserId) {
+      throw new Error('Bu username band. Boshqa username kiriting.');
+    }
+  },
+
   async register({ firstName, lastName, username, email, password }) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan. js/firebase-config.js faylini toldiring.');
 
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const cleanUsername = normalizeUsername(username);
+    if (!cleanUsername) throw new Error('Username kiriting.');
+    await this.ensureUniqueUsername(cleanUsername);
+
     const { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } = state.modules.authMod;
     const { doc, serverTimestamp, setDoc } = state.modules.dbMod;
-    const cred = await createUserWithEmailAndPassword(state.auth, email, password);
-    const displayName = `${firstName} ${lastName}`.trim();
+    const cred = await createUserWithEmailAndPassword(state.auth, cleanEmail, password);
+    const displayName = `${String(firstName || '').trim()} ${String(lastName || '').trim()}`.trim();
 
     await updateProfile(cred.user, { displayName });
     await setDoc(doc(state.db, 'users', cred.user.uid), {
+      firstName: String(firstName || '').trim(),
+      lastName: String(lastName || '').trim(),
       name: displayName,
-      username,
-      email,
+      username: cleanUsername,
+      email: cleanEmail,
       role: 'member',
-      avatar: initials(displayName),
+      avatar: initials(displayName || cleanUsername),
       verified: false,
       blocked: false,
       joinedAt: serverTimestamp(),
@@ -48,17 +74,30 @@ window.MllyCore = {
     return cred.user;
   },
 
-  async login(email, password) {
+  async login(identifier, password) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
 
     const { signInWithEmailAndPassword } = state.modules.authMod;
+    const cleanIdentifier = String(identifier || '').trim().toLowerCase();
+    let email = cleanIdentifier;
+    if (!cleanIdentifier.includes('@')) {
+      const user = await this.getUserByUsername(cleanIdentifier);
+      if (!user?.email) {
+        const error = new Error("Username yoki parol noto'g'ri.");
+        error.code = 'auth/invalid-credential';
+        throw error;
+      }
+      email = user.email;
+    }
     return signInWithEmailAndPassword(state.auth, email, password);
   },
 
   async logout() {
     const state = await this.init();
     if (!state) return;
+    window.MLLYCORE_AUTH_USER = null;
+    window.MLLYCORE_PROFILE = null;
     return state.modules.authMod.signOut(state.auth);
   },
 
@@ -73,36 +112,44 @@ window.MllyCore = {
 
   async getDashboardData(uid) {
     const state = await this.init();
-    if (!state) return { teams: [], ideas: [], notifications: [] };
+    if (!state) return { teams: [], ideas: [], notifications: [], pendingInvites: [] };
 
     const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
     if (window.MLLYCORE_PROFILE?.role === 'admin') {
       const teamsSnap = await getDocs(collection(state.db, 'teams'));
       const teams = teamsSnap.docs.map((item) => ({ id: item.id, membershipRole: 'admin', ...item.data() }));
-      return { teams, ideas: [], notifications: [] };
+      return { teams, ideas: [], notifications: [], pendingInvites: [] };
     }
 
-    const memberSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid)));
+    const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
+      getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))),
+      getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))),
+      getDocs(query(collection(state.db, 'workspaceInvites'), where('inviteeUserId', '==', uid)))
+    ]);
+
     const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    const teams = [];
+    const teamDocs = await Promise.all(memberships.map((membership) => getDoc(doc(state.db, 'teams', membership.teamId))));
+    const teams = teamDocs
+      .map((teamDoc, index) => (teamDoc.exists()
+        ? { id: teamDoc.id, membershipRole: memberships[index].role, ...teamDoc.data() }
+        : null))
+      .filter(Boolean);
 
-    for (const membership of memberships) {
-      const teamDoc = await getDoc(doc(state.db, 'teams', membership.teamId));
-      if (teamDoc.exists()) {
-        teams.push({ id: teamDoc.id, membershipRole: membership.role, ...teamDoc.data() });
-      }
-    }
+    const ideaSnaps = await Promise.all(
+      teams.map((team) => getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', team.id))))
+    );
+    const ideas = ideaSnaps.flatMap((snap) => snap.docs.map((item) => ({ id: item.id, ...item.data() })));
 
-    const ideas = [];
-    for (const team of teams) {
-      const ideaSnap = await getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', team.id)));
-      ideaSnap.docs.forEach((item) => ideas.push({ id: item.id, ...item.data() }));
-    }
+    const notifications = notificationSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortByCreatedAtDesc);
 
-    const notificationSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid)));
-    const notifications = notificationSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+    const pendingInvites = inviteSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .filter((item) => item.status !== 'accepted')
+      .sort(sortByCreatedAtDesc);
 
-    return { teams, ideas, notifications };
+    return { teams, ideas, notifications, pendingInvites };
   },
 
   async getCollection(name) {
@@ -117,78 +164,98 @@ window.MllyCore = {
     const state = await this.init();
     if (!state) return null;
     const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+
     const teamSnap = await getDoc(doc(state.db, 'teams', teamId));
     if (!teamSnap.exists()) return null;
     const team = { id: teamSnap.id, ...teamSnap.data() };
-    const memberSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId)));
+
+    const [memberSnap, ideaSnap, messageSnap, taskSnap, taskSubmissionSnap] = await Promise.all([
+      getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId))),
+      getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId))),
+      getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId))),
+      getDocs(query(collection(state.db, 'tasks'), where('teamId', '==', teamId))),
+      getDocs(query(collection(state.db, 'taskSubmissions'), where('teamId', '==', teamId)))
+    ]);
+
     const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    const members = [];
-    for (const membership of memberships) {
-      const userSnap = await getDoc(doc(state.db, 'users', membership.userId));
-      members.push({ ...membership, user: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null });
-    }
-    const ideaSnap = await getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId)));
-    const ideas = ideaSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    const messageSnap = await getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId)));
-    const messages = messageSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    return { team, members, ideas, messages };
+    const userSnaps = await Promise.all(memberships.map((membership) => getDoc(doc(state.db, 'users', membership.userId))));
+    const members = memberships.map((membership, index) => ({
+      ...membership,
+      user: userSnaps[index].exists() ? { id: userSnaps[index].id, ...userSnaps[index].data() } : null
+    }));
+
+    const ideas = ideaSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortByCreatedAtDesc);
+    const messages = messageSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortByChatAscending);
+    const tasks = taskSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortByCreatedAtDesc);
+    const taskSubmissions = taskSubmissionSnap.docs
+      .map((item) => ({ id: item.id, ...item.data() }))
+      .sort(sortByCreatedAtDesc);
+
+    return { team, members, ideas, messages, tasks, taskSubmissions };
   },
 
-  async createWorkspaceEntry({ teamId, title, description, type = 'idea' }) {
+  async getPersonalIdeas() {
     const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan.');
-    if (!teamId) throw new Error('Workspace topilmadi.');
-
+    if (!state) return [];
     const authUser = window.MLLYCORE_AUTH_USER;
-    if (!authUser) throw new Error('Avval tizimga kiring.');
+    if (!authUser) return [];
+    const { collection, getDocs, query, where } = state.modules.dbMod;
+    const snap = await getDocs(query(collection(state.db, 'personalIdeas'), where('userId', '==', authUser.uid)));
+    return snap.docs.map((item) => ({ id: item.id, ...item.data() })).sort(sortByCreatedAtDesc);
+  },
 
+  async getIdeaById(ideaId) {
+    const state = await this.init();
+    if (!state || !ideaId) return null;
+    const { doc, getDoc } = state.modules.dbMod;
+    const snap = await getDoc(doc(state.db, 'ideas', ideaId));
+    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  },
+
+  async createWorkspaceEntry({ teamId, title, description, type = 'idea', ownerUserId = '' }) {
+    const authUser = await this.ensureAuthed();
     const cleanTitle = String(title || '').trim();
     const cleanDescription = String(description || '').trim();
     const cleanType = String(type || 'idea').trim().toLowerCase();
     if (!cleanTitle) throw new Error(cleanType === 'startup' ? 'Startup nomini kiriting.' : "G'oya nomini kiriting.");
-
-    const idToken = await authUser.getIdToken();
-    const response = await fetch('/api/create-entry', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        teamId,
-        title: cleanTitle,
-        description: cleanDescription,
-        type: cleanType
-      })
+    return apiPost('/api/create-entry', authUser, {
+      teamId,
+      title: cleanTitle,
+      description: cleanDescription,
+      type: cleanType,
+      ownerUserId: ownerUserId || ''
     });
+  },
 
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload.error || 'Yozuv yaratishda xatolik yuz berdi.');
-    }
-    return payload;
+  async updateStartupOwner({ teamId, ideaId, ownerUserId }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/update-entry-owner', authUser, { teamId, ideaId, ownerUserId });
+  },
+
+  async createPersonalIdea({ title, description }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/create-personal-idea', authUser, {
+      title: String(title || '').trim(),
+      description: String(description || '').trim()
+    });
+  },
+
+  async importPersonalIdea({ personalIdeaId, teamId }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/import-personal-idea', authUser, { personalIdeaId, teamId });
   },
 
   async sendChatMessage({ teamId, text }) {
-    const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan.');
-    if (!teamId) throw new Error('Workspace topilmadi.');
+    const authUser = await this.ensureAuthed();
     const cleanText = String(text || '').trim();
     if (!cleanText) throw new Error('Xabar matnini kiriting.');
-
-    const user = window.MLLYCORE_AUTH_USER;
-    const profile = window.MLLYCORE_PROFILE;
-    if (!user) throw new Error('Avval tizimga kiring.');
-
-    const { addDoc, collection, serverTimestamp } = state.modules.dbMod;
-    await addDoc(collection(state.db, 'chatMessages'), {
-      teamId,
-      senderUserId: user.uid,
-      senderName: profile?.name || user.email,
-      senderAvatar: profile?.avatar || initials(profile?.name || user.email || 'U'),
-      text: cleanText,
-      createdAt: serverTimestamp()
-    });
+    return apiPost('/api/send-chat', authUser, { teamId, text: cleanText });
   },
 
   async subscribeTeamChat(teamId, onChange) {
@@ -201,81 +268,43 @@ window.MllyCore = {
       (snapshot) => {
         const messages = snapshot.docs
           .map((item) => ({ id: item.id, ...item.data() }))
-          .sort((a, b) => {
-            const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-            const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-            return aTime - bTime;
-          });
+          .sort(sortByChatAscending);
         onChange(messages);
       }
     );
   },
 
   async createWorkspace({ name, description, leadEmail }) {
-    const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan.');
-
     const profile = window.MLLYCORE_PROFILE;
-    const authUser = window.MLLYCORE_AUTH_USER;
+    const authUser = await this.ensureAuthed();
     if (profile?.role !== 'admin') throw new Error('Workspace yaratish faqat admin uchun.');
     if (!name?.trim()) throw new Error('Workspace nomini kiriting.');
     if (!leadEmail?.trim()) throw new Error('Team lead emailini kiriting.');
-
-    const idToken = await authUser.getIdToken();
-    const response = await fetch('/api/create-workspace', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        name: name.trim(),
-        description: description?.trim() || '',
-        leadEmail: leadEmail.trim()
-      })
+    return apiPost('/api/create-workspace', authUser, {
+      name: name.trim(),
+      description: description?.trim() || '',
+      leadEmail: leadEmail.trim()
     });
-
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(payload.error || 'Workspace yaratishda xatolik yuz berdi.');
-    }
-    return payload;
   },
 
-  async addWorkspaceMember({ teamId, email }) {
-    const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan.');
+  async inviteWorkspaceMember({ teamId, email }) {
+    const authUser = await this.ensureAuthed();
     if (!teamId) throw new Error('Workspace topilmadi.');
     if (!email?.trim()) throw new Error('Email kiriting.');
-
-    const {
-      collection,
-      doc,
-      getDocs,
-      increment,
-      query,
-      serverTimestamp,
-      setDoc,
-      updateDoc,
-      where
-    } = state.modules.dbMod;
-
-    const users = await getDocs(query(collection(state.db, 'users'), where('email', '==', email.trim())));
-    if (users.empty) throw new Error('Bu email bilan foydalanuvchi topilmadi.');
-    const userId = users.docs[0].id;
-
-    await setDoc(doc(state.db, 'teamMembers', `${teamId}_${userId}`), {
+    return apiPost('/api/invite-member', authUser, {
       teamId,
-      userId,
-      role: 'member',
-      joinedAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
+      email: email.trim().toLowerCase()
     });
-    await updateDoc(doc(state.db, 'teams', teamId), {
-      membersCount: increment(1),
-      updatedAt: serverTimestamp()
+  },
+
+  async acceptWorkspaceInvite({ inviteId, secretKey }) {
+    const authUser = await this.ensureAuthed();
+    if (!inviteId) throw new Error('Taklif topilmadi.');
+    if (!secretKey?.trim()) throw new Error('Secret key kiriting.');
+    return apiPost('/api/accept-invite', authUser, {
+      inviteId,
+      secretKey: secretKey.trim().toUpperCase()
     });
-    return userId;
   },
 
   async resetWorkspaceSecret(teamId) {
@@ -297,13 +326,23 @@ window.MllyCore = {
     if (!state) throw new Error('Firebase sozlanmagan.');
     const authUser = window.MLLYCORE_AUTH_USER;
     if (!authUser) throw new Error('Avval tizimga kiring.');
+    const cleanUsername = normalizeUsername(username);
+    if (!cleanUsername) throw new Error('Username kiriting.');
+    await this.ensureUniqueUsername(cleanUsername, authUser.uid);
     const { doc, serverTimestamp, updateDoc } = state.modules.dbMod;
+    const cleanName = String(name || '').trim();
     await updateDoc(doc(state.db, 'users', authUser.uid), {
-      name: name?.trim() || '',
-      username: username?.trim() || '',
-      avatar: initials(name || username || authUser.email || 'U'),
+      name: cleanName || cleanUsername,
+      username: cleanUsername,
+      avatar: initials(cleanName || cleanUsername || authUser.email || 'U'),
       updatedAt: serverTimestamp()
     });
+    window.MLLYCORE_PROFILE = {
+      ...(window.MLLYCORE_PROFILE || {}),
+      name: cleanName || cleanUsername,
+      username: cleanUsername,
+      avatar: initials(cleanName || cleanUsername || authUser.email || 'U')
+    };
   },
 
   async sendPasswordReset() {
@@ -365,23 +404,42 @@ window.MllyCore = {
     await reauthenticateWithCredential(user, credential);
   },
 
+  async createTask(payload) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/create-task', authUser, payload);
+  },
+
+  async claimOpenTask(taskId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/task-action', authUser, { taskId, action: 'claim' });
+  },
+
+  async submitTaskResult({ taskId, resultText }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/task-action', authUser, {
+      taskId,
+      action: 'submit',
+      resultText: String(resultText || '').trim()
+    });
+  },
+
+  async syncTeamTasks(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/sync-tasks', authUser, { teamId });
+  },
+
   async deleteWorkspace(teamId, adminPassword) {
-    const state = await this.init();
-    if (!state) throw new Error('Firebase sozlanmagan.');
     await this.reauthenticate(adminPassword);
     const authUser = window.MLLYCORE_AUTH_USER;
-    const idToken = await authUser.getIdToken(true);
-    const response = await fetch('/api/delete-workspace', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${idToken}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ teamId })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || "Workspace o'chirilmadi.");
-    return payload;
+    return apiPost('/api/delete-workspace', authUser, { teamId }, true);
+  },
+
+  async ensureAuthed() {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const authUser = window.MLLYCORE_AUTH_USER || state.auth.currentUser;
+    if (!authUser) throw new Error('Avval tizimga kiring.');
+    return authUser;
   },
 
   async requireAuth() {
@@ -434,8 +492,30 @@ window.MllyCore = {
   }
 };
 
+async function apiPost(url, authUser, body, forceRefreshToken = false) {
+  const idToken = await authUser.getIdToken(forceRefreshToken);
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${idToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body || {})
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'So\'rov bajarilmadi.');
+  return payload;
+}
+
+function normalizeUsername(username) {
+  return String(username || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '_');
+}
+
 function initials(name) {
-  return name
+  return String(name || 'U')
     .split(' ')
     .filter(Boolean)
     .map((part) => part[0])
@@ -455,4 +535,20 @@ function generateSecretKey() {
     parts.push(part);
   }
   return parts.join('-');
+}
+
+function toMillis(value) {
+  if (!value) return 0;
+  if (typeof value === 'number') return value;
+  if (value.toMillis) return value.toMillis();
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function sortByCreatedAtDesc(a, b) {
+  return toMillis(b.updatedAt || b.createdAt) - toMillis(a.updatedAt || a.createdAt);
+}
+
+function sortByChatAscending(a, b) {
+  return toMillis(a.createdAt) - toMillis(b.createdAt) || toMillis(a.clientCreatedAt) - toMillis(b.clientCreatedAt);
 }

@@ -77,7 +77,7 @@ service cloud.firestore {
     }
 
     match /ideas/{ideaId} {
-      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow read: if isAdmin() || (resource.data.teamId is string && isTeamMember(resource.data.teamId));
       allow create: if signedIn() && isTeamMember(request.resource.data.teamId);
       allow update: if isAdmin()
         || isTeamLead(resource.data.teamId)
@@ -110,6 +110,32 @@ service cloud.firestore {
       allow read, update: if isAdmin()
         || (signedIn() && resource.data.userId == request.auth.uid);
       allow create, delete: if isAdmin();
+    }
+
+    match /workspaceInvites/{inviteId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.inviteeUserId == request.auth.uid)
+        || (signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId));
+      allow write: if isAdmin();
+    }
+
+    match /personalIdeas/{ideaId} {
+      allow read, delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin()
+        || (signedIn() && request.resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow write: if isAdmin();
+    }
+
+    match /taskSubmissions/{submissionId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow write: if isAdmin();
     }
 
     match /auditLogs/{logId} {
