@@ -98,6 +98,25 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="deleteWorkspaceModal" onclick="if(event.target===this)UTIL.closeModal('deleteWorkspaceModal')">
+    <div class="modal">
+      <h3>Workspace o'chirish</h3>
+      <p class="modal-sub" id="deleteWorkspaceSubtitle">Bu amal workspace va unga bog'liq yozuvlarni bazadan ham o'chiradi.</p>
+      <div class="workspace-modal-field">
+        <label class="label">Admin paroli</label>
+        <div class="password-field">
+          <input class="input" id="deleteWorkspacePassword" type="password" placeholder="Admin parolini kiriting">
+          <button class="password-toggle" type="button" id="toggleDeleteWorkspacePassword">Ko'rsat</button>
+        </div>
+      </div>
+      <div class="workspace-modal-error" id="deleteWorkspaceError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
+        <button class="btn btn-danger" type="button" id="confirmDeleteWorkspaceBtn">O'chirish</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
@@ -152,6 +171,8 @@
       const teams = data.teams;
       const ideas = data.ideas;
       const unread = data.notifications.filter((n) => n.unread || n.isRead === false).length;
+      let selectedTeamId = null;
+      let selectedTeamName = '';
 
       document.getElementById('stats').innerHTML = [
         { n: teams.length, l: isAdmin ? "Workspace'lar" : "Workspace'larim", note: isAdmin ? 'Production units' : 'Siz kirgan joylar' },
@@ -223,19 +244,40 @@
             const teamId = button.dataset.adminDelete;
             const team = teams.find((item) => item.id === teamId);
             if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
-            const password = prompt('Tasdiqlash uchun admin parolini qayta kiriting:');
-            if (!password) return;
-            button.disabled = true;
-            try {
-              await MllyCore.deleteWorkspace(teamId, password);
-              location.reload();
-            } catch (error) {
-              alert(error.message || "Workspace o'chirilmadi.");
-              button.disabled = false;
-            }
+            selectedTeamId = teamId;
+            selectedTeamName = team?.name || 'Workspace';
+            document.getElementById('deleteWorkspaceSubtitle').textContent = `${selectedTeamName} o'chirilsa, workspace, member bog'lanishlari, chat va idea yozuvlari bazadan ham o'chadi.`;
+            document.getElementById('deleteWorkspacePassword').value = '';
+            document.getElementById('deleteWorkspaceError').textContent = '';
+            document.getElementById('confirmDeleteWorkspaceBtn').disabled = false;
+            UTIL.openModal('deleteWorkspaceModal');
           });
         });
       }
+
+      document.getElementById('toggleDeleteWorkspacePassword').addEventListener('click', () => {
+        const input = document.getElementById('deleteWorkspacePassword');
+        const toggle = document.getElementById('toggleDeleteWorkspacePassword');
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        toggle.textContent = reveal ? 'Yashir' : "Ko'rsat";
+      });
+
+      document.getElementById('confirmDeleteWorkspaceBtn').addEventListener('click', async () => {
+        if (!selectedTeamId) return;
+        const button = document.getElementById('confirmDeleteWorkspaceBtn');
+        const password = document.getElementById('deleteWorkspacePassword').value;
+        const errorBox = document.getElementById('deleteWorkspaceError');
+        button.disabled = true;
+        errorBox.textContent = '';
+        try {
+          await MllyCore.deleteWorkspace(selectedTeamId, password);
+          location.reload();
+        } catch (error) {
+          errorBox.textContent = error.message || "Workspace o'chirilmadi.";
+          button.disabled = false;
+        }
+      });
 
       document.getElementById('nextStep').textContent = isAdmin
         ? (teams.length

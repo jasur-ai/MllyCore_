@@ -134,6 +134,41 @@ window.MllyCore = {
     return { team, members, ideas, messages };
   },
 
+  async createWorkspaceEntry({ teamId, title, description, type = 'idea' }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!teamId) throw new Error('Workspace topilmadi.');
+
+    const authUser = window.MLLYCORE_AUTH_USER;
+    if (!authUser) throw new Error('Avval tizimga kiring.');
+
+    const cleanTitle = String(title || '').trim();
+    const cleanDescription = String(description || '').trim();
+    const cleanType = String(type || 'idea').trim().toLowerCase();
+    if (!cleanTitle) throw new Error(cleanType === 'startup' ? 'Startup nomini kiriting.' : "G'oya nomini kiriting.");
+
+    const idToken = await authUser.getIdToken();
+    const response = await fetch('/api/create-entry', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        teamId,
+        title: cleanTitle,
+        description: cleanDescription,
+        type: cleanType
+      })
+    });
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.error || 'Yozuv yaratishda xatolik yuz berdi.');
+    }
+    return payload;
+  },
+
   async sendChatMessage({ teamId, text }) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
@@ -154,6 +189,26 @@ window.MllyCore = {
       text: cleanText,
       createdAt: serverTimestamp()
     });
+  },
+
+  async subscribeTeamChat(teamId, onChange) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!teamId) throw new Error('Workspace topilmadi.');
+    const { collection, onSnapshot, query, where } = state.modules.dbMod;
+    return onSnapshot(
+      query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId)),
+      (snapshot) => {
+        const messages = snapshot.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort((a, b) => {
+            const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+            const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+            return aTime - bTime;
+          });
+        onChange(messages);
+      }
+    );
   },
 
   async createWorkspace({ name, description, leadEmail }) {
