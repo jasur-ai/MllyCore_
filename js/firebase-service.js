@@ -6,6 +6,17 @@ const firebaseState = {
   ready: false
 };
 
+const cacheStore = new Map();
+const inflightRequests = new Map();
+const CACHE_VERSION = 'v4';
+const CACHE_PREFIX = `mllycore:${CACHE_VERSION}:`;
+const CACHE_TTL = {
+  username: 60 * 1000,
+  profile: 90 * 1000,
+  dashboard: 20 * 1000,
+  team: 12 * 1000
+};
+
 window.MllyCore = {
   async init() {
     if (!window.MLLYCORE_FIREBASE_ENABLED) return null;
@@ -30,9 +41,19 @@ window.MllyCore = {
     const { collection, getDocs, query, where } = state.modules.dbMod;
     const clean = normalizeUsername(username);
     if (!clean) return null;
-    const snap = await getDocs(query(collection(state.db, 'users'), where('username', '==', clean)));
-    if (snap.empty) return null;
-    return { id: snap.docs[0].id, ...snap.docs[0].data() };
+    const cacheKey = getCacheKey('username', clean);
+    const cached = readCache(cacheKey, CACHE_TTL.username);
+    if (cached) return cached;
+    return rememberInflight(cacheKey, async () => {
+      const snap = await getDocs(query(collection(state.db, 'users'), where('username', '==', clean)));
+      if (snap.empty) {
+        writeCache(cacheKey, null);
+        return null;
+      }
+      const result = { id: snap.docs[0].id, ...snap.docs[0].data() };
+      writeCache(cacheKey, result);
+      return result;
+    });
   },
 
   async ensureUniqueUsername(username, excludeUserId = '') {
@@ -98,58 +119,83 @@ window.MllyCore = {
     if (!state) return;
     window.MLLYCORE_AUTH_USER = null;
     window.MLLYCORE_PROFILE = null;
+    clearRuntimeCache();
     return state.modules.authMod.signOut(state.auth);
   },
 
   async getUserProfile(uid) {
     const state = await this.init();
     if (!state) return null;
-
     const { doc, getDoc } = state.modules.dbMod;
-    const snap = await getDoc(doc(state.db, 'users', uid));
-    return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+    const cacheKey = getCacheKey('profile', uid);
+    const cached = readCache(cacheKey, CACHE_TTL.profile);
+    if (cached) return cached;
+    return rememberInflight(cacheKey, async () => {
+      const snap = await getDoc(doc(state.db, 'users', uid));
+      const profile = snap.exists() ? { id: snap.id, ...snap.data() } : null;
+      writeCache(cacheKey, profile);
+      if (profile?.username) {
+        writeCache(getCacheKey('username', profile.username), profile);
+      }
+      return profile;
+    });
   },
 
-  async getDashboardData(uid) {
+  async getDashboardData(uid, { forceFresh = false } = {}) {
     const state = await this.init();
     if (!state) return { teams: [], ideas: [], notifications: [], pendingInvites: [] };
-
-    const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
-    if (window.MLLYCORE_PROFILE?.role === 'admin') {
-      const teamsSnap = await getDocs(collection(state.db, 'teams'));
-      const teams = teamsSnap.docs.map((item) => ({ id: item.id, membershipRole: 'admin', ...item.data() }));
-      return { teams, ideas: [], notifications: [], pendingInvites: [] };
+    const role = window.MLLYCORE_PROFILE?.role === 'admin' ? 'admin' : 'member';
+    const cacheKey = getCacheKey('dashboard', `${role}:${uid}`);
+    if (!forceFresh) {
+      const cached = readCache(cacheKey, CACHE_TTL.dashboard);
+      if (cached) return cached;
     }
 
-    const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
-      getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))),
-      getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))),
-      getDocs(query(collection(state.db, 'workspaceInvites'), where('inviteeUserId', '==', uid)))
-    ]);
+    try {
+      return await rememberInflight(cacheKey, async () => {
+        const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+        let payload;
+        if (window.MLLYCORE_PROFILE?.role === 'admin') {
+          const teamsSnap = await getDocs(collection(state.db, 'teams'));
+          const teams = teamsSnap.docs.map((item) => ({ id: item.id, membershipRole: 'admin', ...item.data() }));
+          payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
+        } else {
+          const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
+            getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))),
+            getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))),
+            getDocs(query(collection(state.db, 'workspaceInvites'), where('inviteeUserId', '==', uid)))
+          ]);
 
-    const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    const teamDocs = await Promise.all(memberships.map((membership) => getDoc(doc(state.db, 'teams', membership.teamId))));
-    const teams = teamDocs
-      .map((teamDoc, index) => (teamDoc.exists()
-        ? { id: teamDoc.id, membershipRole: memberships[index].role, ...teamDoc.data() }
-        : null))
-      .filter(Boolean);
+          const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+          const teamDocs = await Promise.all(memberships.map((membership) => getDoc(doc(state.db, 'teams', membership.teamId))));
+          const teams = teamDocs
+            .map((teamDoc, index) => (teamDoc.exists()
+              ? { id: teamDoc.id, membershipRole: memberships[index].role, ...teamDoc.data() }
+              : null))
+            .filter(Boolean);
 
-    const ideaSnaps = await Promise.all(
-      teams.map((team) => getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', team.id))))
-    );
-    const ideas = ideaSnaps.flatMap((snap) => snap.docs.map((item) => ({ id: item.id, ...item.data() })));
+          const ideaSnaps = await Promise.all(
+            teams.map((team) => getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', team.id))))
+          );
+          const ideas = ideaSnaps.flatMap((snap) => snap.docs.map((item) => ({ id: item.id, ...item.data() })));
+          const notifications = notificationSnap.docs
+            .map((item) => ({ id: item.id, ...item.data() }))
+            .sort(sortByCreatedAtDesc);
+          const pendingInvites = inviteSnap.docs
+            .map((item) => ({ id: item.id, ...item.data() }))
+            .filter((item) => item.status !== 'accepted')
+            .sort(sortByCreatedAtDesc);
 
-    const notifications = notificationSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort(sortByCreatedAtDesc);
-
-    const pendingInvites = inviteSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .filter((item) => item.status !== 'accepted')
-      .sort(sortByCreatedAtDesc);
-
-    return { teams, ideas, notifications, pendingInvites };
+          payload = { teams, ideas, notifications, pendingInvites };
+        }
+        writeCache(cacheKey, payload);
+        return payload;
+      });
+    } catch (error) {
+      const stale = readCache(cacheKey, Number.POSITIVE_INFINITY);
+      if (stale) return stale;
+      throw error;
+    }
   },
 
   async getCollection(name) {
@@ -160,44 +206,62 @@ window.MllyCore = {
     return snap.docs.map((item) => ({ id: item.id, ...item.data() }));
   },
 
-  async getTeamData(teamId) {
+  async getTeamData(teamId, { forceFresh = false } = {}) {
     const state = await this.init();
     if (!state) return null;
-    const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+    const cacheKey = getCacheKey('team', teamId);
+    if (!forceFresh) {
+      const cached = readCache(cacheKey, CACHE_TTL.team);
+      if (cached) return cached;
+    }
 
-    const teamSnap = await getDoc(doc(state.db, 'teams', teamId));
-    if (!teamSnap.exists()) return null;
-    const team = { id: teamSnap.id, ...teamSnap.data() };
+    try {
+      return await rememberInflight(cacheKey, async () => {
+        const { collection, doc, getDoc, getDocs, query, where } = state.modules.dbMod;
+        const teamSnap = await getDoc(doc(state.db, 'teams', teamId));
+        if (!teamSnap.exists()) {
+          writeCache(cacheKey, null);
+          return null;
+        }
+        const team = { id: teamSnap.id, ...teamSnap.data() };
 
-    const [memberSnap, ideaSnap, messageSnap, taskSnap, taskSubmissionSnap] = await Promise.all([
-      getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId))),
-      getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId))),
-      getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId))),
-      getDocs(query(collection(state.db, 'tasks'), where('teamId', '==', teamId))),
-      getDocs(query(collection(state.db, 'taskSubmissions'), where('teamId', '==', teamId)))
-    ]);
+        const [memberSnap, ideaSnap, messageSnap, taskSnap, taskSubmissionSnap] = await Promise.all([
+          getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId))),
+          getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId))),
+          getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId))),
+          getDocs(query(collection(state.db, 'tasks'), where('teamId', '==', teamId))),
+          getDocs(query(collection(state.db, 'taskSubmissions'), where('teamId', '==', teamId)))
+        ]);
 
-    const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
-    const userSnaps = await Promise.all(memberships.map((membership) => getDoc(doc(state.db, 'users', membership.userId))));
-    const members = memberships.map((membership, index) => ({
-      ...membership,
-      user: userSnaps[index].exists() ? { id: userSnaps[index].id, ...userSnaps[index].data() } : null
-    }));
+        const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+        const userProfiles = await Promise.all(memberships.map((membership) => this.getUserProfile(membership.userId)));
+        const members = memberships.map((membership, index) => ({
+          ...membership,
+          user: userProfiles[index] || null
+        }));
 
-    const ideas = ideaSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort(sortByCreatedAtDesc);
-    const messages = messageSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort(sortByChatAscending);
-    const tasks = taskSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort(sortByCreatedAtDesc);
-    const taskSubmissions = taskSubmissionSnap.docs
-      .map((item) => ({ id: item.id, ...item.data() }))
-      .sort(sortByCreatedAtDesc);
+        const ideas = ideaSnap.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByCreatedAtDesc);
+        const messages = messageSnap.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByChatAscending);
+        const tasks = taskSnap.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByCreatedAtDesc);
+        const taskSubmissions = taskSubmissionSnap.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByCreatedAtDesc);
 
-    return { team, members, ideas, messages, tasks, taskSubmissions };
+        const payload = { team, members, ideas, messages, tasks, taskSubmissions };
+        writeCache(cacheKey, payload);
+        return payload;
+      });
+    } catch (error) {
+      const stale = readCache(cacheKey, Number.POSITIVE_INFINITY);
+      if (stale) return stale;
+      throw error;
+    }
   },
 
   async getPersonalIdeas() {
@@ -270,31 +334,41 @@ window.MllyCore = {
     const cleanDescription = String(description || '').trim();
     const cleanType = String(type || 'idea').trim().toLowerCase();
     if (!cleanTitle) throw new Error(cleanType === 'startup' ? 'Startup nomini kiriting.' : "G'oya nomini kiriting.");
-    return apiPost('/api/create-entry', authUser, {
+    const result = await apiPost('/api/create-entry', authUser, {
       teamId,
       title: cleanTitle,
       description: cleanDescription,
       type: cleanType,
       ownerUserId: ownerUserId || ''
     });
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser.uid);
+    return result;
   },
 
   async updateStartupOwner({ teamId, ideaId, ownerUserId }) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/update-entry-owner', authUser, { teamId, ideaId, ownerUserId });
+    const result = await apiPost('/api/update-entry-owner', authUser, { teamId, ideaId, ownerUserId });
+    invalidateTeamCache(teamId);
+    return result;
   },
 
   async createPersonalIdea({ title, description }) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/create-personal-idea', authUser, {
+    const result = await apiPost('/api/create-personal-idea', authUser, {
       title: String(title || '').trim(),
       description: String(description || '').trim()
     });
+    invalidateDashboardCache(authUser.uid);
+    return result;
   },
 
   async importPersonalIdea({ personalIdeaId, teamId }) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/import-personal-idea', authUser, { personalIdeaId, teamId });
+    const result = await apiPost('/api/import-personal-idea', authUser, { personalIdeaId, teamId });
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser.uid);
+    return result;
   },
 
   async sendChatMessage({ teamId, text }) {
@@ -348,31 +422,39 @@ window.MllyCore = {
     if (profile?.role !== 'admin') throw new Error('Workspace yaratish faqat admin uchun.');
     if (!name?.trim()) throw new Error('Workspace nomini kiriting.');
     if (!leadEmail?.trim()) throw new Error('Team lead emailini kiriting.');
-    return apiPost('/api/create-workspace', authUser, {
+    const result = await apiPost('/api/create-workspace', authUser, {
       name: name.trim(),
       description: description?.trim() || '',
       leadEmail: leadEmail.trim()
     });
+    invalidateDashboardCache(authUser.uid);
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
   },
 
   async inviteWorkspaceMember({ teamId, email }) {
     const authUser = await this.ensureAuthed();
     if (!teamId) throw new Error('Workspace topilmadi.');
     if (!email?.trim()) throw new Error('Email kiriting.');
-    return apiPost('/api/invite-member', authUser, {
+    const result = await apiPost('/api/invite-member', authUser, {
       teamId,
       email: email.trim().toLowerCase()
     });
+    invalidateTeamCache(teamId);
+    return result;
   },
 
   async acceptWorkspaceInvite({ inviteId, secretKey }) {
     const authUser = await this.ensureAuthed();
     if (!inviteId) throw new Error('Taklif topilmadi.');
     if (!secretKey?.trim()) throw new Error('Secret key kiriting.');
-    return apiPost('/api/accept-invite', authUser, {
+    const result = await apiPost('/api/accept-invite', authUser, {
       inviteId,
       secretKey: secretKey.trim().toUpperCase()
     });
+    invalidateDashboardCache(authUser.uid);
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
   },
 
   async resetWorkspaceSecret(teamId) {
@@ -386,6 +468,8 @@ window.MllyCore = {
       invitationCode: secretKey,
       updatedAt: serverTimestamp()
     });
+    invalidateTeamCache(teamId);
+    invalidateCacheByPrefix(getCacheKey('dashboard', ''));
     return secretKey;
   },
 
@@ -411,6 +495,7 @@ window.MllyCore = {
       username: cleanUsername,
       avatar: initials(cleanName || cleanUsername || authUser.email || 'U')
     };
+    invalidateProfileCache(authUser.uid, cleanUsername);
   },
 
   async sendPasswordReset() {
@@ -474,33 +559,44 @@ window.MllyCore = {
 
   async createTask(payload) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/create-task', authUser, payload);
+    const result = await apiPost('/api/create-task', authUser, payload);
+    invalidateTeamCache(payload?.teamId);
+    return result;
   },
 
   async claimOpenTask(taskId) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/task-action', authUser, { taskId, action: 'claim' });
+    const result = await apiPost('/api/task-action', authUser, { taskId, action: 'claim' });
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
   },
 
   async submitTaskResult({ taskId, resultText, resultLink = '' }) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/task-action', authUser, {
+    const result = await apiPost('/api/task-action', authUser, {
       taskId,
       action: 'submit',
       resultText: String(resultText || '').trim(),
       resultLink: String(resultLink || '').trim()
     });
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
   },
 
   async syncTeamTasks(teamId) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/sync-tasks', authUser, { teamId });
+    const result = await apiPost('/api/sync-tasks', authUser, { teamId });
+    invalidateTeamCache(teamId);
+    return result;
   },
 
   async deleteWorkspace(teamId, adminPassword) {
     await this.reauthenticate(adminPassword);
     const authUser = window.MLLYCORE_AUTH_USER;
-    return apiPost('/api/delete-workspace', authUser, { teamId }, true);
+    const result = await apiPost('/api/delete-workspace', authUser, { teamId }, true);
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser?.uid);
+    return result;
   },
 
   async ensureAuthed() {
@@ -620,4 +716,120 @@ function sortByCreatedAtDesc(a, b) {
 
 function sortByChatAscending(a, b) {
   return toMillis(a.createdAt) - toMillis(b.createdAt) || toMillis(a.clientCreatedAt) - toMillis(b.clientCreatedAt);
+}
+
+function getCacheKey(type, id) {
+  return `${CACHE_PREFIX}${type}:${id}`;
+}
+
+function rememberInflight(key, loader) {
+  if (inflightRequests.has(key)) return inflightRequests.get(key);
+  const request = Promise.resolve()
+    .then(loader)
+    .finally(() => {
+      inflightRequests.delete(key);
+    });
+  inflightRequests.set(key, request);
+  return request;
+}
+
+function readCache(key, maxAge = 0) {
+  const now = Date.now();
+  const runtimeEntry = cacheStore.get(key);
+  if (runtimeEntry && now - runtimeEntry.cachedAt <= maxAge) {
+    return cloneForUse(runtimeEntry.value);
+  }
+
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    cacheStore.set(key, parsed);
+    if (now - parsed.cachedAt > maxAge) return null;
+    return cloneForUse(parsed.value);
+  } catch {
+    return null;
+  }
+}
+
+function writeCache(key, value) {
+  const entry = {
+    cachedAt: Date.now(),
+    value: dehydrateForCache(value)
+  };
+  cacheStore.set(key, entry);
+  try {
+    sessionStorage.setItem(key, JSON.stringify(entry));
+  } catch {}
+}
+
+function invalidateDashboardCache(uid = '') {
+  if (uid) {
+    invalidateCacheByPrefix(getCacheKey('dashboard', `admin:${uid}`));
+    invalidateCacheByPrefix(getCacheKey('dashboard', `member:${uid}`));
+    return;
+  }
+  invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+}
+
+function invalidateTeamCache(teamId = '') {
+  if (!teamId) {
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return;
+  }
+  invalidateCacheByPrefix(getCacheKey('team', teamId));
+}
+
+function invalidateProfileCache(uid = '', username = '') {
+  if (uid) invalidateCacheByPrefix(getCacheKey('profile', uid));
+  if (username) invalidateCacheByPrefix(getCacheKey('username', normalizeUsername(username)));
+}
+
+function invalidateCacheByPrefix(prefix) {
+  [...cacheStore.keys()].forEach((key) => {
+    if (key.startsWith(prefix)) cacheStore.delete(key);
+  });
+  try {
+    const keysToDelete = [];
+    for (let i = 0; i < sessionStorage.length; i += 1) {
+      const key = sessionStorage.key(i);
+      if (key?.startsWith(prefix)) keysToDelete.push(key);
+    }
+    keysToDelete.forEach((key) => sessionStorage.removeItem(key));
+  } catch {}
+}
+
+function clearRuntimeCache() {
+  cacheStore.clear();
+  inflightRequests.clear();
+  invalidateCacheByPrefix(CACHE_PREFIX);
+}
+
+function dehydrateForCache(value) {
+  if (value == null) return value;
+  if (typeof value?.toMillis === 'function') return value.toMillis();
+  if (Array.isArray(value)) return value.map((item) => dehydrateForCache(item));
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === 'object') {
+    const output = {};
+    Object.entries(value).forEach(([key, item]) => {
+      output[key] = dehydrateForCache(item);
+    });
+    return output;
+  }
+  return value;
+}
+
+function cloneForUse(value) {
+  if (value == null) return value;
+  if (Array.isArray(value)) return value.map((item) => cloneForUse(item));
+  if (typeof value === 'object') {
+    const output = {};
+    Object.entries(value).forEach(([key, item]) => {
+      output[key] = cloneForUse(item);
+    });
+    return output;
+  }
+  return value;
 }

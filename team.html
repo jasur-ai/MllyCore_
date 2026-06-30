@@ -790,9 +790,12 @@
 
       const teamId = qs('id');
       MllyCore.syncTeamTasks(teamId).catch(() => {});
-      const dashboard = await MllyCore.getDashboardData(user.uid);
+      const [dashboard, initialWorkspace] = await Promise.all([
+        MllyCore.getDashboardData(user.uid),
+        teamId ? MllyCore.getTeamData(teamId) : Promise.resolve(null)
+      ]);
       mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
-      workspaceState = teamId ? await MllyCore.getTeamData(teamId) : null;
+      workspaceState = initialWorkspace;
       if (!workspaceState) {
         document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
         return;
