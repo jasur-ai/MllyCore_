@@ -9,62 +9,77 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar">
-      <div>
-        <h1 class="page-title" id="welcome">Xush kelibsiz!</h1>
-        <p class="page-subtitle" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bir joyda.</p>
-        <div class="status-strip">
-          <span class="badge badge-active">Firebase Auth ulangan</span>
-          <span class="badge">Real ma'lumotlar</span>
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title" id="welcome">Workspace overview</h1>
+          <p class="workspace-command-copy" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
         </div>
-      </div>
-      <div class="action-bar">
-        <div class="search">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input class="input" id="globalSearch" placeholder="Workspace ichidan qidirish...">
-        </div>
-        <button class="btn btn-primary" id="adminCreateTeam" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
-      </div>
-    </div>
-
-    <div class="grid grid-4 mb-4" id="stats"></div>
-    <div id="securityReminder"></div>
-    <div id="adminOnlyPanel"></div>
-
-    <div class="grid dashboard-grid" id="memberDashboard">
-      <div>
-        <div class="section-head">
-          <h2>Mening workspace'larim</h2>
-          <span class="badge" id="workspaceRoleHint">Team lead a'zo qo'shadi</span>
-        </div>
-        <div class="grid grid-2" id="teams"></div>
-
-        <div class="section-head mt-4">
-          <h2>So'nggi g'oyalar</h2>
-          <a href="my-ideas.html" class="skeleton-link">Hammasini ko'rish</a>
-        </div>
-        <div class="card table-wrap" style="padding:0">
-          <table class="table">
-            <thead><tr><th>G'oya</th><th>Workspace</th><th>Status</th><th>Yangilangan</th></tr></thead>
-            <tbody id="ideasTable"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div>
-        <div class="card mb-4">
-          <div class="section-head"><h3>Keyingi qadam</h3></div>
-          <div class="notice" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
-        </div>
-
-        <div class="card">
-          <div class="section-head">
-            <h3>Bildirishnomalar</h3>
-            <a href="notifications.html" class="skeleton-link">Hammasi</a>
+        <div class="workspace-command-tools">
+          <div class="search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+            <input class="input" id="globalSearch" placeholder="Workspace ichidan qidirish...">
           </div>
-          <div id="notifs"></div>
+          <button class="btn btn-primary" id="adminCreateTeam" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
         </div>
-      </div>
+      </section>
+
+      <section class="workspace-overview" id="stats"></section>
+      <div id="securityReminder"></div>
+
+      <section class="workspace-layout" id="memberDashboard">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Mening workspace'larim</h2>
+                <div class="workspace-surface-copy" id="workspaceRoleHint">Team lead a'zo qo'shadi va secret keyni boshqaradi.</div>
+              </div>
+              <div class="workspace-chip-row">
+                <span class="badge badge-active">Private</span>
+                <span class="badge">Role-based</span>
+              </div>
+            </div>
+            <div class="workspace-card-grid cols-2" id="teams"></div>
+          </div>
+
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>So'nggi g'oyalar</h2>
+                <div class="workspace-surface-copy">Faqat siz kirgan workspace ichidagi g'oyalar.</div>
+              </div>
+              <a href="my-ideas.html" class="skeleton-link">Hammasini ko'rish</a>
+            </div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead><tr><th>G'oya</th><th>Workspace</th><th>Status</th><th>Yangilangan</th></tr></thead>
+                <tbody id="ideasTable"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <div class="section-head"><h3>Keyingi qadam</h3></div>
+            <div class="workspace-note-bar" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
+          </div>
+
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h3>Bildirishnomalar</h3>
+                <div class="workspace-surface-copy">So'nggi activity va o'qilmagan ogohlantirishlar.</div>
+              </div>
+              <a href="notifications.html" class="skeleton-link">Hammasi</a>
+            </div>
+            <div class="workspace-card-grid" id="notifs"></div>
+          </div>
+        </aside>
+      </section>
+
+      <div id="adminOnlyPanel"></div>
     </div>
   </div>
 
@@ -118,14 +133,17 @@
 
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
       document.getElementById('dashboardSubtitle').textContent = isAdmin
-        ? 'Statistika va workspace yaratish boshqaruvi.'
-        : "Workspace, g'oyalar va bildirishnomalar bir joyda.";
+        ? 'Statistika, workspace yaratish va production boshqaruvi shu yerda.'
+        : "Workspace, g'oya va activity oqimi bitta ekranda.";
       document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
-      document.getElementById('workspaceRoleHint').textContent = isAdmin ? 'Admin workspace yaratadi' : "Team lead a'zo qo'shadi";
+      document.getElementById('workspaceRoleHint').textContent = isAdmin
+        ? 'Admin faqat workspace lifecycle ni boshqaradi.'
+        : "Team lead a'zo qo'shadi, member esa faqat ichki oqimni ko'radi.";
+
       if (profile?.passwordResetRequired) {
         document.getElementById('securityReminder').innerHTML = `
-          <div class="notice mb-4">
-            Xavfsizlik uchun boshlang'ich parolni almashtiring. Profil sahifasida joriy parol va yangi parol bilan darhol yangilash mumkin.
+          <div class="workspace-note-bar">
+            Xavfsizlik uchun boshlang'ich parolni yangilang. Profil sahifasida joriy parol va yangi parol bilan darhol almashtirish mumkin.
             <a class="btn btn-ghost btn-sm" href="profile.html" style="margin-left:10px">Parolni almashtirish</a>
           </div>
         `;
@@ -134,51 +152,116 @@
       const teams = data.teams;
       const ideas = data.ideas;
       const unread = data.notifications.filter((n) => n.unread || n.isRead === false).length;
+
+      document.getElementById('stats').innerHTML = [
+        { n: teams.length, l: isAdmin ? "Workspace'lar" : "Workspace'larim", note: isAdmin ? 'Production units' : 'Siz kirgan joylar' },
+        { n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: 'Boshqarayotgan oqimlar' },
+        { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami ko'rinadigan userlar" },
+        { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
+      ].map((s) => `
+        <div class="workspace-stat">
+          <span class="workspace-stat-label">${s.l}</span>
+          <span class="workspace-stat-value">${s.n}</span>
+          <span class="workspace-stat-note">${s.note}</span>
+        </div>
+      `).join('');
+
       if (isAdmin) {
         document.getElementById('memberDashboard').style.display = 'none';
         document.getElementById('adminOnlyPanel').innerHTML = `
-          <div class="grid grid-2">
-            <div class="card">
-              <h3 style="margin:0 0 10px">Workspace yaratish</h3>
-              <p class="muted text-sm">Admin team lead emailini belgilaydi. Boshlang'ich parol email bilan bir xil bo'ladi.</p>
-              <button class="btn btn-primary" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
+          <section class="workspace-layout">
+            <div class="workspace-main-stack">
+              <div class="workspace-surface pad">
+                <div class="section-head"><h2>Workspace operations</h2></div>
+                <div class="workspace-note-bar">Admin faqat workspace yaratadi, team lead belgilaydi va kerak bo'lsa workspace'ni o'chiradi. Ichki idea, member yoki secret key oqimi team leadga tegishli.</div>
+              </div>
+              <div class="workspace-surface">
+                <div class="workspace-surface-head">
+                  <div>
+                    <h2>Yaratilgan workspace'lar</h2>
+                    <div class="workspace-surface-copy">Faqat a'zolar soni va lifecycle ko'rsatkichlari.</div>
+                  </div>
+                </div>
+                <div class="workspace-card-grid cols-2">
+                  ${teams.length ? teams.map((team) => `
+                    <div class="workspace-record">
+                      <div class="workspace-record-top">
+                        <div>
+                          <h3>${team.name}</h3>
+                          <div class="workspace-inline-meta">
+                            <span>${team.membersCount || 0} a'zo</span>
+                            <span>${team.leadUserId ? 'Team lead bor' : 'Lead kutilmoqda'}</span>
+                          </div>
+                        </div>
+                        <button class="btn btn-danger btn-sm" data-admin-delete="${team.id}">O'chirish</button>
+                      </div>
+                      <p>${team.description || 'Tavsif kiritilmagan.'}</p>
+                    </div>
+                  `).join('') : '<div class="workspace-empty"><h3>Workspace yo\'q</h3><p>Birinchi workspace shu oynadan yaratiladi.</p></div>'}
+                </div>
+              </div>
             </div>
-            <a class="card card-hover" href="admin.html">
-              <h3 style="margin:0 0 10px">Admin paneli</h3>
-              <p class="muted text-sm">Workspace ro'yxati, a'zolar soni va o'chirish boshqaruvi.</p>
-            </a>
-          </div>
+            <aside class="workspace-side-stack">
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Admin qoidasi</h3>
+                <div class="workspace-security-list">
+                  <span>Idea boshqarmaydi</span>
+                  <span>Secret key reset qilmaydi</span>
+                  <span>Faqat workspace lifecycle</span>
+                </div>
+              </div>
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Yangi workspace</h3>
+                <p class="muted text-sm" style="margin:0 0 14px">Team lead emailini kiriting va workspace'ni oching.</p>
+                <button class="btn btn-primary w-full" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
+              </div>
+            </aside>
+          </section>
         `;
+        document.querySelectorAll('[data-admin-delete]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const teamId = button.dataset.adminDelete;
+            const team = teams.find((item) => item.id === teamId);
+            if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
+            const password = prompt('Tasdiqlash uchun admin parolini qayta kiriting:');
+            if (!password) return;
+            button.disabled = true;
+            try {
+              await MllyCore.deleteWorkspace(teamId, password);
+              location.reload();
+            } catch (error) {
+              alert(error.message || "Workspace o'chirilmadi.");
+              button.disabled = false;
+            }
+          });
+        });
       }
+
       document.getElementById('nextStep').textContent = isAdmin
         ? (teams.length
-          ? "Workspace ochilgan. Admin panelida faqat a'zolar soni va o'chirish boshqaruvi ko'rinadi."
+          ? "Workspace ochilgan. Keyingi operatsiya admin panel orqali lifecycle nazoratidir."
           : "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang.")
         : (teams.length
           ? "Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi."
-          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni secret key orqali qo'shadi.");
-      document.getElementById('stats').innerHTML = [
-        { icon: 'W', n: teams.length, l: isAdmin ? "Workspace'lar" : "Workspace'larim" },
-        { icon: 'L', n: teams.filter(t => t.membershipRole === 'team_lead').length, l: "Lead workspace" },
-        { icon: 'M', n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar" },
-        { icon: 'N', n: unread, l: 'Yangi bildirishnomalar' },
-      ].map(s => `<div class="card stat"><div class="stat-icon">${s.icon}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
+          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni email bo'yicha qo'shadi yoki secret key oqimini boshqaradi.");
 
       document.getElementById('teams').innerHTML = teams.length ? teams.map((team) => `
-        <a href="team.html?id=${team.id}" class="card card-hover">
-          <div class="workspace-card">
+        <a href="team.html?id=${team.id}" class="workspace-record">
+          <div class="workspace-record-top">
             <div class="flex items-center gap-3">
               <div class="team-logo ${team.color || 'tl-1'}">${team.logo || 'W'}</div>
               <div>
-                <div class="font-semibold">${team.name}</div>
-                <div class="text-xs muted">${team.membersCount || 0} a'zo</div>
+                <h3>${team.name}</h3>
+                <div class="workspace-inline-meta">
+                  <span>${team.membersCount || 0} a'zo</span>
+                  <span>${team.membershipRole || 'member'}</span>
+                </div>
               </div>
             </div>
-            <span class="badge">${team.membershipRole || 'member'}</span>
           </div>
-          <p class="text-sm muted" style="margin:12px 0 0">${team.description || ''}</p>
+          <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
         </a>
-      `).join('') : `<div class="card empty-state"><h3>Workspace yo'q</h3><p class="muted">${isAdmin ? "Birinchi workspace yarating." : "Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi."}</p></div>`;
+      `).join('') : `<div class="workspace-empty"><h3>Workspace yo'q</h3><p>${isAdmin ? "Birinchi workspace yarating." : "Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi."}</p></div>`;
 
       document.getElementById('ideasTable').innerHTML = ideas.length ? ideas.map((idea) => {
         const team = teams.find(t => t.id === idea.teamId);
@@ -191,14 +274,12 @@
       }).join('') : "<tr><td colspan=\"4\" class=\"muted text-sm\">Hozircha g'oya yo'q.</td></tr>";
 
       document.getElementById('notifs').innerHTML = data.notifications.length ? data.notifications.slice(0, 4).map((n) => `
-        <div class="flex gap-3 mb-3" style="padding-bottom:10px;border-bottom:1px solid var(--border)">
-          ${(n.unread || n.isRead === false) ? '<span class="dot" style="margin-top:6px"></span>' : '<span style="width:8px"></span>'}
-          <div style="flex:1">
-            <div class="text-sm">${n.text || n.content}</div>
-            <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
-          </div>
+        <div class="workspace-message-item">
+          <strong>${n.text || n.content}</strong>
+          <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+          <span>${n.type || 'notification'}</span>
         </div>
-      `).join('') : '<p class="muted text-sm">Bildirishnoma yoq.</p>';
+      `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
 
       document.getElementById('globalSearch').addEventListener('input', (event) => {
         const q = event.target.value.trim().toLowerCase();

@@ -9,8 +9,24 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar"><div><h1 class="page-title">G'oyalarim</h1><p class="page-subtitle">Faqat siz a'zo bo'lgan workspace g'oyalari.</p></div></div>
-    <div class="grid grid-2" id="ideas"></div>
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title">Idea registry</h1>
+          <p class="workspace-command-copy">Faqat siz a'zo bo'lgan workspace ichidagi g'oyalar shu yerda jamlanadi.</p>
+        </div>
+      </section>
+      <section class="workspace-surface">
+        <div class="workspace-surface-head">
+          <div>
+            <h2>G'oyalarim</h2>
+            <div class="workspace-surface-copy">Private workspace idea oqimi.</div>
+          </div>
+          <span class="badge" id="ideaCount">0</span>
+        </div>
+        <div class="workspace-card-grid cols-2" id="ideas"></div>
+      </section>
+    </div>
   </div>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
@@ -22,9 +38,16 @@
       if (!user) return;
       const data = await MllyCore.getDashboardData(user.uid);
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+      document.getElementById('ideaCount').textContent = data.ideas.length;
       document.getElementById('ideas').innerHTML = data.ideas.length ? data.ideas.map((i) => `
-        <a href="idea.html?id=${i.id}" class="card card-hover"><span class="badge">${i.status || i.category || '-'}</span><h3>${i.title}</h3><p class="muted text-sm">${i.description || ''}</p></a>
-      `).join('') : "<div class=\"card empty-state\"><h3>G'oya yoq</h3><p class=\"muted\">Workspace yaratilgandan keyin g'oyalar shu yerda ko'rinadi.</p></div>";
+        <a href="idea.html?id=${i.id}" class="workspace-record">
+          <div class="workspace-record-top">
+            <h3>${i.title}</h3>
+            <span class="badge">${i.status || i.category || '-'}</span>
+          </div>
+          <p>${i.description || 'Idea tavsifi kiritilmagan.'}</p>
+        </a>
+      `).join('') : "<div class=\"workspace-empty\"><h3>G'oya yoq</h3><p>Workspace yaratilgandan keyin g'oyalar shu yerda ko'rinadi.</p></div>";
     })();
   </script>
 </body>

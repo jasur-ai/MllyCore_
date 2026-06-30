@@ -9,30 +9,63 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar"><div><h1 class="page-title">Profil sozlamalari</h1><p class="page-subtitle">Akkaunt ma'lumotlari.</p></div></div>
-    <div class="grid grid-2">
-      <div class="card">
-        <h3 style="margin:0 0 14px">Profil</h3>
-        <label class="label">Ism</label><input class="input mb-3" id="name">
-        <label class="label">Username</label><input class="input mb-3" id="username">
-        <label class="label">Email</label><input class="input mb-3" id="email" disabled>
-        <button class="btn btn-primary" id="saveProfileBtn">Saqlash</button>
-      </div>
-      <div class="card">
-        <h3 style="margin:0 0 14px">Xavfsizlik</h3>
-        <p class="muted text-sm">Team lead uchun boshlang'ich parol email bilan bir xil bo'ladi. Uni shu yerda darhol almashtiring.</p>
-        <label class="label">Hozirgi parol</label>
-        <input class="input mb-3" id="currentPassword" type="password" autocomplete="current-password">
-        <label class="label">Yangi parol</label>
-        <input class="input mb-3" id="newPassword" type="password" autocomplete="new-password">
-        <label class="label">Yangi parolni takrorlang</label>
-        <input class="input mb-3" id="confirmPassword" type="password" autocomplete="new-password">
-        <div class="action-bar">
-          <button class="btn btn-primary" id="changePasswordBtn">Parolni almashtirish</button>
-          <button class="btn btn-ghost" id="resetPasswordBtn">Email orqali link</button>
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title">Profile & security</h1>
+          <p class="workspace-command-copy">Akkaunt ma'lumotlari, email tasdiqlash va parol xavfsizligi shu yerda boshqariladi.</p>
         </div>
-        <p class="muted text-xs mt-3">Email orqali link Firebase Authentication tomonidan yuboriladi. Xat Firebase loyihasining Auth email template sozlamasidan ketadi, ba'zan Spam/Promotions ichiga tushishi mumkin.</p>
-      </div>
+      </section>
+
+      <section class="workspace-layout">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface pad">
+            <div class="section-head"><h2>Profil</h2></div>
+            <div class="workspace-form-grid">
+              <div>
+                <label class="label">Ism</label>
+                <input class="input" id="name">
+              </div>
+              <div>
+                <label class="label">Username</label>
+                <input class="input" id="username">
+              </div>
+              <div>
+                <label class="label">Email</label>
+                <input class="input" id="email" disabled>
+              </div>
+              <button class="btn btn-primary" id="saveProfileBtn">Saqlash</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Parolni yangilash</h3>
+            <p class="muted text-sm" style="margin:0 0 14px">Team lead uchun boshlang'ich parol email bilan bir xil bo'lishi mumkin. Uni shu yerda almashtiring.</p>
+            <div class="workspace-form-grid">
+              <div>
+                <label class="label">Hozirgi parol</label>
+                <input class="input" id="currentPassword" type="password" autocomplete="current-password">
+              </div>
+              <div>
+                <label class="label">Yangi parol</label>
+                <input class="input" id="newPassword" type="password" autocomplete="new-password">
+              </div>
+              <div>
+                <label class="label">Yangi parolni takrorlang</label>
+                <input class="input" id="confirmPassword" type="password" autocomplete="new-password">
+              </div>
+              <button class="btn btn-primary" id="changePasswordBtn">Parolni almashtirish</button>
+              <button class="btn btn-ghost" id="resetPasswordBtn">Email orqali link</button>
+            </div>
+          </div>
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Xavfsizlik eslatmasi</h3>
+            <p class="muted text-sm" style="margin:0">Email orqali link Firebase Authentication tomonidan yuboriladi. Xat Firebase Auth template sozlamasidan ketadi va ba'zan Spam/Promotions ichiga tushishi mumkin.</p>
+          </div>
+        </aside>
+      </section>
     </div>
   </div>
   <script src="js/firebase-config.js"></script>
@@ -49,6 +82,7 @@
       document.getElementById('name').value = profile.name || '';
       document.getElementById('username').value = profile.username || '';
       document.getElementById('email').value = profile.email || user.email || '';
+
       document.getElementById('saveProfileBtn').addEventListener('click', async () => {
         try {
           await MllyCore.updateUserProfile({
@@ -60,6 +94,7 @@
           UTIL.toast(error.message || 'Profil saqlanmadi');
         }
       });
+
       document.getElementById('changePasswordBtn').addEventListener('click', async () => {
         const currentPassword = document.getElementById('currentPassword').value;
         const newPassword = document.getElementById('newPassword').value;
@@ -78,6 +113,7 @@
           UTIL.toast(error.message || 'Parol almashtirilmadi');
         }
       });
+
       document.getElementById('resetPasswordBtn').addEventListener('click', async () => {
         try {
           await MllyCore.sendPasswordReset();

@@ -9,7 +9,7 @@
 </head>
 <body>
   <div id="app">
-    <div id="content" class="card"><p class="muted">Workspace yuklanmoqda...</p></div>
+    <div id="content" class="workspace-app"><div class="workspace-empty"><h3>Workspace yuklanmoqda</h3><p>Ma'lumotlar olinmoqda...</p></div></div>
   </div>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
@@ -41,13 +41,14 @@
         location.href = 'admin.html';
         return;
       }
+
       const dashboard = await MllyCore.getDashboardData(user.uid);
       mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
 
       const teamId = qs('id');
       const data = teamId ? await MllyCore.getTeamData(teamId) : null;
       if (!data) {
-        document.getElementById('content').innerHTML = '<h1 class="page-title">Workspace topilmadi</h1><p class="muted">Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p>';
+        document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
         return;
       }
 
@@ -59,117 +60,164 @@
         return aTime - bTime;
       });
 
-      document.getElementById('content').outerHTML = `
-        <section class="workspace-shell">
-          <div class="workspace-hero">
-            <div class="flex items-center gap-4">
-              <div class="team-logo ${data.team.color || 'tl-1'}">${escapeHtml(data.team.logo || 'W')}</div>
-              <div>
-                <h1 class="page-title">${escapeHtml(data.team.name)}</h1>
-                <p class="page-subtitle">${escapeHtml(data.team.description || 'Workspace tavsifi yoq.')}</p>
+      document.getElementById('content').innerHTML = `
+        <section class="workspace-command">
+          <div>
+            <h1 class="workspace-command-title">${escapeHtml(data.team.name)}</h1>
+            <p class="workspace-command-copy">${escapeHtml(data.team.description || 'Workspace ichidagi g\'oya, member va chat oqimi.')}</p>
+          </div>
+          <div class="workspace-command-tools">
+            <span class="badge badge-active">${escapeHtml(membership?.role || 'member')}</span>
+            ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
+          </div>
+        </section>
+
+        <section class="workspace-overview">
+          <div class="workspace-stat">
+            <span class="workspace-stat-label">A'zolar</span>
+            <span class="workspace-stat-value">${data.members.length}</span>
+            <span class="workspace-stat-note">Workspace ichidagi jamoa</span>
+          </div>
+          <div class="workspace-stat">
+            <span class="workspace-stat-label">G'oyalar</span>
+            <span class="workspace-stat-value">${data.ideas.length}</span>
+            <span class="workspace-stat-note">Private idea oqimi</span>
+          </div>
+          <div class="workspace-stat">
+            <span class="workspace-stat-label">Chat xabarlari</span>
+            <span class="workspace-stat-value">${sortedMessages.length}</span>
+            <span class="workspace-stat-note">Joriy suhbat tarixi</span>
+          </div>
+          <div class="workspace-stat">
+            <span class="workspace-stat-label">Sizning rol</span>
+            <span class="workspace-stat-value">${escapeHtml(membership?.role || 'member')}</span>
+            <span class="workspace-stat-note">${isLead ? 'Lead access faol' : 'Focused workspace access'}</span>
+          </div>
+        </section>
+
+        <section class="workspace-split-hero">
+          <div class="workspace-surface pad">
+            <div class="section-head"><h2>Workspace context</h2></div>
+            <div class="workspace-chip-row">
+              <span class="badge">Private workspace</span>
+              <span class="badge">Chat enabled</span>
+              <span class="badge">${isLead ? 'Secret key owner' : 'Member access'}</span>
+            </div>
+            <p class="muted text-sm" style="margin:14px 0 0">Bu yerda faqat shu workspace ichidagi g'oyalar, a'zolar va chat oqimi ko'rinadi. Public qidiruv yoki boshqa workspace ma'lumotlari aralashmaydi.</p>
+          </div>
+          <div class="workspace-action-stack">
+            ${isLead ? `
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Lead actions</h3>
+                <div class="workspace-form-grid">
+                  <div>
+                    <label class="label">Yangi a'zo emaili</label>
+                    <div class="workspace-form-inline">
+                      <input class="input" id="memberEmail" type="email" placeholder="member@email.com">
+                      <button class="btn btn-primary" id="addMemberBtn">Qo'shish</button>
+                    </div>
+                  </div>
+                  <button class="btn btn-ghost" id="resetSecretBtn">Secret key reset</button>
+                </div>
+              </div>
+            ` : `
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Member view</h3>
+                <p class="muted text-sm" style="margin:0">Siz workspace ichidagi g'oya, chat va muhokamalarni ko'rasiz. A'zo qo'shish yoki secret key reset faqat team lead uchun ochiq.</p>
+              </div>
+            `}
+          </div>
+        </section>
+
+        <section class="workspace-layout">
+          <div class="workspace-main-stack">
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Idea canvas</h2>
+                  <div class="workspace-surface-copy">Workspace ichidagi asosiy g'oya oqimi.</div>
+                </div>
+                <span class="badge">${data.ideas.length} item</span>
+              </div>
+              <div class="workspace-card-grid cols-2">
+                ${data.ideas.length ? data.ideas.map((idea) => `
+                  <a href="idea.html?id=${idea.id}" class="workspace-record">
+                    <div class="workspace-record-top">
+                      <h3>${escapeHtml(idea.title)}</h3>
+                      <span class="badge">${escapeHtml(idea.status || idea.category || '-')}</span>
+                    </div>
+                    <p>${escapeHtml(idea.description || 'Idea tafsiloti kiritilmagan.')}</p>
+                  </a>
+                `).join('') : '<div class="workspace-empty"><h3>G\'oya yoq</h3><p>Bu workspace ichida hali g\'oya yaratilmagan.</p></div>'}
               </div>
             </div>
-            <div class="workspace-actions">
-              <span class="badge">${data.members.length} a'zo</span>
-              ${isLead ? `<span class="invite-code">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
+
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Chat stream</h2>
+                  <div class="workspace-surface-copy">Realtime muhokama va jamoa activity.</div>
+                </div>
+              </div>
+              <div class="chat">
+                <div class="chat-messages" id="chatMessages">
+                  ${sortedMessages.length ? sortedMessages.map((message) => `
+                    <div class="msg ${message.senderUserId === user.uid ? 'me' : ''}">
+                      <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
+                      <div class="bubble">
+                        <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt)}</div>
+                        <div>${escapeHtml(message.text)}</div>
+                      </div>
+                    </div>
+                  `).join('') : '<div class="workspace-empty"><h3>Chat bo\'sh</h3><p>Birinchi xabarni yozing.</p></div>'}
+                </div>
+                <div class="chat-input">
+                  <input class="input" id="chatText" placeholder="Xabar yozing...">
+                  <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="tabs" role="tablist">
-            <button class="tab active" data-tab="ideas" type="button">G'oyalar</button>
-            <button class="tab" data-tab="members" type="button">A'zolar</button>
-            <button class="tab" data-tab="chat" type="button">Chat</button>
-            ${isLead ? `<button class="tab" data-tab="settings" type="button">Sozlamalar</button>` : ''}
-          </div>
-
-          <div class="tab-panel active" id="panel-ideas">
-            <div class="section-head">
-              <h2>Workspace g'oyalari</h2>
-              <span class="badge">Faqat workspace ichida</span>
-            </div>
-            <div class="grid grid-2">
-              ${data.ideas.length ? data.ideas.map((idea) => `
-                <a href="idea.html?id=${idea.id}" class="card card-hover">
-                  <div class="font-semibold">${escapeHtml(idea.title)}</div>
-                  <div class="text-xs muted mt-2">${escapeHtml(idea.status || idea.category || '-')}</div>
-                </a>
-              `).join('') : '<div class="card empty-state"><h3>G\'oya yoq</h3><p class="muted">Bu workspace ichida hali g\'oya yaratilmagan.</p></div>'}
-            </div>
-          </div>
-
-          <div class="tab-panel" id="panel-members">
-            <div class="grid ${isLead ? 'workspace-two-col' : 'grid-2'}">
-              <div class="workspace-panel">
-                <div class="section-head"><h2>A'zolar</h2><span class="badge">${data.members.length}</span></div>
+          <aside class="workspace-side-stack">
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h3>A'zolar</h3>
+                  <div class="workspace-surface-copy">Workspace ichidagi role map.</div>
+                </div>
+                <span class="badge">${data.members.length}</span>
+              </div>
+              <div class="workspace-card-grid">
                 ${data.members.map((member) => `
-                  <div class="member-row">
+                  <div class="workspace-list-row">
                     <div class="avatar">${escapeHtml(member.user?.avatar || 'U')}</div>
-                    <div style="min-width:0">
-                      <div class="font-semibold text-sm">${escapeHtml(member.user?.name || member.user?.email || member.userId)}</div>
-                      <div class="text-xs muted">${escapeHtml(member.user?.email || '')}</div>
+                    <div class="workspace-list-copy">
+                      <strong>${escapeHtml(member.user?.name || member.user?.email || member.userId)}</strong>
+                      <span>${escapeHtml(member.user?.email || '')}</span>
                     </div>
                     <span class="badge">${escapeHtml(member.role)}</span>
                   </div>
                 `).join('')}
               </div>
-              ${isLead ? `
-                <div class="workspace-panel">
-                  <h3 style="margin:0 0 12px">A'zo qo'shish</h3>
-                  <p class="muted text-sm">A'zo oldin ro'yxatdan o'tgan bo'lishi kerak. Emailini kiriting va workspace'ga qo'shing.</p>
-                  <label class="label">Email</label>
-                  <input class="input mb-3" id="memberEmail" type="email" placeholder="member@email.com">
-                  <button class="btn btn-primary w-full" id="addMemberBtn">Workspace'ga qo'shish</button>
-                </div>
-              ` : ''}
             </div>
-          </div>
 
-          <div class="tab-panel" id="panel-chat">
-            <div class="chat">
-              <div class="chat-messages" id="chatMessages">
-                ${sortedMessages.length ? sortedMessages.map((message) => `
-                  <div class="msg ${message.senderUserId === user.uid ? 'me' : ''}">
-                    <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
-                    <div class="bubble">
-                      <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt)}</div>
-                      <div>${escapeHtml(message.text)}</div>
-                    </div>
-                  </div>
-                `).join('') : '<div class="empty-state"><h3>Chat bo\'sh</h3><p class="muted">Birinchi xabarni yozing.</p></div>'}
-              </div>
-              <div class="chat-input">
-                <input class="input" id="chatText" placeholder="Xabar yozing...">
-                <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
-              </div>
-            </div>
-          </div>
-
-          ${isLead ? `
-            <div class="tab-panel" id="panel-settings">
-              <div class="grid grid-2">
-                <div class="workspace-panel">
-                  <h3 style="margin:0 0 12px">Secret key</h3>
-                  <div class="invite-code mb-3">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</div>
-                  <button class="btn btn-primary" id="resetSecretBtn">Secret key reset</button>
+            <div class="workspace-surface pad">
+              <h3 style="margin:0 0 12px">Workspace notes</h3>
+              <div class="workspace-message-stack">
+                <div class="workspace-message-item">
+                  <strong>Visibility</strong>
+                  <span>Faqat workspace ichidagi userlar bu yer ma'lumotlarini ko'radi.</span>
                 </div>
-                <div class="workspace-panel">
-                  <h3 style="margin:0 0 12px">Rollar</h3>
-                  <p class="muted text-sm">Admin workspace yaratadi. Team lead a'zolarni qo'shadi, secret key reset qiladi va workspace ichidagi ishlarni boshqaradi.</p>
+                <div class="workspace-message-item">
+                  <strong>Access</strong>
+                  <span>${isLead ? 'Siz team lead sifatida member va secret key oqimini boshqarasiz.' : 'Siz member sifatida focused access bilan ishlaysiz.'}</span>
                 </div>
               </div>
             </div>
-          ` : ''}
+          </aside>
         </section>
       `;
-
-      document.querySelectorAll('[data-tab]').forEach((tab) => {
-        tab.addEventListener('click', () => {
-          document.querySelectorAll('[data-tab]').forEach((item) => item.classList.remove('active'));
-          document.querySelectorAll('.tab-panel').forEach((panel) => panel.classList.remove('active'));
-          tab.classList.add('active');
-          document.getElementById(`panel-${tab.dataset.tab}`)?.classList.add('active');
-        });
-      });
 
       document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('chatText');
@@ -184,6 +232,7 @@
           button.disabled = false;
         }
       });
+
       document.getElementById('chatText')?.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') document.getElementById('sendChatBtn')?.click();
       });

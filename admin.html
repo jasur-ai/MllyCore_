@@ -9,32 +9,55 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar">
-      <div>
-        <h1 class="page-title">Admin paneli</h1>
-        <p class="page-subtitle">Workspace yaratish va umumiy platforma statistikasi.</p>
-      </div>
-      <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
-    </div>
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title">Admin control layer</h1>
+          <p class="workspace-command-copy">Workspace lifecycle, team lead tayinlash va production-level boshqaruv shu yerda.</p>
+        </div>
+        <div class="workspace-command-tools">
+          <a class="btn btn-ghost" href="dashboard.html">Dashboard</a>
+          <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
+        </div>
+      </section>
 
-    <div class="grid grid-3 mb-4" id="stats"></div>
+      <section class="workspace-overview" id="stats"></section>
 
-    <div class="grid grid-2 mb-4">
-      <div class="card">
-        <h3 style="margin:0 0 12px">Admin vazifasi</h3>
-        <div class="notice">Admin faqat workspace yaratadi va team lead emailini belgilaydi.</div>
-      </div>
-      <div class="card">
-        <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
-        <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni boshqarish team lead zimmasida.</p>
-      </div>
-    </div>
+      <section class="workspace-layout">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface pad">
+            <div class="section-head"><h2>Admin qoidası</h2></div>
+            <div class="workspace-note-bar">Admin idea, chat yoki secret key oqimiga aralashmaydi. Admin faqat workspace yaratadi, team leadni belgilaydi va kerak bo'lsa workspace'ni o'chiradi.</div>
+          </div>
 
-    <div class="section-head">
-      <h2>Workspace'lar</h2>
-      <span class="badge">Faqat a'zolar soni ko'rinadi</span>
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>Workspace registry</h2>
+                <div class="workspace-surface-copy">A'zolar soni, team lead tayinlanganligi va delete action.</div>
+              </div>
+              <span class="badge">Production control</span>
+            </div>
+            <div class="workspace-card-grid cols-2" id="workspaceList"></div>
+          </div>
+        </div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Admin vazifasi</h3>
+            <div class="workspace-security-list">
+              <span>Workspace yaratish</span>
+              <span>Lead email tayinlash</span>
+              <span>Workspace o'chirish</span>
+            </div>
+          </div>
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
+            <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni yuritish team lead zimmasida.</p>
+          </div>
+        </aside>
+      </section>
     </div>
-    <div class="grid grid-2" id="workspaceList"></div>
   </div>
 
   <script src="js/firebase-config.js"></script>
@@ -53,22 +76,33 @@
 
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
       document.getElementById('stats').innerHTML = [
-        { n: teams.length, l: "Workspace'lar" },
-        { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar' },
-        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar' }
-      ].map(s => `<div class="card stat"><div class="stat-icon">${s.l[0]}</div><div><div class="stat-num">${s.n}</div><div class="stat-label">${s.l}</div></div></div>`).join('');
+        { n: teams.length, l: "Workspace'lar", note: 'Joriy production birliklari' },
+        { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar', note: 'Boshqaruvchi userlar' },
+        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar', note: 'Platformadagi memberlar' },
+        { n: teams.filter((team) => !team.leadUserId).length, l: 'Lead kutilmoqda', note: "Tayinlanmagan workspace'lar" }
+      ].map((s) => `
+        <div class="workspace-stat">
+          <span class="workspace-stat-label">${s.l}</span>
+          <span class="workspace-stat-value">${s.n}</span>
+          <span class="workspace-stat-note">${s.note}</span>
+        </div>
+      `).join('');
 
       document.getElementById('workspaceList').innerHTML = teams.length ? teams.map((team) => `
-        <div class="card">
-          <div class="workspace-card">
+        <div class="workspace-record">
+          <div class="workspace-record-top">
             <div>
-              <div class="font-semibold">${team.name}</div>
-              <div class="text-xs muted">${team.membersCount || 0} a'zo</div>
+              <h3>${team.name}</h3>
+              <div class="workspace-inline-meta">
+                <span>${team.membersCount || 0} a'zo</span>
+                <span>${team.leadUserId ? 'Lead biriktirilgan' : 'Lead kutilmoqda'}</span>
+              </div>
             </div>
             <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
           </div>
+          <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
         </div>
-      `).join('') : '<div class="card empty-state"><h3>Workspace yoq</h3><p class="muted">Yangi workspace dashboard orqali yaratiladi.</p></div>';
+      `).join('') : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace dashboard orqali yaratiladi.</p></div>';
 
       document.querySelectorAll('[data-delete-workspace]').forEach((button) => {
         button.addEventListener('click', async () => {

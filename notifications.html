@@ -9,8 +9,24 @@
 </head>
 <body>
   <div id="app">
-    <div class="topbar"><div><h1 class="page-title">Bildirishnomalar</h1><p class="page-subtitle">Workspace va g'oyalar yangiliklari.</p></div></div>
-    <div class="card" id="list"></div>
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title">Notification center</h1>
+          <p class="workspace-command-copy">Workspace, member va g'oya activity bo'yicha so'nggi signal va update'lar.</p>
+        </div>
+      </section>
+      <section class="workspace-surface">
+        <div class="workspace-surface-head">
+          <div>
+            <h2>Bildirishnomalar</h2>
+            <div class="workspace-surface-copy">Unread itemlar va activity oqimi.</div>
+          </div>
+          <span class="badge" id="notificationCount">0</span>
+        </div>
+        <div class="workspace-card-grid" id="list"></div>
+      </section>
+    </div>
   </div>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
@@ -22,12 +38,14 @@
       if (!user) return;
       const data = await MllyCore.getDashboardData(user.uid);
       mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+      document.getElementById('notificationCount').textContent = data.notifications.length;
       document.getElementById('list').innerHTML = data.notifications.length ? data.notifications.map((n) => `
-        <div class="flex gap-3 mb-3" style="padding-bottom:12px;border-bottom:1px solid var(--border)">
-          ${(n.unread || n.isRead === false) ? '<span class="dot" style="margin-top:6px"></span>' : '<span style="width:8px"></span>'}
-          <div><div class="font-semibold text-sm">${n.content || n.text}</div><div class="text-xs muted">${n.type || 'notification'}</div></div>
+        <div class="workspace-message-item">
+          <strong>${n.content || n.text}</strong>
+          <div class="text-xs muted">${n.type || 'notification'}</div>
+          <span>${(n.unread || n.isRead === false) ? 'Unread' : 'Read'}</span>
         </div>
-      `).join('') : '<p class="muted">Bildirishnoma yoq.</p>';
+      `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity paydo bo\'lganda shu yerda ko\'rinadi.</p></div>';
     })();
   </script>
 </body>
