@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -45,8 +45,9 @@ module.exports = async (req, res) => {
     }
 
     const now = serverNow();
+    const nowMs = Date.now();
     const deadlineAt = deadline ? new Date(deadline).toISOString() : '';
-    const taskRef = await db.collection('tasks').add({
+    const taskPayload = {
       teamId,
       title: cleanTitle,
       description: cleanDescription,
@@ -60,8 +61,34 @@ module.exports = async (req, res) => {
       status: cleanMode === 'direct' ? 'assigned' : 'open',
       progressCount: 0,
       requiredPercent: cleanMode === 'team' ? 65 : 100,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
       createdAt: now,
       updatedAt: now
+    };
+    const taskRef = await db.collection('tasks').add(taskPayload);
+
+    await updateTeamSummary(db, teamId, (team) => {
+      const recentTask = {
+        id: taskRef.id,
+        teamId,
+        title: cleanTitle,
+        status: taskPayload.status,
+        assignmentMode: cleanMode,
+        assignedUserName: taskPayload.assignedUserName || '',
+        createdByName: taskPayload.createdByName,
+        deadlineAt,
+        progressCount: 0,
+        requiredCount: cleanMode === 'team' ? Math.max(1, Math.ceil((team.membersCount || 1) * 0.65)) : 1,
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs
+      };
+      return {
+        tasksCount: (team.tasksCount || 0) + 1,
+        recentTasks: mergeRecentItems(team.recentTasks, recentTask, 10),
+        lastTask: recentTask,
+        lastActivityAtMs: nowMs
+      };
     });
 
     const memberDocs = await db.collection('teamMembers').where('teamId', '==', teamId).get();

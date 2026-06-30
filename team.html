@@ -52,12 +52,36 @@
     let workspaceState = null;
     let chatSeenSyncPending = false;
     let chatSeenTimer = null;
+    let chatSubscribedTeamId = '';
+    let lastWorkspaceRenderKey = '';
 
     function setFeedback(id, text, tone = 'error') {
       const node = document.getElementById(id);
       if (!node) return;
       node.className = `text-sm muted feedback-${tone}`;
       node.textContent = text || '';
+    }
+
+    function workspaceRenderKey(data) {
+      if (!data?.team?.id) return '';
+      const latestIdea = (data.ideas || [])[0];
+      const latestTask = (data.tasks || [])[0];
+      const latestSubmission = (data.taskSubmissions || [])[0];
+      const latestMessage = (data.messages || []).length ? data.messages[data.messages.length - 1] : null;
+      return [
+        data.team.id,
+        data.members?.length || 0,
+        data.ideas?.length || 0,
+        data.tasks?.length || 0,
+        data.taskSubmissions?.length || 0,
+        data.messages?.length || 0,
+        latestIdea?.id || '',
+        latestTask?.id || '',
+        latestSubmission?.id || '',
+        latestMessage?.id || '',
+        latestMessage?.seenBy?.length || 0,
+        data.team.updatedAt?.seconds || data.team.updatedAt || ''
+      ].join('|');
     }
 
     function memberOptions(members, includeLead = true) {
@@ -366,6 +390,7 @@
     async function renderWorkspace(data, currentUserId) {
       const membership = data.members.find((member) => member.userId === currentUserId);
       const isLead = membership?.role === 'team_lead';
+      lastWorkspaceRenderKey = workspaceRenderKey(data);
 
       document.getElementById('content').innerHTML = `
         <section class="workspace-command">
@@ -646,11 +671,17 @@
         document.getElementById('chatMessages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
-      if (chatUnsubscribe) chatUnsubscribe();
-      chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, async (messages) => {
-        renderChat(messages, currentUserId);
-        scheduleChatSeen(messages, currentUserId, data.team.id);
-      });
+      if (chatSubscribedTeamId !== data.team.id) {
+        if (chatUnsubscribe) chatUnsubscribe();
+        chatSubscribedTeamId = data.team.id;
+        chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, async (messages) => {
+          if (workspaceState) {
+            workspaceState = { ...workspaceState, messages };
+          }
+          renderChat(messages, currentUserId);
+          scheduleChatSeen(messages, currentUserId, data.team.id);
+        });
+      }
       markWorkspaceNotificationsSeen(data);
 
       document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
@@ -773,10 +804,23 @@
     }
 
     async function refreshWorkspace(teamId, currentUserId) {
-      MllyCore.syncTeamTasks(teamId).catch(() => {});
-      workspaceState = await MllyCore.getTeamData(teamId);
-      if (workspaceState) {
-        await renderWorkspace(workspaceState, currentUserId);
+      const cached = await MllyCore.getTeamData(teamId);
+      if (cached) {
+        workspaceState = cached;
+        const cachedKey = workspaceRenderKey(cached);
+        if (cachedKey !== lastWorkspaceRenderKey) {
+          await renderWorkspace(workspaceState, currentUserId);
+        }
+      }
+
+      await MllyCore.syncTeamTasks(teamId).catch(() => {});
+      const fresh = await MllyCore.getTeamData(teamId, { forceFresh: true }).catch(() => null);
+      if (fresh) {
+        workspaceState = fresh;
+        const freshKey = workspaceRenderKey(fresh);
+        if (freshKey !== lastWorkspaceRenderKey) {
+          await renderWorkspace(workspaceState, currentUserId);
+        }
       }
     }
 

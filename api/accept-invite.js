@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
     const membershipSnap = await membershipRef.get();
     const batch = db.batch();
     const now = serverNow();
+    const nowMs = Date.now();
 
     if (!membershipSnap.exists) {
       batch.set(membershipRef, {
@@ -58,6 +59,13 @@ module.exports = async (req, res) => {
     });
 
     await batch.commit();
+
+    if (!membershipSnap.exists) {
+      await updateTeamSummary(db, invite.teamId, (current) => ({
+        membersCount: Math.max(current.membersCount || 0, (team.membersCount || 0) + 1),
+        lastActivityAtMs: nowMs
+      }));
+    }
 
     const recipients = [decoded.uid];
     if (team.leadUserId) recipients.push(team.leadUserId);

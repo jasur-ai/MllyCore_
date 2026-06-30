@@ -77,6 +77,32 @@ async function notifyUsers(db, users, payloadBuilder) {
   await batch.commit();
 }
 
+function mergeRecentItems(items = [], nextItem, limit = 8) {
+  const base = Array.isArray(items) ? items.filter(Boolean) : [];
+  const merged = [
+    nextItem,
+    ...base.filter((item) => item && item.id !== nextItem.id)
+  ]
+    .sort((a, b) => Number(b.updatedAtMs || b.createdAtMs || 0) - Number(a.updatedAtMs || a.createdAtMs || 0))
+    .slice(0, limit);
+  return merged;
+}
+
+async function updateTeamSummary(db, teamId, updater) {
+  const teamRef = db.collection('teams').doc(teamId);
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) return null;
+  const current = teamSnap.data() || {};
+  const patch = await updater(current, teamRef);
+  if (patch && Object.keys(patch).length) {
+    if (!Object.prototype.hasOwnProperty.call(patch, 'updatedAt')) {
+      patch.updatedAt = serverNow();
+    }
+    await teamRef.update(patch);
+  }
+  return { ref: teamRef, current };
+}
+
 module.exports = {
   admin,
   initAdmin,
@@ -86,5 +112,7 @@ module.exports = {
   formatName,
   createAvatar,
   randomSecretKey,
-  notifyUsers
+  notifyUsers,
+  mergeRecentItems,
+  updateTeamSummary
 };

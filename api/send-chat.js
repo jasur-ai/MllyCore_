@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -51,6 +51,7 @@ module.exports = async (req, res) => {
     if (!teamSnap.exists) throw new Error('Workspace topilmadi.');
 
     const now = serverNow();
+    const nowMs = Date.now();
     const profileName = caller?.name || caller?.email || 'User';
     const messageRef = await db.collection('chatMessages').add({
       teamId,
@@ -60,7 +61,26 @@ module.exports = async (req, res) => {
       text: cleanMessage,
       seenBy: [decoded.uid],
       clientCreatedAt: Date.now(),
+      createdAtMs: nowMs,
       createdAt: now
+    });
+
+    await updateTeamSummary(db, teamId, (team) => {
+      const recentMessage = {
+        id: messageRef.id,
+        teamId,
+        senderUserId: decoded.uid,
+        senderName: profileName,
+        text: cleanMessage.slice(0, 140),
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs
+      };
+      return {
+        chatCount: Math.max((team.chatCount || 0) + 1, 1),
+        recentMessages: mergeRecentItems(team.recentMessages, recentMessage, 10),
+        lastMessage: recentMessage,
+        lastActivityAtMs: nowMs
+      };
     });
 
     const memberDocs = await db.collection('teamMembers').where('teamId', '==', teamId).get();

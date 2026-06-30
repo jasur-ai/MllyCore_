@@ -1,4 +1,4 @@
-const { requireUser, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -47,6 +47,7 @@ module.exports = async (req, res) => {
 
     let autoAssigned = 0;
     for (const task of openTasks) {
+      const nowMs = Date.now();
       const randomUserId = eligibleMemberIds[Math.floor(Math.random() * eligibleMemberIds.length)];
       const profile = userMap[randomUserId] || {};
       await db.collection('tasks').doc(task.id).update({
@@ -54,7 +55,29 @@ module.exports = async (req, res) => {
         assignedUserName: profile.name || profile.email || '',
         status: 'assigned',
         autoAssignedAt: serverNow(),
+        updatedAtMs: nowMs,
         updatedAt: serverNow()
+      });
+      await updateTeamSummary(db, teamId, (team) => {
+        const recentTask = {
+          id: task.id,
+          teamId,
+          title: task.title,
+          status: 'assigned',
+          assignmentMode: task.assignmentMode,
+          assignedUserName: profile.name || profile.email || '',
+          createdByName: task.createdByName || '',
+          deadlineAt: task.deadlineAt || '',
+          progressCount: task.progressCount || 0,
+          requiredCount: task.requiredCount || 1,
+          createdAtMs: Number(task.createdAtMs || nowMs),
+          updatedAtMs: nowMs
+        };
+        return {
+          recentTasks: mergeRecentItems(team.recentTasks, recentTask, 10),
+          lastTask: recentTask,
+          lastActivityAtMs: nowMs
+        };
       });
       await notifyUsers(db, eligibleMemberIds.concat(task.createdByUserId || []).filter(Boolean), (userId) => ({
         userId,

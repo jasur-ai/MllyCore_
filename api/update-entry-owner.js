@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -32,10 +32,34 @@ module.exports = async (req, res) => {
 
     const owner = ownerUserSnap.exists ? ownerUserSnap.data() : {};
     const now = serverNow();
+    const nowMs = Date.now();
     await db.collection('ideas').doc(ideaId).update({
       ownerUserId: cleanOwnerUserId,
       ownerName: owner.name || owner.email || '',
+      updatedAtMs: nowMs,
       updatedAt: now
+    });
+
+    await updateTeamSummary(db, teamId, (team) => {
+      const previous = Array.isArray(team.recentIdeas) ? team.recentIdeas.find((item) => item.id === ideaId) : null;
+      const recentIdea = {
+        id: ideaId,
+        teamId,
+        title: idea.title,
+        description: idea.description || '',
+        status: idea.status || 'Startup',
+        category: idea.category || 'startup',
+        entryType: 'startup',
+        ownerName: owner.name || owner.email || '',
+        createdByName: idea.createdByName || '',
+        createdAtMs: Number(previous?.createdAtMs || idea.createdAtMs || nowMs),
+        updatedAtMs: nowMs
+      };
+      return {
+        recentIdeas: mergeRecentItems(team.recentIdeas, recentIdea, 10),
+        lastIdea: recentIdea,
+        lastActivityAtMs: nowMs
+      };
     });
 
     await notifyUsers(db, [cleanOwnerUserId], (userId) => ({

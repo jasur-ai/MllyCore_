@@ -34,10 +34,11 @@
       if (!user) return;
 
       const ideaId = qs('id');
-      const dashboard = await MllyCore.getDashboardData(user.uid);
+      const [dashboard, idea] = await Promise.all([
+        MllyCore.getDashboardData(user.uid),
+        MllyCore.getIdeaById(ideaId)
+      ]);
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
-
-      const idea = await MllyCore.getIdeaById(ideaId);
       if (!idea) {
         document.getElementById('ideaApp').innerHTML = '<div class="workspace-empty"><h3>G\'oya topilmadi</h3><p>Bu yozuv mavjud emas yoki sizda ko\'rish huquqi yo\'q.</p></div>';
         return;

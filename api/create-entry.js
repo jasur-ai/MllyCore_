@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -46,7 +46,8 @@ module.exports = async (req, res) => {
     const profile = userSnap.exists ? userSnap.data() : {};
     const now = serverNow();
 
-    const ideaRef = await db.collection('ideas').add({
+    const nowMs = Date.now();
+    const ideaPayload = {
       teamId,
       title: cleanTitle,
       description: cleanDescription,
@@ -59,8 +60,34 @@ module.exports = async (req, res) => {
       ownerName: cleanType === 'startup'
         ? (ownerProfile?.name || ownerProfile?.email || '')
         : (profile.name || decoded.email || 'User'),
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
       createdAt: now,
       updatedAt: now
+    };
+    const ideaRef = await db.collection('ideas').add(ideaPayload);
+
+    await updateTeamSummary(db, teamId, (team) => {
+      const recentIdea = {
+        id: ideaRef.id,
+        teamId,
+        title: cleanTitle,
+        description: cleanDescription,
+        status: ideaPayload.status,
+        category: ideaPayload.category,
+        entryType: cleanType,
+        ownerName: ideaPayload.ownerName,
+        createdByName: ideaPayload.createdByName,
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs
+      };
+      return {
+        ideasCount: (team.ideasCount || 0) + (cleanType === 'idea' ? 1 : 0),
+        startupsCount: (team.startupsCount || 0) + (cleanType === 'startup' ? 1 : 0),
+        recentIdeas: mergeRecentItems(team.recentIdeas, recentIdea, 10),
+        lastIdea: recentIdea,
+        lastActivityAtMs: nowMs
+      };
     });
 
     const memberSnaps = await db.collection('teamMembers').where('teamId', '==', teamId).get();

@@ -1,4 +1,4 @@
-const { requireUser, cleanText, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, cleanText, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -29,6 +29,7 @@ module.exports = async (req, res) => {
     const now = serverNow();
 
     if (cleanAction === 'claim') {
+      const nowMs = Date.now();
       if (task.assignmentMode !== 'open') throw new Error('Faqat umumiy topshiriq olinadi.');
       if (task.assignedUserId) throw new Error('Bu topshiriq allaqachon band qilingan.');
       await taskRef.update({
@@ -36,7 +37,29 @@ module.exports = async (req, res) => {
         assignedUserName: caller?.name || caller?.email || 'User',
         status: 'assigned',
         claimedAt: now,
+        updatedAtMs: nowMs,
         updatedAt: now
+      });
+      await updateTeamSummary(db, task.teamId, (team) => {
+        const recentTask = {
+          id: taskId,
+          teamId: task.teamId,
+          title: task.title,
+          status: 'assigned',
+          assignmentMode: task.assignmentMode,
+          assignedUserName: caller?.name || caller?.email || 'User',
+          createdByName: task.createdByName || '',
+          deadlineAt: task.deadlineAt || '',
+          progressCount: task.progressCount || 0,
+          requiredCount: task.requiredCount || 1,
+          createdAtMs: Number(task.createdAtMs || nowMs),
+          updatedAtMs: nowMs
+        };
+        return {
+          recentTasks: mergeRecentItems(team.recentTasks, recentTask, 10),
+          lastTask: recentTask,
+          lastActivityAtMs: nowMs
+        };
       });
       if (task.createdByUserId) {
         await notifyUsers(db, [task.createdByUserId], (userId) => ({
@@ -55,6 +78,7 @@ module.exports = async (req, res) => {
     }
 
     if (!cleanResultText) throw new Error('Natija yozilmaguncha tugatdim bosilmaydi.');
+    const nowMs = Date.now();
 
     const submissionRef = db.collection('taskSubmissions').doc(`${taskId}_${decoded.uid}`);
     const existingSubmission = await submissionRef.get();
@@ -83,6 +107,7 @@ module.exports = async (req, res) => {
       role: membership.role,
       resultText: cleanResultText,
       resultLink: cleanResultLink,
+      createdAtMs: nowMs,
       createdAt: now
     });
 
@@ -100,7 +125,30 @@ module.exports = async (req, res) => {
       requiredCount,
       status,
       completedAt: status === 'completed' ? now : task.completedAt || null,
+      updatedAtMs: nowMs,
       updatedAt: now
+    });
+
+    await updateTeamSummary(db, task.teamId, (team) => {
+      const recentTask = {
+        id: taskId,
+        teamId: task.teamId,
+        title: task.title,
+        status,
+        assignmentMode: task.assignmentMode,
+        assignedUserName: task.assignedUserName || '',
+        createdByName: task.createdByName || '',
+        deadlineAt: task.deadlineAt || '',
+        progressCount,
+        requiredCount,
+        createdAtMs: Number(task.createdAtMs || nowMs),
+        updatedAtMs: nowMs
+      };
+      return {
+        recentTasks: mergeRecentItems(team.recentTasks, recentTask, 10),
+        lastTask: recentTask,
+        lastActivityAtMs: nowMs
+      };
     });
 
     const recipients = teamMembers.docs.map((doc) => doc.data().userId);

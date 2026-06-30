@@ -87,4 +87,12 @@ window.mountLayout = function(active, context) {
   root.outerHTML = `<div class="app" id="app">${renderLayout(active, context)}<main class="main">${main}</main></div>`;
   const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
   window.MllyCoreTheme?.apply?.(theme);
+  document.querySelectorAll('a[href]').forEach((link) => {
+    const href = link.getAttribute('href') || '';
+    if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
+    const prefetch = () => window.MllyCore?.prefetchRouteData?.(href);
+    link.addEventListener('mouseenter', prefetch, { once: true });
+    link.addEventListener('focus', prefetch, { once: true });
+    link.addEventListener('touchstart', prefetch, { once: true, passive: true });
+  });
 };

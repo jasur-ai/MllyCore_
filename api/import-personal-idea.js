@@ -1,4 +1,4 @@
-const { requireUser, serverNow, notifyUsers } = require('./_lib/firebase-admin');
+const { requireUser, serverNow, notifyUsers, mergeRecentItems, updateTeamSummary } = require('./_lib/firebase-admin');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -29,7 +29,8 @@ module.exports = async (req, res) => {
     }
 
     const now = serverNow();
-    const importedRef = await db.collection('ideas').add({
+    const nowMs = Date.now();
+    const importedPayload = {
       teamId,
       title: personalIdea.title,
       description: personalIdea.description || '',
@@ -41,13 +42,39 @@ module.exports = async (req, res) => {
       ownerUserId: decoded.uid,
       ownerName: caller?.name || caller?.email || 'User',
       sourcePersonalIdeaId: personalIdeaId,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
       createdAt: now,
       updatedAt: now
-    });
+    };
+    const importedRef = await db.collection('ideas').add(importedPayload);
 
     await db.collection('personalIdeas').doc(personalIdeaId).update({
       importedCount: (personalIdea.importedCount || 0) + 1,
+      updatedAtMs: nowMs,
       updatedAt: now
+    });
+
+    await updateTeamSummary(db, teamId, (team) => {
+      const recentIdea = {
+        id: importedRef.id,
+        teamId,
+        title: importedPayload.title,
+        description: importedPayload.description,
+        status: importedPayload.status,
+        category: importedPayload.category,
+        entryType: 'idea',
+        ownerName: importedPayload.ownerName,
+        createdByName: importedPayload.createdByName,
+        createdAtMs: nowMs,
+        updatedAtMs: nowMs
+      };
+      return {
+        ideasCount: (team.ideasCount || 0) + 1,
+        recentIdeas: mergeRecentItems(team.recentIdeas, recentIdea, 10),
+        lastIdea: recentIdea,
+        lastActivityAtMs: nowMs
+      };
     });
 
     const memberDocs = await db.collection('teamMembers').where('teamId', '==', teamId).get();

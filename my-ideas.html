@@ -90,8 +90,10 @@
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
-      const data = await MllyCore.getDashboardData(user.uid);
-      const personalIdeas = await MllyCore.getPersonalIdeas();
+      const [data, personalIdeas] = await Promise.all([
+        MllyCore.getDashboardData(user.uid, { includeIdeas: true }),
+        MllyCore.getPersonalIdeas()
+      ]);
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
 
       const teams = data.teams || [];
