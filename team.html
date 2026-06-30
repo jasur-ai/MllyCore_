@@ -51,6 +51,7 @@
     let chatUnsubscribe = null;
     let workspaceState = null;
     let chatSeenSyncPending = false;
+    let chatSeenTimer = null;
 
     function setFeedback(id, text, tone = 'error') {
       const node = document.getElementById(id);
@@ -99,8 +100,16 @@
       if (stat) stat.textContent = messages.length;
     }
 
+    function canMarkChatSeen() {
+      const chatBox = document.getElementById('chatMessages');
+      if (!chatBox) return false;
+      const rect = chatBox.getBoundingClientRect();
+      const visible = rect.bottom > 100 && rect.top < (window.innerHeight || document.documentElement.clientHeight) - 40;
+      return document.visibilityState === 'visible' && document.hasFocus() && visible;
+    }
+
     async function syncChatSeen(messages, currentUserId, teamId) {
-      if (chatSeenSyncPending || !teamId) return;
+      if (chatSeenSyncPending || !teamId || !canMarkChatSeen()) return;
       const hasUnseen = (messages || []).some((message) => {
         const seenBy = Array.isArray(message.seenBy) ? message.seenBy : [];
         return message.senderUserId !== currentUserId && !seenBy.includes(currentUserId);
@@ -113,6 +122,13 @@
       } finally {
         chatSeenSyncPending = false;
       }
+    }
+
+    function scheduleChatSeen(messages, currentUserId, teamId) {
+      if (chatSeenTimer) clearTimeout(chatSeenTimer);
+      chatSeenTimer = setTimeout(() => {
+        syncChatSeen(messages, currentUserId, teamId);
+      }, 1200);
     }
 
     async function markWorkspaceNotificationsSeen(data) {
@@ -613,7 +629,7 @@
       renderTasks(data, currentUserId, isLead);
       renderMembers(data, currentUserId);
       renderChat(data.messages || [], currentUserId);
-      await syncChatSeen(data.messages || [], currentUserId, data.team.id);
+      scheduleChatSeen(data.messages || [], currentUserId, data.team.id);
 
       if (focusType === 'tasks') {
         const taskCard = focusEntityId ? document.querySelector(`[data-task-id="${focusEntityId}"]`) : null;
@@ -633,7 +649,7 @@
       if (chatUnsubscribe) chatUnsubscribe();
       chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, async (messages) => {
         renderChat(messages, currentUserId);
-        syncChatSeen(messages, currentUserId, data.team.id);
+        scheduleChatSeen(messages, currentUserId, data.team.id);
       });
       markWorkspaceNotificationsSeen(data);
 
@@ -786,6 +802,18 @@
 
     window.addEventListener('beforeunload', () => {
       if (typeof chatUnsubscribe === 'function') chatUnsubscribe();
+      if (chatSeenTimer) clearTimeout(chatSeenTimer);
+    });
+
+    window.addEventListener('focus', () => {
+      if (workspaceState?.messages?.length && workspaceState?.team?.id && window.MLLYCORE_AUTH_USER?.uid) {
+        scheduleChatSeen(workspaceState.messages, window.MLLYCORE_AUTH_USER.uid, workspaceState.team.id);
+      }
+    });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && workspaceState?.messages?.length && workspaceState?.team?.id && window.MLLYCORE_AUTH_USER?.uid) {
+        scheduleChatSeen(workspaceState.messages, window.MLLYCORE_AUTH_USER.uid, workspaceState.team.id);
+      }
     });
   </script>
 </body>
