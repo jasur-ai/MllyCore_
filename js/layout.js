@@ -68,15 +68,15 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${profile.name || profile.email}</div>
         <div class="text-xs muted">@${profile.username || 'user'}</div>
       </div>
-      <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
-        <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
-        <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
-      </button>
       <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
         Chiqish
       </a>
     </div>
   </aside>
+  <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn app-theme-toggle" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
+    <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
+    <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
+  </button>
   `;
 };
 
