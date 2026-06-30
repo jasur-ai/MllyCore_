@@ -43,10 +43,6 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       </div>
     </a>
     <div class="flex items-center gap-2">
-      <button class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
-        <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
-        <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
-      </button>
       <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
