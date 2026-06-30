@@ -3,52 +3,272 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MllyCore - G'oyalar platformasi</title>
+  <title>MllyCore - Startup workspace platformasi</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div style="max-width: 1100px; margin: 0 auto; padding: 80px 24px;">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="brand-logo" style="width:48px;height:48px;font-size:20px">M</div>
-      <div>
-        <div style="font-size:22px;font-weight:800">MllyCore</div>
-        <div class="muted text-sm">Startap g'oyalari platformasi</div>
+  <div class="landing-page">
+    <header class="landing-nav">
+      <a href="index.html" class="landing-brand">
+        <span class="landing-brand-mark">M</span>
+        <span>
+          <span class="landing-brand-name">MllyCore</span>
+          <span class="landing-brand-tag">Startup workspace system</span>
+        </span>
+      </a>
+      <nav class="landing-nav-links">
+        <a href="#workflow">Workflow</a>
+        <a href="#roles">Rollar</a>
+        <a href="#security">Xavfsizlik</a>
+      </nav>
+      <div class="landing-nav-actions">
+        <a href="login.html" class="btn btn-ghost">Kirish</a>
+        <a href="register.html" class="btn landing-btn-accent">Ro'yxatdan o'tish</a>
       </div>
-    </div>
+    </header>
 
-    <h1 style="font-size:44px;line-height:1.1;margin:32px 0 12px;font-weight:800">
-      G'oyalaringizni <span style="background:linear-gradient(135deg,#6366f1,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent">jamoangiz bilan</span> hayotga tatbiq eting.
-    </h1>
-    <p class="muted" style="font-size:17px;max-width:680px;margin-bottom:32px">
-      Jamoalar tuzing, g'oyalarni boshqaring, real-time chatda muhokama qiling va loyihalaringizni Raw'dan Implemented bosqichigacha olib boring.
-    </p>
+    <main class="landing-shell">
+      <section class="landing-hero">
+        <div class="landing-copy">
+          <div class="landing-badge-row">
+            <span class="landing-pill">Admin -> Team lead -> Member</span>
+            <span class="landing-pill landing-pill-muted">Firebase Auth + Firestore</span>
+          </div>
+          <h1>Startup g'oyalarni bitta workspace ichida tartibli boshqaring.</h1>
+          <p class="landing-lead">
+            MllyCore admin uchun workspace boshqaruvi, team lead uchun a'zo va secret key nazorati,
+            jamoa uchun esa g'oya, chat va xavfsiz hamkorlik oqimini bitta joyga yig'adi.
+          </p>
+          <div class="landing-actions">
+            <a href="register.html" class="btn landing-btn-accent">Bepul boshlash</a>
+            <a href="login.html" class="btn btn-ghost">Kirish</a>
+            <a href="dashboard.html" class="btn landing-btn-subtle">Boshqaruv paneli</a>
+          </div>
+          <div class="landing-proof">
+            <div class="landing-proof-item">
+              <strong>3 rol</strong>
+              <span>aniq kirish darajasi</span>
+            </div>
+            <div class="landing-proof-item">
+              <strong>Workspace</strong>
+              <span>private idea muhitlari</span>
+            </div>
+            <div class="landing-proof-item">
+              <strong>Real-time</strong>
+              <span>chat va status oqimi</span>
+            </div>
+          </div>
+        </div>
 
-    <div class="flex gap-3 mb-4">
-      <a href="login.html" class="btn btn-primary">Kirish</a>
-      <a href="register.html" class="btn btn-ghost">Ro'yxatdan o'tish</a>
-      <a href="login.html" class="btn btn-ghost">Boshqaruv paneli</a>
-    </div>
+        <div class="landing-showcase">
+          <div class="landing-window">
+            <div class="landing-window-bar">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="landing-product">
+              <aside class="landing-product-sidebar">
+                <div class="landing-product-logo">MllyCore</div>
+                <a class="landing-product-link active">Dashboard</a>
+                <a class="landing-product-link">Workspace'lar</a>
+                <a class="landing-product-link">Chat</a>
+                <a class="landing-product-link">Security</a>
+                <div class="landing-product-note">Admin ko'rinishi</div>
+              </aside>
+              <div class="landing-product-main">
+                <div class="landing-product-top">
+                  <div>
+                    <div class="landing-product-label">Workspace operations</div>
+                    <h2>MllyCore Workspace</h2>
+                  </div>
+                  <span class="landing-product-chip">Team lead email required</span>
+                </div>
+                <div class="landing-mini-stats">
+                  <div class="landing-mini-stat">
+                    <span>Workspace'lar</span>
+                    <strong>12</strong>
+                  </div>
+                  <div class="landing-mini-stat">
+                    <span>Team leadlar</span>
+                    <strong>8</strong>
+                  </div>
+                  <div class="landing-mini-stat">
+                    <span>Yangi a'zolar</span>
+                    <strong>24</strong>
+                  </div>
+                </div>
+                <div class="landing-workspace-grid">
+                  <article class="landing-team-card featured">
+                    <div class="landing-team-card-head">
+                      <div>
+                        <h3>Growth Lab</h3>
+                        <p>Lead: sardor@team</p>
+                      </div>
+                      <span>14 a'zo</span>
+                    </div>
+                    <div class="landing-team-card-body">
+                      <div class="landing-status-line">
+                        <span class="landing-dot success"></span>
+                        Secret key yangilangan
+                      </div>
+                      <div class="landing-status-line">
+                        <span class="landing-dot info"></span>
+                        3 ta yangi g'oya muhokamada
+                      </div>
+                    </div>
+                  </article>
+                  <article class="landing-chat-card">
+                    <div class="landing-chat-head">
+                      <strong>Team chat</strong>
+                      <span>Live</span>
+                    </div>
+                    <div class="landing-chat-message">
+                      <b>Lead</b>
+                      <p>Yangi member qo'shildi, onboarding boshlansin.</p>
+                    </div>
+                    <div class="landing-chat-message alt">
+                      <b>Member</b>
+                      <p>MVP scope bo'yicha roadmap tayyor.</p>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <div class="grid grid-3 mt-4" style="margin-top:60px">
-      <div class="card">
-        <div class="stat-icon" style="background:rgba(99,102,241,0.15);color:#a5b4fc">I</div>
-        <h3 style="margin:14px 0 6px">G'oyalar boshqaruvi</h3>
-        <p class="muted text-sm">Raw, Active, Planned va Archived kategoriyalari bilan to'liq lifecycle.</p>
-      </div>
-      <div class="card">
-        <div class="stat-icon" style="background:rgba(236,72,153,0.15);color:#f9a8d4">T</div>
-        <h3 style="margin:14px 0 6px">Jamoa hamkorligi</h3>
-        <p class="muted text-sm">16-raqamli invite kod, rollar tizimi va real-time chat.</p>
-      </div>
-      <div class="card">
-        <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:#6ee7b7">S</div>
-        <h3 style="margin:14px 0 6px">Xavfsizlik</h3>
-        <p class="muted text-sm">Email tasdiqlash, RBAC security rules va audit loglar.</p>
-      </div>
-    </div>
+      <section class="landing-strip">
+        <div class="landing-strip-item">Workspace first architecture</div>
+        <div class="landing-strip-item">Role-based access</div>
+        <div class="landing-strip-item">Email verification</div>
+        <div class="landing-strip-item">Secret key control</div>
+        <div class="landing-strip-item">Firebase-backed data</div>
+      </section>
+
+      <section class="landing-section" id="workflow">
+        <div class="landing-section-head">
+          <span class="landing-kicker">Workflow</span>
+          <h2>ClickUp uslubidagi aniq oqim, lekin startup jamoalariga mos.</h2>
+          <p>
+            Har bir rol o'ziga tegishli ishni ko'radi. Keraksiz ekranlar yo'q, qarorlar va harakatlar
+            bitta joyda turadi.
+          </p>
+        </div>
+        <div class="landing-flow-grid">
+          <article class="landing-flow-card">
+            <span class="landing-step">01</span>
+            <h3>Admin workspace yaratadi</h3>
+            <p>Team lead emailini belgilaydi, workspace ochadi va umumiy statistikani kuzatadi.</p>
+          </article>
+          <article class="landing-flow-card">
+            <span class="landing-step">02</span>
+            <h3>Team lead jamoani yig'adi</h3>
+            <p>A'zolarni email bo'yicha qo'shadi, secret key reset qiladi va ichki tartibni boshqaradi.</p>
+          </article>
+          <article class="landing-flow-card">
+            <span class="landing-step">03</span>
+            <h3>Jamoa g'oya ustida ishlaydi</h3>
+            <p>Chat, status va workspace ichidagi g'oyalar bo'yicha yopiq hamkorlik muhitida ishlaydi.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section landing-section-surface" id="roles">
+        <div class="landing-section-head compact">
+          <span class="landing-kicker">Role System</span>
+          <h2>Har bir rolga alohida UX.</h2>
+        </div>
+        <div class="landing-role-grid">
+          <article class="landing-role-card">
+            <div class="landing-role-top">
+              <span class="landing-role-badge">Admin</span>
+              <strong>Control view</strong>
+            </div>
+            <p>Faqat statistika, workspace yaratish va workspace o'chirish. Idea yoki member operatsiyasiga aralashmaydi.</p>
+            <ul class="landing-checklist">
+              <li>Workspace yaratish</li>
+              <li>Team lead belgilash</li>
+              <li>Workspace o'chirish</li>
+            </ul>
+          </article>
+          <article class="landing-role-card featured">
+            <div class="landing-role-top">
+              <span class="landing-role-badge lead">Team lead</span>
+              <strong>Execution view</strong>
+            </div>
+            <p>Workspace ichidagi asosiy operator. A'zolarni qo'shadi, secret key boshqaradi va ichki oqimni yuritadi.</p>
+            <ul class="landing-checklist">
+              <li>A'zo qo'shish</li>
+              <li>Secret key reset</li>
+              <li>Chat va idea oqimi</li>
+            </ul>
+          </article>
+          <article class="landing-role-card">
+            <div class="landing-role-top">
+              <span class="landing-role-badge member">Member</span>
+              <strong>Focused view</strong>
+            </div>
+            <p>Faqat o'zi qo'shilgan workspace ichidagi g'oya, chat va muhokamalarni ko'radi.</p>
+            <ul class="landing-checklist">
+              <li>Private workspace access</li>
+              <li>Idea muhokamasi</li>
+              <li>Chat ishtiroki</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section class="landing-section landing-split" id="security">
+        <div class="landing-security-panel">
+          <span class="landing-kicker">Security</span>
+          <h2>Workspace ichidagi ma'lumotlar ommaviy emas.</h2>
+          <p>
+            Email verification, role-based access, Firestore rules va private workspace modeli
+            startup jamoalarga xavfsiz ichki ish maydoni beradi.
+          </p>
+          <div class="landing-security-list">
+            <div>Email tasdiqlanmaguncha kirish yo'q</div>
+            <div>G'oyalar public qidiruvga chiqmaydi</div>
+            <div>Secret key faqat team lead tomonidan boshqariladi</div>
+          </div>
+        </div>
+        <div class="landing-module-panel">
+          <div class="landing-module-grid">
+            <div class="landing-module">
+              <span>Workspace</span>
+              <strong>Private teams</strong>
+            </div>
+            <div class="landing-module">
+              <span>Ideas</span>
+              <strong>Status-driven flow</strong>
+            </div>
+            <div class="landing-module">
+              <span>Chat</span>
+              <strong>Realtime updates</strong>
+            </div>
+            <div class="landing-module">
+              <span>Auth</span>
+              <strong>Verified entry</strong>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing-cta-block">
+        <div>
+          <span class="landing-kicker">Ready</span>
+          <h2>MllyCore bilan startup workspace oqimini tartibga soling.</h2>
+          <p>Admin paneldan boshlang, team leadni belgilang va jamoani yopiq muhitda ishga tushiring.</p>
+        </div>
+        <div class="landing-actions">
+          <a href="register.html" class="btn landing-btn-accent">Ro'yxatdan o'tish</a>
+          <a href="login.html" class="btn btn-ghost">Kirish</a>
+        </div>
+      </section>
+    </main>
   </div>
 </body>
 </html>
