@@ -304,6 +304,12 @@ window.MllyCore = {
     return apiPost('/api/send-chat', authUser, { teamId, text: cleanText });
   },
 
+  async markTeamChatSeen(teamId) {
+    const authUser = await this.ensureAuthed();
+    if (!teamId) throw new Error('Workspace topilmadi.');
+    return apiPost('/api/mark-chat-seen', authUser, { teamId });
+  },
+
   async subscribeTeamChat(teamId, onChange) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
@@ -316,6 +322,22 @@ window.MllyCore = {
           .map((item) => ({ id: item.id, ...item.data() }))
           .sort(sortByChatAscending);
         onChange(messages);
+      }
+    );
+  },
+
+  async subscribeUserNotifications(uid, onChange) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (!uid) throw new Error('Foydalanuvchi topilmadi.');
+    const { collection, onSnapshot, query, where } = state.modules.dbMod;
+    return onSnapshot(
+      query(collection(state.db, 'notifications'), where('userId', '==', uid)),
+      (snapshot) => {
+        const notifications = snapshot.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByCreatedAtDesc);
+        onChange(notifications);
       }
     );
   },
@@ -460,12 +482,13 @@ window.MllyCore = {
     return apiPost('/api/task-action', authUser, { taskId, action: 'claim' });
   },
 
-  async submitTaskResult({ taskId, resultText }) {
+  async submitTaskResult({ taskId, resultText, resultLink = '' }) {
     const authUser = await this.ensureAuthed();
     return apiPost('/api/task-action', authUser, {
       taskId,
       action: 'submit',
-      resultText: String(resultText || '').trim()
+      resultText: String(resultText || '').trim(),
+      resultLink: String(resultLink || '').trim()
     });
   },
 

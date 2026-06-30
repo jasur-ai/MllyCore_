@@ -31,6 +31,7 @@ module.exports = async (req, res) => {
       senderName: profileName,
       senderAvatar: caller?.avatar || profileName.slice(0, 2).toUpperCase(),
       text: cleanMessage,
+      seenBy: [decoded.uid],
       clientCreatedAt: Date.now(),
       createdAt: now
     });

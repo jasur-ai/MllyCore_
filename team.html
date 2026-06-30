@@ -50,6 +50,7 @@
 
     let chatUnsubscribe = null;
     let workspaceState = null;
+    let chatSeenSyncPending = false;
 
     function setFeedback(id, text, tone = 'error') {
       const node = document.getElementById(id);
@@ -72,7 +73,10 @@
         <div class="msg ${message.senderUserId === currentUserId ? 'me' : ''}" data-message-id="${message.id}">
           <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
           <div class="bubble">
-            <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt || message.clientCreatedAt)}</div>
+            <div class="meta">
+              <span>${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt || message.clientCreatedAt)}</span>
+              ${message.senderUserId === currentUserId ? `<span class="chat-checks ${(Array.isArray(message.seenBy) && message.seenBy.length > 1) ? 'is-read' : ''}">${(Array.isArray(message.seenBy) && message.seenBy.length > 1) ? '\u2713\u2713' : '\u2713'}</span>` : ''}
+            </div>
             <div>${escapeHtml(message.text)}</div>
           </div>
         </div>
@@ -93,6 +97,22 @@
       if (count) count.textContent = messages.length;
       const stat = document.getElementById('chatStat');
       if (stat) stat.textContent = messages.length;
+    }
+
+    async function syncChatSeen(messages, currentUserId, teamId) {
+      if (chatSeenSyncPending || !teamId) return;
+      const hasUnseen = (messages || []).some((message) => {
+        const seenBy = Array.isArray(message.seenBy) ? message.seenBy : [];
+        return message.senderUserId !== currentUserId && !seenBy.includes(currentUserId);
+      });
+      if (!hasUnseen) return;
+      chatSeenSyncPending = true;
+      try {
+        await MllyCore.markTeamChatSeen(teamId);
+      } catch (_) {
+      } finally {
+        chatSeenSyncPending = false;
+      }
     }
 
     async function markWorkspaceNotificationsSeen(data) {
@@ -214,6 +234,7 @@
     function renderTasks(data, currentUserId, isLead) {
       const tasks = data.tasks || [];
       const submissions = data.taskSubmissions || [];
+      const memberCount = data.members.length || 1;
       const target = document.getElementById('tasksList');
       const count = document.getElementById('taskCount');
       if (count) count.textContent = `${tasks.length} ta`;
@@ -223,6 +244,7 @@
         const hasSubmitted = taskSubs.some((item) => item.userId === currentUserId);
         const isAssignedToCurrent = task.assignedUserId === currentUserId;
         const canClaim = task.assignmentMode === 'open' && !task.assignedUserId;
+        const teamRequired = task.requiredCount || Math.max(1, Math.ceil(memberCount * 0.65));
         const canSubmit = (
           (task.assignmentMode === 'team') ||
           ((task.assignmentMode === 'direct' || task.assignmentMode === 'open') && isAssignedToCurrent)
@@ -239,12 +261,13 @@
                   <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo\'q')}</span>
                 </div>
               </div>
-              <span class="badge badge-progress">${task.progressCount || 0}/${task.requiredCount || (task.assignmentMode === 'team' ? '65%' : 1)}</span>
+              <span class="badge badge-progress">${task.assignmentMode === 'team' ? `${task.progressCount || 0}/${memberCount} kishi` : `${task.progressCount || 0}/${task.requiredCount || 1}`}</span>
             </div>
             <p class="workspace-helper">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</p>
             <div class="workspace-detail-list">
               <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(task.assignedUserName || (task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
               <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
+              ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
             </div>
             ${taskSubs.length ? `
               <div class="workspace-message-stack">
@@ -252,6 +275,7 @@
                   <div class="workspace-message-item">
                     <strong>${escapeHtml(sub.userName)}</strong>
                     <span>${escapeHtml(sub.resultText)}</span>
+                    ${sub.resultLink ? `<a class="text-sm" href="${escapeHtml(sub.resultLink)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;margin-top:8px;display:inline-flex">Linkni ochish</a>` : ''}
                   </div>
                 `).join('')}
               </div>
@@ -259,8 +283,9 @@
             <div class="workspace-task-footer">
               ${canClaim ? `<button class="btn btn-ghost" data-task-claim="${task.id}">Topshiriqni olish</button>` : '<span class="workspace-helper">Topshiriq oqimi faol</span>'}
               ${canSubmit ? `
-                <div class="workspace-subgrid cols-2" style="flex:1">
+                <div class="workspace-task-submit-grid" style="flex:1">
                   <input class="input" data-task-result="${task.id}" placeholder="Natijani yozing">
+                  <input class="input" data-task-link="${task.id}" placeholder="Pitch yoki ish linki">
                   <button class="btn btn-primary" data-task-submit="${task.id}">Tugatdim</button>
                 </div>
               ` : ''}
@@ -293,6 +318,7 @@
         button.addEventListener('click', async () => {
           const taskId = button.dataset.taskSubmit;
           const resultText = document.querySelector(`[data-task-result="${taskId}"]`)?.value || '';
+          const resultLink = document.querySelector(`[data-task-link="${taskId}"]`)?.value || '';
           const feedback = document.querySelector(`[data-task-feedback="${taskId}"]`);
           if (feedback) {
             feedback.className = 'text-sm muted feedback-error';
@@ -300,7 +326,7 @@
           }
           button.disabled = true;
           try {
-            await MllyCore.submitTaskResult({ taskId, resultText });
+            await MllyCore.submitTaskResult({ taskId, resultText, resultLink });
             await refreshWorkspace(data.team.id, currentUserId);
           } catch (error) {
             if (feedback) feedback.textContent = error.message || 'Natija yuborilmadi.';
@@ -587,6 +613,7 @@
       renderTasks(data, currentUserId, isLead);
       renderMembers(data, currentUserId);
       renderChat(data.messages || [], currentUserId);
+      await syncChatSeen(data.messages || [], currentUserId, data.team.id);
 
       if (focusType === 'tasks') {
         const taskCard = focusEntityId ? document.querySelector(`[data-task-id="${focusEntityId}"]`) : null;
@@ -604,8 +631,11 @@
       }
 
       if (chatUnsubscribe) chatUnsubscribe();
-      chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, (messages) => renderChat(messages, currentUserId));
-      await markWorkspaceNotificationsSeen(data);
+      chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, async (messages) => {
+        renderChat(messages, currentUserId);
+        syncChatSeen(messages, currentUserId, data.team.id);
+      });
+      markWorkspaceNotificationsSeen(data);
 
       document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('chatText');
@@ -727,7 +757,7 @@
     }
 
     async function refreshWorkspace(teamId, currentUserId) {
-      await MllyCore.syncTeamTasks(teamId).catch(() => {});
+      MllyCore.syncTeamTasks(teamId).catch(() => {});
       workspaceState = await MllyCore.getTeamData(teamId);
       if (workspaceState) {
         await renderWorkspace(workspaceState, currentUserId);
@@ -743,7 +773,7 @@
       }
 
       const teamId = qs('id');
-      await MllyCore.syncTeamTasks(teamId).catch(() => {});
+      MllyCore.syncTeamTasks(teamId).catch(() => {});
       const dashboard = await MllyCore.getDashboardData(user.uid);
       mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
       workspaceState = teamId ? await MllyCore.getTeamData(teamId) : null;

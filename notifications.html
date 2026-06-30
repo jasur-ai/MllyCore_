@@ -89,12 +89,7 @@
       return read ? '\u2713\u2713' : '\u2713';
     }
 
-    (async () => {
-      const user = await window.MLLYCORE_AUTH_READY;
-      if (!user) return;
-      const data = await MllyCore.getDashboardData(user.uid);
-      mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
-
+    function renderNotificationPage(data) {
       const invites = data.pendingInvites || [];
       document.getElementById('inviteCount').textContent = invites.length;
       document.getElementById('notificationCount').textContent = data.notifications.length;
@@ -178,6 +173,20 @@
           button.disabled = false;
         });
       });
+    }
+
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+      const data = await MllyCore.getDashboardData(user.uid);
+      mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
+      renderNotificationPage(data);
+
+      MllyCore.subscribeUserNotifications(user.uid, (notifications) => {
+        const nextData = { ...data, notifications };
+        window.APP_CONTEXT = { ...(window.APP_CONTEXT || {}), notifications };
+        renderNotificationPage(nextData);
+      }).catch(() => {});
     })();
   </script>
 </body>

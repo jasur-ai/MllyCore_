@@ -8,9 +8,10 @@ module.exports = async (req, res) => {
 
   try {
     const { db, decoded, caller } = await requireUser(req);
-    const { taskId, action, resultText = '' } = req.body || {};
+    const { taskId, action, resultText = '', resultLink = '' } = req.body || {};
     const cleanAction = cleanText(action).toLowerCase();
     const cleanResultText = cleanText(resultText);
+    const cleanResultLink = cleanText(resultLink);
     if (!taskId) throw new Error('Topshiriq topilmadi.');
     if (!['claim', 'submit'].includes(cleanAction)) throw new Error('Amal noto\'g\'ri.');
 
@@ -81,6 +82,7 @@ module.exports = async (req, res) => {
       userName: caller?.name || caller?.email || 'User',
       role: membership.role,
       resultText: cleanResultText,
+      resultLink: cleanResultLink,
       createdAt: now
     });
 

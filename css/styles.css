@@ -433,6 +433,47 @@ body.theme-light.auth-page {
     radial-gradient(760px 420px at 100% 0%, rgba(16,185,129,0.08), transparent 72%),
     linear-gradient(180deg, #edf3fb 0%, #f6f9fd 46%, #eef3fb 100%);
 }
+body.theme-light .auth-shell-pro {
+  background: rgba(255,255,255,0.84);
+  border-color: rgba(148,163,184,0.18);
+  box-shadow: 0 28px 80px rgba(148,163,184,0.18);
+}
+body.theme-light .auth-panel-brand,
+body.theme-light .auth-panel-side h1,
+body.theme-light .auth-panel-card h2 {
+  color: #182132;
+}
+body.theme-light .auth-panel-tag,
+body.theme-light .auth-panel-side p,
+body.theme-light .auth-panel-card p,
+body.theme-light .auth-helper {
+  color: #5d6a82;
+}
+body.theme-light .auth-panel-side {
+  background:
+    linear-gradient(160deg, rgba(99,102,241,0.08), rgba(255,255,255,0.92) 52%, rgba(56,189,248,0.08)),
+    rgba(255,255,255,0.94);
+  border-right-color: rgba(148,163,184,0.14);
+}
+body.theme-light .auth-panel-main {
+  background: rgba(248,250,253,0.88);
+}
+body.theme-light .auth-panel-card {
+  background: rgba(255,255,255,0.92);
+  border-color: rgba(148,163,184,0.16);
+  box-shadow: 0 18px 42px rgba(148,163,184,0.12);
+}
+body.theme-light .auth-feature-card,
+body.theme-light .auth-side-proof span {
+  background: rgba(255,255,255,0.76);
+  border-color: rgba(148,163,184,0.16);
+}
+body.theme-light .auth-feature-card span {
+  color: #64748b;
+}
+body.theme-light .auth-helper {
+  border-top-color: rgba(148,163,184,0.14);
+}
 .auth-shell-pro {
   width: min(1180px, 100%);
   margin: 0 auto;
@@ -920,6 +961,17 @@ body.theme-light .workspace-security-list span {
 .workspace-task-meta { display: flex; flex-wrap: wrap; gap: 8px; }
 .workspace-task-footer { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 .workspace-task-result { margin-top: 8px; }
+.workspace-task-submit-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+@media (max-width: 780px) {
+  .workspace-task-submit-grid {
+    grid-template-columns: 1fr;
+  }
+}
 .loading-copy { color: var(--muted); animation: pulseText 1.2s ease-in-out infinite; }
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
 .tab { padding: 10px 16px; cursor: pointer; color: var(--muted); border: 0; border-bottom: 2px solid transparent; font-weight: 600; font-size: 14px; background: transparent; }
@@ -958,9 +1010,7 @@ body.theme-light .auth-wrap,
 body.theme-light .auth-panel-card,
 body.theme-light .auth-panel-side,
 body.theme-light .auth-panel-main { color: var(--text); }
-body.theme-light .auth-panel-card,
 body.theme-light .auth-wrap { background: rgba(255,255,255,0.9); border-color: var(--border); }
-body.theme-light .auth-panel-side { background: linear-gradient(160deg, rgba(99,102,241,0.08), rgba(56,189,248,0.08) 60%, rgba(255,255,255,0.92)); }
 @media (max-width: 900px) { .auth-wrap { grid-template-columns: 1fr; } .auth-side { display: none; } .auth-form { padding: 32px 20px; } }
 
 /* Chat */
@@ -968,9 +1018,18 @@ body.theme-light .auth-panel-side { background: linear-gradient(160deg, rgba(99,
 .chat-messages { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .msg { display: flex; gap: 10px; }
 .msg .bubble { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; max-width: 70%; }
-.msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+.msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .msg.me { flex-direction: row-reverse; }
 .msg.me .bubble { background: linear-gradient(135deg, rgba(99,102,241,0.3), rgba(139,92,246,0.2)); border-color: rgba(99,102,241,0.35); }
+.chat-checks {
+  color: #93c5fd;
+  font-weight: 700;
+  letter-spacing: .04em;
+  flex: 0 0 auto;
+}
+.chat-checks.is-read {
+  color: #60a5fa;
+}
 .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); background: var(--bg-2); }
 .chat-empty { padding: 24px 12px; text-align: center; color: var(--muted); }
 

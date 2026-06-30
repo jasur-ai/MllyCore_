@@ -16,10 +16,6 @@
           <p class="workspace-command-copy" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
         </div>
         <div class="workspace-command-tools">
-          <button class="btn btn-ghost btn-sm theme-toggle-btn" type="button" id="pageThemeToggle" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
-            <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
-            <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
-          </button>
           <div class="search" style="display:none">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             <input class="input" id="globalSearch" placeholder="Workspace ichidan qidirish...">
@@ -161,7 +157,7 @@
       document.getElementById('globalSearch').closest('.search').style.display = isAdmin ? '' : 'none';
       if (!isAdmin) {
         document.querySelector('.workspace-command-tools').style.justifyContent = 'flex-start';
-        document.getElementById('pageThemeToggle').insertAdjacentHTML('beforebegin', `
+        document.querySelector('.workspace-command-tools').insertAdjacentHTML('afterbegin', `
           <span class="badge ${profile?.role === 'team_lead' ? 'badge-active' : ''}">
             ${profile?.role === 'team_lead' ? 'Team lead' : 'Member'}
           </span>
