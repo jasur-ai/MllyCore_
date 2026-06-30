@@ -5,3 +5,5 @@ firestore-debug.log
 ui-debug.log
 serviceAccountKey.json
 .env
+.vercel
+.env*.local

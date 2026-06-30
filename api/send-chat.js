@@ -7,11 +7,10 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const { db, decoded, caller } = await requireUser(req);
-    const { teamId, text } = req.body || {};
+    const { db, decoded, caller, admin } = await requireUser(req);
+    const { teamId, text, markSeen = false } = req.body || {};
     const cleanMessage = cleanText(text);
     if (!teamId) throw new Error('Workspace topilmadi.');
-    if (!cleanMessage) throw new Error('Xabar matnini kiriting.');
 
     const memberRef = db.collection('teamMembers').doc(`${teamId}_${decoded.uid}`);
     const memberSnap = await memberRef.get();
@@ -19,6 +18,34 @@ module.exports = async (req, res) => {
       res.status(403).json({ error: 'Siz bu workspace a\'zosi emassiz.' });
       return;
     }
+
+    if (markSeen) {
+      const messagesSnap = await db.collection('chatMessages').where('teamId', '==', teamId).get();
+      const pending = messagesSnap.docs.filter((doc) => {
+        const data = doc.data() || {};
+        const seenBy = Array.isArray(data.seenBy) ? data.seenBy : [];
+        return data.senderUserId !== decoded.uid && !seenBy.includes(decoded.uid);
+      });
+
+      if (!pending.length) {
+        res.status(200).json({ ok: true, updated: 0 });
+        return;
+      }
+
+      const batch = db.batch();
+      const now = serverNow();
+      pending.forEach((messageDoc) => {
+        batch.update(messageDoc.ref, {
+          seenBy: admin.firestore.FieldValue.arrayUnion(decoded.uid),
+          updatedAt: now
+        });
+      });
+      await batch.commit();
+      res.status(200).json({ ok: true, updated: pending.length });
+      return;
+    }
+
+    if (!cleanMessage) throw new Error('Xabar matnini kiriting.');
 
     const teamSnap = await db.collection('teams').doc(teamId).get();
     if (!teamSnap.exists) throw new Error('Workspace topilmadi.');

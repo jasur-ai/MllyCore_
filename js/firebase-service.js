@@ -307,7 +307,7 @@ window.MllyCore = {
   async markTeamChatSeen(teamId) {
     const authUser = await this.ensureAuthed();
     if (!teamId) throw new Error('Workspace topilmadi.');
-    return apiPost('/api/mark-chat-seen', authUser, { teamId });
+    return apiPost('/api/send-chat', authUser, { teamId, markSeen: true });
   },
 
   async subscribeTeamChat(teamId, onChange) {
