@@ -31,6 +31,8 @@
       const date = new Date(value);
       return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16);
     };
+    const focusType = qs('focus');
+    const focusEntityId = qs('entity');
 
     window.UTIL = window.UTIL || {
       toast: (msg) => {
@@ -67,7 +69,7 @@
       const target = document.getElementById('chatMessages');
       if (!target) return;
       target.innerHTML = messages.length ? messages.map((message) => `
-        <div class="msg ${message.senderUserId === currentUserId ? 'me' : ''}">
+        <div class="msg ${message.senderUserId === currentUserId ? 'me' : ''}" data-message-id="${message.id}">
           <div class="avatar-sm avatar">${escapeHtml(message.senderAvatar || 'U')}</div>
           <div class="bubble">
             <div class="meta">${escapeHtml(message.senderName || 'User')} / ${fmtDate(message.createdAt || message.clientCreatedAt)}</div>
@@ -75,11 +77,45 @@
           </div>
         </div>
       `).join('') : '<div class="chat-empty">Chat hali bo\'sh. Birinchi xabarni yozing.</div>';
-      target.scrollTop = target.scrollHeight;
+      if (focusType === 'chat' && focusEntityId) {
+        const focused = target.querySelector(`[data-message-id="${focusEntityId}"]`);
+        if (focused) {
+          focused.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          focused.classList.add('workspace-flash');
+          setTimeout(() => focused.classList.remove('workspace-flash'), 1800);
+        } else {
+          target.scrollTop = target.scrollHeight;
+        }
+      } else {
+        target.scrollTop = target.scrollHeight;
+      }
       const count = document.getElementById('chatCount');
       if (count) count.textContent = messages.length;
       const stat = document.getElementById('chatStat');
       if (stat) stat.textContent = messages.length;
+    }
+
+    async function markWorkspaceNotificationsSeen(data) {
+      const ideaIds = (data.ideas || []).map((item) => item.id);
+      const taskIds = (data.tasks || []).map((item) => item.id);
+      const types = ['team_message', 'task_assigned', 'task_claimed', 'task_progress', 'task_completed', 'task_auto_assigned'];
+
+      await MllyCore.markNotificationsRead({
+        teamId: data.team.id,
+        relatedEntityIds: taskIds,
+        types: types.filter((type) => type !== 'team_message')
+      }).catch(() => {});
+
+      await MllyCore.markNotificationsRead({
+        teamId: data.team.id,
+        relatedEntityIds: ideaIds,
+        types: ['idea_created', 'idea_imported', 'startup_created', 'startup_owner_changed']
+      }).catch(() => {});
+
+      await MllyCore.markNotificationsRead({
+        teamId: data.team.id,
+        types: ['team_message']
+      }).catch(() => {});
     }
 
     function renderMembers(data, currentUserId) {
@@ -109,7 +145,7 @@
       document.getElementById('startupsCount').textContent = `${startups.length} ta`;
 
       document.getElementById('startupList').innerHTML = startups.length ? startups.map((item) => `
-        <div class="workspace-record workspace-record-startup workspace-record-accent">
+        <div class="workspace-record workspace-record-startup workspace-record-accent" data-startup-id="${item.id}">
           <div class="workspace-record-top">
             <div>
               <h3>${escapeHtml(item.title)}</h3>
@@ -135,7 +171,7 @@
       `).join('') : '<div class="workspace-empty"><h3>Startup yo\'q</h3><p>Hozircha team lead startup qo\'shmagan.</p></div>';
 
       document.getElementById('ideasList').innerHTML = ideas.length ? ideas.map((item) => `
-        <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-idea">
+        <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-idea" data-idea-id="${item.id}">
           <div class="workspace-record-top">
             <div>
               <h3>${escapeHtml(item.title)}</h3>
@@ -193,7 +229,7 @@
         ) && !hasSubmitted && task.status !== 'completed';
 
         return `
-          <div class="workspace-task-card">
+          <div class="workspace-task-card" data-task-id="${task.id}">
             <div class="workspace-task-head">
               <div>
                 <h3 style="margin:0">${escapeHtml(task.title)}</h3>
@@ -552,8 +588,24 @@
       renderMembers(data, currentUserId);
       renderChat(data.messages || [], currentUserId);
 
+      if (focusType === 'tasks') {
+        const taskCard = focusEntityId ? document.querySelector(`[data-task-id="${focusEntityId}"]`) : null;
+        (taskCard || document.getElementById('tasksList'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        taskCard?.classList.add('workspace-flash');
+        setTimeout(() => taskCard?.classList.remove('workspace-flash'), 1800);
+      } else if (focusType === 'ideas' || focusType === 'startup') {
+        const selector = focusType === 'startup' ? `[data-startup-id="${focusEntityId}"]` : `[data-idea-id="${focusEntityId}"]`;
+        const card = focusEntityId ? document.querySelector(selector) : null;
+        (card || document.getElementById(focusType === 'startup' ? 'startupList' : 'ideasList'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        card?.classList.add('workspace-flash');
+        setTimeout(() => card?.classList.remove('workspace-flash'), 1800);
+      } else if (focusType === 'chat') {
+        document.getElementById('chatMessages')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+
       if (chatUnsubscribe) chatUnsubscribe();
       chatUnsubscribe = await MllyCore.subscribeTeamChat(data.team.id, (messages) => renderChat(messages, currentUserId));
+      await markWorkspaceNotificationsSeen(data);
 
       document.getElementById('sendChatBtn')?.addEventListener('click', async () => {
         const input = document.getElementById('chatText');

@@ -218,6 +218,52 @@ window.MllyCore = {
     return snap.exists() ? { id: snap.id, ...snap.data() } : null;
   },
 
+  async markNotificationsRead({ ids = [], teamId = '', relatedEntityId = '', relatedEntityIds = [], types = [] } = {}) {
+    const state = await this.init();
+    if (!state) return 0;
+    const authUser = await this.ensureAuthed();
+    const { collection, getDocs, query, serverTimestamp, where, writeBatch } = state.modules.dbMod;
+    const idSet = new Set((ids || []).filter(Boolean));
+    const relatedSet = new Set((relatedEntityIds || []).filter(Boolean));
+    const typeSet = new Set((types || []).filter(Boolean));
+
+    const snap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', authUser.uid)));
+    const matched = snap.docs.filter((item) => {
+      const data = item.data() || {};
+      const unread = data.unread || data.isRead === false;
+      if (!unread) return false;
+      if (idSet.size && !idSet.has(item.id)) return false;
+      if (teamId && data.teamId !== teamId) return false;
+      if (relatedEntityId && data.relatedEntityId !== relatedEntityId) return false;
+      if (relatedSet.size && !relatedSet.has(data.relatedEntityId)) return false;
+      if (typeSet.size && !typeSet.has(data.type)) return false;
+      return true;
+    });
+
+    if (!matched.length) return 0;
+
+    const batch = writeBatch(state.db);
+    matched.forEach((item) => {
+      batch.update(item.ref, {
+        unread: false,
+        isRead: true,
+        readAt: serverTimestamp()
+      });
+    });
+    await batch.commit();
+
+    if (window.APP_CONTEXT?.notifications?.length) {
+      const matchedIds = new Set(matched.map((item) => item.id));
+      window.APP_CONTEXT.notifications = window.APP_CONTEXT.notifications.map((item) => (
+        matchedIds.has(item.id)
+          ? { ...item, unread: false, isRead: true }
+          : item
+      ));
+    }
+
+    return matched.length;
+  },
+
   async createWorkspaceEntry({ teamId, title, description, type = 'idea', ownerUserId = '' }) {
     const authUser = await this.ensureAuthed();
     const cleanTitle = String(title || '').trim();

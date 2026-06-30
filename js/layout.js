@@ -15,18 +15,19 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
           <span style="font-size:13px">${team.name}</span>
         </a>
       `).join('') || '<div class="text-xs muted" style="padding:8px 10px">Workspace yoq</div>';
+
   const navItems = isAdmin ? `
-      <a href="dashboard.html" class="nav-item ${active==='dashboard'?'active':''}">Statistika</a>
-      <a href="admin.html" class="nav-item ${active==='admin'?'active':''}">Admin paneli</a>
-      <a href="profile.html" class="nav-item ${active==='profile'?'active':''}">Profil sozlamalari</a>
+      <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Statistika</a>
+      <a href="admin.html" class="nav-item ${active === 'admin' ? 'active' : ''}">Admin paneli</a>
+      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     ` : `
-      <a href="dashboard.html" class="nav-item ${active==='dashboard'?'active':''}">Dashboard</a>
-      <a href="my-ideas.html" class="nav-item ${active==='ideas'?'active':''}">G'oyalarim</a>
-      <a href="notifications.html" class="nav-item ${active==='notif'?'active':''}">
+      <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
+      <a href="my-ideas.html" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
+      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
         ${unread ? `<span class="count">${unread}</span>` : ''}
       </a>
-      <a href="profile.html" class="nav-item ${active==='profile'?'active':''}">Profil sozlamalari</a>
+      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
 
       <div class="nav-section">Workspace'larim</div>
       ${teamLinks}
@@ -42,7 +43,10 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       </div>
     </a>
     <div class="flex items-center gap-2">
-      <button class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()"><span data-theme-label>Light mode</span></button>
+      <button class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
+        <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
+        <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
+      </button>
       <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
@@ -68,7 +72,10 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${profile.name || profile.email}</div>
         <div class="text-xs muted">@${profile.username || 'user'}</div>
       </div>
-      <button type="button" class="btn btn-ghost btn-sm" onclick="window.MllyCoreTheme?.toggle?.()" style="padding:6px 10px"><span data-theme-label>Light mode</span></button>
+      <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()">
+        <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
+        <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
+      </button>
       <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
         Chiqish
       </a>

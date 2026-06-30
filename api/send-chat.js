@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
 
     const now = serverNow();
     const profileName = caller?.name || caller?.email || 'User';
-    await db.collection('chatMessages').add({
+    const messageRef = await db.collection('chatMessages').add({
       teamId,
       senderUserId: decoded.uid,
       senderName: profileName,
@@ -46,14 +46,14 @@ module.exports = async (req, res) => {
         teamId,
         type: 'team_message',
         text: `${profileName} chatga yozdi: ${cleanMessage.slice(0, 90)}`,
-        relatedEntityId: teamId,
+        relatedEntityId: messageRef.id,
         unread: true,
         isRead: false,
         createdAt: now
       }));
     }
 
-    res.status(200).json({ ok: true });
+    res.status(200).json({ ok: true, id: messageRef.id });
   } catch (error) {
     res.status(error.statusCode || 400).json({ error: error.message || 'Xabar yuborilmadi.' });
   }

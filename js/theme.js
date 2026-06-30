@@ -7,8 +7,10 @@
     document.body.classList.add(nextTheme === 'light' ? 'theme-light' : 'theme-dark');
     localStorage.setItem(storageKey, nextTheme);
     document.documentElement.dataset.theme = nextTheme;
-    document.querySelectorAll('[data-theme-label]').forEach((node) => {
-      node.textContent = nextTheme === 'light' ? 'Dark mode' : 'Light mode';
+    document.querySelectorAll('[data-theme-toggle]').forEach((node) => {
+      const nextTitle = nextTheme === 'light' ? 'Dark mode' : 'Light mode';
+      node.setAttribute('title', nextTitle);
+      node.setAttribute('aria-label', nextTitle);
     });
   }
 

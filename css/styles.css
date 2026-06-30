@@ -754,6 +754,32 @@ body.theme-light .workspace-command .search input {
   border-color: rgba(148,163,184,0.2);
 }
 .workspace-command-tools { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: end; }
+.theme-toggle-btn {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 42px;
+}
+.theme-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+}
+body.theme-dark .theme-sun,
+body.theme-light .theme-moon {
+  display: none;
+}
+body.theme-light .theme-toggle-btn {
+  background: rgba(255,255,255,0.82);
+  border-color: rgba(148,163,184,0.24);
+}
 .workspace-overview { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 14px; }
 .workspace-stat { padding: 18px; border: 1px solid var(--border); border-radius: 18px; background: rgba(21,27,44,0.94); }
 .workspace-stat-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: .08em; }
@@ -838,6 +864,38 @@ body.theme-light .workspace-security-list span {
 .workspace-message-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: rgba(11,15,26,0.5); }
 .workspace-message-item strong { display: block; font-size: 13px; margin-bottom: 4px; }
 .workspace-message-item span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.notification-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.notification-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99,102,241,0.26);
+}
+.notification-unread {
+  border-color: rgba(96,165,250,0.34);
+  background: rgba(37,99,235,0.09);
+}
+.notification-checks {
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+.notification-checks.is-read {
+  color: #60a5fa;
+}
+.workspace-flash .bubble {
+  border-color: rgba(96,165,250,0.45);
+  box-shadow: 0 0 0 3px rgba(96,165,250,0.12);
+}
+.workspace-record.workspace-flash,
+.workspace-task-card.workspace-flash {
+  border-color: rgba(96,165,250,0.45);
+  box-shadow: 0 0 0 3px rgba(96,165,250,0.12);
+}
 .workspace-surface-body { padding: 18px 20px 20px; }
 .workspace-surface-body.compact { padding-top: 0; }
 .workspace-stack-tight { display: grid; gap: 12px; }
