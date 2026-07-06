@@ -148,19 +148,25 @@
       ]);
 
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
-      document.getElementById('stats').innerHTML = [
-        { n: teams.length, l: "Workspace'lar", note: 'Joriy production birliklari' },
-        { n: users.filter(u => u.role === 'manager').length, l: 'Managerlar', note: 'Hisobot rahbarlari' },
-        { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar', note: 'Boshqaruvchi userlar' },
-        { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar', note: 'Platformadagi memberlar' },
-        { n: teams.filter((team) => !team.leadUserId).length, l: 'Lead kutilmoqda', note: "Tayinlanmagan workspace'lar" }
-      ].map((s) => `
-        <div class="workspace-stat">
-          <span class="workspace-stat-label">${s.l}</span>
-          <span class="workspace-stat-value">${s.n}</span>
-          <span class="workspace-stat-note">${s.note}</span>
-        </div>
-      `).join('');
+
+      const updateAdminStats = () => {
+        const managers = users.filter(u => u.role === 'manager');
+        const mgrEmails = managers.map(m => m.email).join(', ') || 'Hozircha yo\'q';
+        document.getElementById('stats').innerHTML = [
+          { n: teams.length, l: "Workspace'lar", note: 'Joriy production birliklari' },
+          { n: managers.length, l: 'Managerlar', note: `Email: ${mgrEmails}` },
+          { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar', note: 'Boshqaruvchi userlar' },
+          { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar', note: 'Platformadagi memberlar' },
+          { n: teams.filter((team) => !team.leadUserId).length, l: 'Lead kutilmoqda', note: "Tayinlanmagan workspace'lar" }
+        ].map((s) => `
+          <div class="workspace-stat" title="${s.note}">
+            <span class="workspace-stat-label">${s.l}</span>
+            <span class="workspace-stat-value">${s.n}</span>
+            <span class="workspace-stat-note" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;">${s.note}</span>
+          </div>
+        `).join('');
+      };
+      updateAdminStats();
 
       let selectedRevokeManagerId = null;
 
@@ -329,19 +335,7 @@
           }
           UTIL.closeModal('revokeManagerModal');
           renderManagers();
-          document.getElementById('stats').innerHTML = [
-            { n: teams.length, l: "Workspace'lar", note: 'Joriy production birliklari' },
-            { n: users.filter(u => u.role === 'manager').length, l: 'Managerlar', note: 'Hisobot rahbarlari' },
-            { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar', note: 'Boshqaruvchi userlar' },
-            { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar', note: 'Platformadagi memberlar' },
-            { n: teams.filter((team) => !team.leadUserId).length, l: 'Lead kutilmoqda', note: "Tayinlanmagan workspace'lar" }
-          ].map((s) => `
-            <div class="workspace-stat">
-              <span class="workspace-stat-label">${s.l}</span>
-              <span class="workspace-stat-value">${s.n}</span>
-              <span class="workspace-stat-note">${s.note}</span>
-            </div>
-          `).join('');
+          updateAdminStats();
         } catch (error) {
           errorBox.textContent = error.message || "Managerlikdan olib tashlab bo'lmadi.";
           button.disabled = false;
@@ -349,24 +343,34 @@
       });
 
       document.getElementById('confirmAddManagerBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('confirmAddManagerBtn');
         const name = document.getElementById('newManagerName').value;
         const email = document.getElementById('newManagerEmail').value;
         const err = document.getElementById('addManagerError');
         err.textContent = '';
-        if (!email) { err.textContent = 'Email kiritish majburiy'; return; }
+        if (!email.trim()) { err.textContent = 'Email kiritish majburiy'; return; }
+        btn.disabled = true;
+        btn.textContent = "Qo'shilmoqda...";
         try {
-          const res = await MllyCore.createOrPromoteManager({ email, name });
+          const res = await MllyCore.createOrPromoteManager({ email: email.trim(), name: name.trim() });
           let mgrObj = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase());
           if (mgrObj) {
             mgrObj.role = 'manager';
-            mgrObj.name = name || mgrObj.name;
+            mgrObj.name = name.trim() || mgrObj.name;
           } else {
             users.push({ id: res.id, email: res.email, name: res.name, role: 'manager', assignedTeams: [], assignedTeamNames: [] });
           }
+          document.getElementById('newManagerName').value = '';
+          document.getElementById('newManagerEmail').value = '';
+          btn.disabled = false;
+          btn.textContent = "Qo'shish";
           UTIL.closeModal('addManagerModal');
           renderManagers();
+          updateAdminStats();
         } catch (error) {
-          err.textContent = error.message;
+          err.textContent = error.message || "Xatolik yuz berdi";
+          btn.disabled = false;
+          btn.textContent = "Qo'shish";
         }
       });
 
@@ -429,5 +433,5 @@
       });
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d5f586bdfad22',t:'MTc4MzMyNzkzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d8ec12faa2f9d',t:'MTc4MzMyOTg3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
