@@ -31,9 +31,10 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else {
+    const hasTeam = teams && teams.length > 0;
     navItems = `
       <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
-      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>
+      ${hasTeam ? `<a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>` : ''}
       <a href="my-ideas.html" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
       <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
