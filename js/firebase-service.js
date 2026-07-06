@@ -740,13 +740,45 @@ window.MllyCore = {
     return results;
   },
 
-  async createReport({ type, teamId = '', teamName = '', link, description, targetRole = 'team_lead' }) {
+  async getReportPeriodMode() {
+    const state = await this.init();
+    if (!state) return 'daily';
+    const { doc, getDoc } = state.modules.dbMod;
+    try {
+      const snap = await getDoc(doc(state.db, 'settings', 'reportPeriodMode'));
+      return snap.exists() ? (snap.data().activeMode || 'daily') : 'daily';
+    } catch (_) {
+      return localStorage.getItem('mllycore_report_mode') || 'daily';
+    }
+  },
+
+  async setReportPeriodMode(mode) {
+    const state = await this.init();
+    if (!state) return;
+    localStorage.setItem('mllycore_report_mode', mode);
+    const { doc, setDoc } = state.modules.dbMod;
+    try {
+      await setDoc(doc(state.db, 'settings', 'reportPeriodMode'), { activeMode: mode, updatedAt: Date.now() }, { merge: true });
+    } catch (_) {}
+  },
+
+  async createReport({ type, teamId = '', teamName = '', link, description, targetRole = 'team_lead', periodType = 'daily' }) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
     const authUser = await this.ensureAuthed();
     const profile = window.MLLYCORE_PROFILE || {};
     const { addDoc, collection } = state.modules.dbMod;
     const now = Date.now();
+    const d = new Date(now);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const secs = String(d.getSeconds()).padStart(2, '0');
+    const typeLabel = periodType === 'daily' ? 'kunlik' : periodType === 'weekly' ? 'haftalik' : 'oylik';
+    const formattedDate = `${day}/${month}/${year} ${hours}:${mins}:${secs} ${typeLabel}`;
+
     const docRef = await addDoc(collection(state.db, 'reports'), {
       type,
       teamId,
@@ -759,23 +791,47 @@ window.MllyCore = {
       status: 'pending',
       feedback: '',
       targetRole,
+      periodType,
+      formattedDate,
       createdAt: now,
       updatedAt: now
     });
     invalidateCacheByPrefix(getCacheKey('reports', ''));
-    return { id: docRef.id, type, teamId, link, description, status: 'pending' };
+    return { id: docRef.id, type, teamId, link, description, status: 'pending', periodType, formattedDate };
   },
 
   async updateReportStatus({ reportId, status, feedback = '' }) {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
     await this.ensureAuthed();
-    const { doc, updateDoc } = state.modules.dbMod;
-    await updateDoc(doc(state.db, 'reports', reportId), {
+    const { doc, getDoc, updateDoc } = state.modules.dbMod;
+    const now = Date.now();
+    const d = new Date(now);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const mins = String(d.getMinutes()).padStart(2, '0');
+    const secs = String(d.getSeconds()).padStart(2, '0');
+
+    let updateData = {
       status,
       feedback: String(feedback || '').trim(),
-      updatedAt: Date.now()
-    });
+      updatedAt: now
+    };
+
+    if (status === 'approved') {
+      const repSnap = await getDoc(doc(state.db, 'reports', reportId));
+      if (repSnap.exists()) {
+        const repData = repSnap.data();
+        const pType = repData.periodType || 'daily';
+        const typeLabel = pType === 'daily' ? 'kunlik' : pType === 'weekly' ? 'haftalik' : 'oylik';
+        updateData.formattedDate = `${day}/${month}/${year} ${hours}:${mins}:${secs} ${typeLabel}`;
+        updateData.approvedAtFormatted = updateData.formattedDate;
+      }
+    }
+
+    await updateDoc(doc(state.db, 'reports', reportId), updateData);
     invalidateCacheByPrefix(getCacheKey('reports', ''));
     return { success: true };
   },
