@@ -48,14 +48,21 @@ window.MllyCore = {
     const cached = readCache(cacheKey, CACHE_TTL.username);
     if (cached) return cached;
     return rememberInflight(cacheKey, async () => {
-      const snap = await getDocs(query(collection(state.db, 'users'), where('username', '==', clean)));
-      if (snap.empty) {
-        writeCache(cacheKey, null);
-        return null;
+      try {
+        const snap = await getDocs(query(collection(state.db, 'users'), where('username', '==', clean)));
+        if (snap.empty) {
+          writeCache(cacheKey, null);
+          return null;
+        }
+        const result = { id: snap.docs[0].id, ...snap.docs[0].data() };
+        writeCache(cacheKey, result);
+        return result;
+      } catch (err) {
+        if (err?.code === 'permission-denied' || String(err?.message || '').toLowerCase().includes('permission')) {
+          return null;
+        }
+        throw err;
       }
-      const result = { id: snap.docs[0].id, ...snap.docs[0].data() };
-      writeCache(cacheKey, result);
-      return result;
     });
   },
 
@@ -73,7 +80,6 @@ window.MllyCore = {
     const cleanEmail = String(email || '').trim().toLowerCase();
     const cleanUsername = normalizeUsername(username);
     if (!cleanUsername) throw new Error('Username kiriting.');
-    await this.ensureUniqueUsername(cleanUsername);
 
     const { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } = state.modules.authMod;
     const { doc, serverTimestamp, setDoc } = state.modules.dbMod;
