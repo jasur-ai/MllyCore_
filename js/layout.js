@@ -97,6 +97,18 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
 window.mountLayout = function(active, context) {
   if (context) window.APP_CONTEXT = context;
   const root = document.getElementById('app');
+  if (!root) return;
+  if (root.classList.contains('app')) {
+    const temp = document.createElement('div');
+    temp.innerHTML = renderLayout(active, context);
+    const newHeader = temp.querySelector('.mobile-header');
+    const newSidebar = temp.querySelector('.sidebar');
+    const curHeader = root.querySelector('.mobile-header');
+    const curSidebar = root.querySelector('.sidebar');
+    if (newHeader && curHeader) curHeader.replaceWith(newHeader);
+    if (newSidebar && curSidebar) curSidebar.replaceWith(newSidebar);
+    return;
+  }
   const main = root.innerHTML;
   root.outerHTML = `<div class="app" id="app">${renderLayout(active, context)}<main class="main">${main}</main></div>`;
   const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
