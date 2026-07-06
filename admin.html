@@ -89,6 +89,25 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="revokeManagerModal" onclick="if(event.target===this)UTIL.closeModal('revokeManagerModal')">
+    <div class="modal">
+      <h3>Managerlikdan Olib Tashlash</h3>
+      <p class="modal-sub" id="revokeManagerSubtitle">Bu amal foydalanuvchini oddiy member roliga o'tkazadi va unga biriktirilgan jamoalarni bekor qiladi.</p>
+      <div class="workspace-modal-field">
+        <label class="label">Admin parolini tasdiqlang</label>
+        <div class="password-field">
+          <input class="input" id="revokeManagerPassword" type="password" placeholder="Admin parolini kiriting">
+          <button class="password-toggle" type="button" id="toggleRevokeManagerPassword">Ko'rsat</button>
+        </div>
+      </div>
+      <div class="workspace-modal-error" id="revokeManagerError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('revokeManagerModal')">Bekor qilish</button>
+        <button class="btn btn-danger" type="button" id="confirmRevokeManagerBtn">Olib Tashlash</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="deleteWorkspaceModal" onclick="if(event.target===this)UTIL.closeModal('deleteWorkspaceModal')">
     <div class="modal">
       <h3>Workspace o'chirish</h3>
@@ -143,6 +162,8 @@
         </div>
       `).join('');
 
+      let selectedRevokeManagerId = null;
+
       const renderManagers = () => {
         const managers = users.filter(u => u.role === 'manager');
         const container = document.getElementById('managerList');
@@ -173,6 +194,7 @@
                   </h3>
                   <div class="text-xs muted">${mgr.email}</div>
                 </div>
+                <button type="button" class="btn btn-danger btn-sm revoke-mgr-btn" data-mgr-id="${mgr.id}" data-mgr-name="${escapeHtml(mgr.name || mgr.email)}">Managerlikdan olib tashlash</button>
               </div>
               <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;">
                 <div class="text-xs font-semibold mb-2" style="margin-bottom:6px;">Mas'ul komandalar:</div>
@@ -195,13 +217,34 @@
           `;
         }).join('');
 
+        document.querySelectorAll('.revoke-mgr-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const mId = btn.dataset.mgrId;
+            const mName = btn.dataset.mgrName;
+            if (!confirm(`Rostdan ham "${mName}" foydalanuvchisini umumiy managerlik huquqidan olib tashlamoqchimisiz?`)) {
+              return;
+            }
+            selectedRevokeManagerId = mId;
+            document.getElementById('revokeManagerSubtitle').textContent = `"${mName}" manager roldan oddiy a'zolikka o'tkaziladi va mas'ul komandalari bekor qilinadi.`;
+            document.getElementById('revokeManagerPassword').value = '';
+            document.getElementById('revokeManagerError').textContent = '';
+            document.getElementById('confirmRevokeManagerBtn').disabled = false;
+            UTIL.openModal('revokeManagerModal');
+          });
+        });
+
         document.querySelectorAll('.remove-mgr-team-btn').forEach(btn => {
           btn.addEventListener('click', async () => {
             const mId = btn.dataset.mgrId;
             const tId = btn.dataset.teamId;
+            const mgrObj = users.find(u => u.id === mId);
+            const tObj = teams.find(t => t.id === tId);
+            const tName = tObj?.name || 'tanlangan komanda';
+            if (!confirm(`Rostdan ham "${tName}" komandasini "${mgrObj?.name || 'Manager'}" mas'uliyatidan bekor qilmoqchimisiz?`)) {
+              return;
+            }
             try {
               await MllyCore.removeTeamFromManager({ managerUserId: mId, teamId: tId });
-              const mgrObj = users.find(u => u.id === mId);
               if (mgrObj && mgrObj.assignedTeams) {
                 const idx = mgrObj.assignedTeams.indexOf(tId);
                 if (idx > -1) {
@@ -237,9 +280,12 @@
               errDiv.style.display = 'block';
               return;
             }
+            const mgrObj = users.find(u => u.id === mId);
+            if (!confirm(`Rostdan ham "${matchedTeam.name}" komandasini "${mgrObj?.name || 'Manager'}" ga mas'ul qilib tayinlamoqchimisiz?`)) {
+              return;
+            }
             try {
               await MllyCore.assignTeamToManager({ managerUserId: mId, teamId: matchedTeam.id, teamName: matchedTeam.name });
-              const mgrObj = users.find(u => u.id === mId);
               if (mgrObj) {
                 mgrObj.assignedTeams = mgrObj.assignedTeams || [];
                 mgrObj.assignedTeamNames = mgrObj.assignedTeamNames || [];
@@ -257,6 +303,50 @@
         });
       };
       renderManagers();
+
+      document.getElementById('toggleRevokeManagerPassword')?.addEventListener('click', () => {
+        const input = document.getElementById('revokeManagerPassword');
+        const toggle = document.getElementById('toggleRevokeManagerPassword');
+        const reveal = input.type === 'password';
+        input.type = reveal ? 'text' : 'password';
+        toggle.textContent = reveal ? 'Yashir' : "Ko'rsat";
+      });
+
+      document.getElementById('confirmRevokeManagerBtn')?.addEventListener('click', async () => {
+        if (!selectedRevokeManagerId) return;
+        const button = document.getElementById('confirmRevokeManagerBtn');
+        const password = document.getElementById('revokeManagerPassword').value;
+        const errorBox = document.getElementById('revokeManagerError');
+        button.disabled = true;
+        errorBox.textContent = '';
+        try {
+          await MllyCore.revokeManagerRole(selectedRevokeManagerId, password);
+          const mgrObj = users.find(u => u.id === selectedRevokeManagerId);
+          if (mgrObj) {
+            mgrObj.role = 'member';
+            mgrObj.assignedTeams = [];
+            mgrObj.assignedTeamNames = [];
+          }
+          UTIL.closeModal('revokeManagerModal');
+          renderManagers();
+          document.getElementById('stats').innerHTML = [
+            { n: teams.length, l: "Workspace'lar", note: 'Joriy production birliklari' },
+            { n: users.filter(u => u.role === 'manager').length, l: 'Managerlar', note: 'Hisobot rahbarlari' },
+            { n: users.filter(u => u.role === 'team_lead').length, l: 'Team leadlar', note: 'Boshqaruvchi userlar' },
+            { n: users.filter(u => u.role === 'member').length, l: 'A\'zolar', note: 'Platformadagi memberlar' },
+            { n: teams.filter((team) => !team.leadUserId).length, l: 'Lead kutilmoqda', note: "Tayinlanmagan workspace'lar" }
+          ].map((s) => `
+            <div class="workspace-stat">
+              <span class="workspace-stat-label">${s.l}</span>
+              <span class="workspace-stat-value">${s.n}</span>
+              <span class="workspace-stat-note">${s.note}</span>
+            </div>
+          `).join('');
+        } catch (error) {
+          errorBox.textContent = error.message || "Managerlikdan olib tashlab bo'lmadi.";
+          button.disabled = false;
+        }
+      });
 
       document.getElementById('confirmAddManagerBtn')?.addEventListener('click', async () => {
         const name = document.getElementById('newManagerName').value;
@@ -339,5 +429,5 @@
       });
     })();
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d5f586bdfad22',t:'MTc4MzMyNzkzNw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
