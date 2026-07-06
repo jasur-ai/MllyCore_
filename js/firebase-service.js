@@ -848,6 +848,9 @@ window.MllyCore = {
     const now = Date.now();
     if (!snap.empty) {
       const userDoc = snap.docs[0];
+      if (userDoc.data().role === 'manager') {
+        throw new Error('Bu foydalanuvchi allaqachon manager qilib tayinlangan!');
+      }
       await setDoc(doc(state.db, 'users', userDoc.id), {
         role: 'manager',
         name: name || userDoc.data().name,
