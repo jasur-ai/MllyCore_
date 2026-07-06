@@ -108,6 +108,17 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="customConfirmModal" onclick="if(event.target===this)UTIL.closeModal('customConfirmModal')">
+    <div class="modal" style="max-width:440px;">
+      <h3 id="customConfirmTitle">Tasdiqlash</h3>
+      <p class="modal-sub" id="customConfirmText" style="margin-bottom:20px;font-size:14px;color:var(--text);"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" id="customConfirmNoBtn">Bekor qilish</button>
+        <button class="btn btn-primary" type="button" id="customConfirmYesBtn">Rostdan ham Tasdiqlash</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="deleteWorkspaceModal" onclick="if(event.target===this)UTIL.closeModal('deleteWorkspaceModal')">
     <div class="modal">
       <h3>Workspace o'chirish</h3>
@@ -169,6 +180,28 @@
       updateAdminStats();
 
       let selectedRevokeManagerId = null;
+      let customConfirmCallback = null;
+
+      const showCustomConfirm = (title, text, btnClass, callback) => {
+        document.getElementById('customConfirmTitle').textContent = title || 'Tasdiqlash';
+        document.getElementById('customConfirmText').textContent = text || '';
+        const yesBtn = document.getElementById('customConfirmYesBtn');
+        yesBtn.className = btnClass || 'btn btn-primary';
+        customConfirmCallback = callback;
+        UTIL.openModal('customConfirmModal');
+      };
+
+      document.getElementById('customConfirmNoBtn')?.addEventListener('click', () => {
+        UTIL.closeModal('customConfirmModal');
+        customConfirmCallback = null;
+      });
+
+      document.getElementById('customConfirmYesBtn')?.addEventListener('click', () => {
+        UTIL.closeModal('customConfirmModal');
+        if (typeof customConfirmCallback === 'function') {
+          customConfirmCallback();
+        }
+      });
 
       const renderManagers = () => {
         const managers = users.filter(u => u.role === 'manager');
@@ -227,39 +260,47 @@
           btn.addEventListener('click', () => {
             const mId = btn.dataset.mgrId;
             const mName = btn.dataset.mgrName;
-            if (!confirm(`Rostdan ham "${mName}" foydalanuvchisini umumiy managerlik huquqidan olib tashlamoqchimisiz?`)) {
-              return;
-            }
-            selectedRevokeManagerId = mId;
-            document.getElementById('revokeManagerSubtitle').textContent = `"${mName}" manager roldan oddiy a'zolikka o'tkaziladi va mas'ul komandalari bekor qilinadi.`;
-            document.getElementById('revokeManagerPassword').value = '';
-            document.getElementById('revokeManagerError').textContent = '';
-            document.getElementById('confirmRevokeManagerBtn').disabled = false;
-            UTIL.openModal('revokeManagerModal');
+            showCustomConfirm(
+              'Managerlikdan Olib Tashlash',
+              `Rostdan ham "${mName}" foydalanuvchisini umumiy managerlik huquqidan olib tashlamoqchimisiz?`,
+              'btn btn-danger',
+              () => {
+                selectedRevokeManagerId = mId;
+                document.getElementById('revokeManagerSubtitle').textContent = `"${mName}" manager roldan oddiy a'zolikka o'tkaziladi va mas'ul komandalari bekor qilinadi.`;
+                document.getElementById('revokeManagerPassword').value = '';
+                document.getElementById('revokeManagerError').textContent = '';
+                document.getElementById('confirmRevokeManagerBtn').disabled = false;
+                UTIL.openModal('revokeManagerModal');
+              }
+            );
           });
         });
 
         document.querySelectorAll('.remove-mgr-team-btn').forEach(btn => {
-          btn.addEventListener('click', async () => {
+          btn.addEventListener('click', () => {
             const mId = btn.dataset.mgrId;
             const tId = btn.dataset.teamId;
             const mgrObj = users.find(u => u.id === mId);
             const tObj = teams.find(t => t.id === tId);
             const tName = tObj?.name || 'tanlangan komanda';
-            if (!confirm(`Rostdan ham "${tName}" komandasini "${mgrObj?.name || 'Manager'}" mas'uliyatidan bekor qilmoqchimisiz?`)) {
-              return;
-            }
-            try {
-              await MllyCore.removeTeamFromManager({ managerUserId: mId, teamId: tId });
-              if (mgrObj && mgrObj.assignedTeams) {
-                const idx = mgrObj.assignedTeams.indexOf(tId);
-                if (idx > -1) {
-                  mgrObj.assignedTeams.splice(idx, 1);
-                  if (mgrObj.assignedTeamNames) mgrObj.assignedTeamNames.splice(idx, 1);
-                }
+            showCustomConfirm(
+              'Mas\'uliyatni Bekor Qilish',
+              `Rostdan ham "${tName}" komandasini "${mgrObj?.name || 'Manager'}" mas'uliyatidan bekor qilmoqchimisiz?`,
+              'btn btn-danger',
+              async () => {
+                try {
+                  await MllyCore.removeTeamFromManager({ managerUserId: mId, teamId: tId });
+                  if (mgrObj && mgrObj.assignedTeams) {
+                    const idx = mgrObj.assignedTeams.indexOf(tId);
+                    if (idx > -1) {
+                      mgrObj.assignedTeams.splice(idx, 1);
+                      if (mgrObj.assignedTeamNames) mgrObj.assignedTeamNames.splice(idx, 1);
+                    }
+                  }
+                  renderManagers();
+                } catch (err) { alert(err.message); }
               }
-              renderManagers();
-            } catch (err) { alert(err.message); }
+            );
           });
         });
 
@@ -273,7 +314,7 @@
         });
 
         document.querySelectorAll('.mgr-assign-btn').forEach(btn => {
-          btn.addEventListener('click', async () => {
+          btn.addEventListener('click', () => {
             const mId = btn.dataset.mgrId;
             const inp = document.getElementById('input_' + mId);
             const errDiv = document.getElementById('err_' + mId);
@@ -287,9 +328,28 @@
               return;
             }
             const mgrObj = users.find(u => u.id === mId);
-            if (!confirm(`Rostdan ham "${matchedTeam.name}" komandasini "${mgrObj?.name || 'Manager'}" ga mas'ul qilib tayinlamoqchimisiz?`)) {
-              return;
-            }
+            showCustomConfirm(
+              'Komanda Biriktirish',
+              `Rostdan ham "${matchedTeam.name}" komandasini "${mgrObj?.name || 'Manager'}" ga mas'ul qilib tayinlamoqchimisiz?`,
+              'btn btn-primary',
+              async () => {
+                try {
+                  await MllyCore.assignTeamToManager({ managerUserId: mId, teamId: matchedTeam.id, teamName: matchedTeam.name });
+                  if (mgrObj) {
+                    mgrObj.assignedTeams = mgrObj.assignedTeams || [];
+                    mgrObj.assignedTeamNames = mgrObj.assignedTeamNames || [];
+                    if (!mgrObj.assignedTeams.includes(matchedTeam.id)) {
+                      mgrObj.assignedTeams.push(matchedTeam.id);
+                      mgrObj.assignedTeamNames.push(matchedTeam.name);
+                    }
+                  }
+                  renderManagers();
+                } catch (err) {
+                  errDiv.textContent = err.message;
+                  errDiv.style.display = 'block';
+                }
+              }
+            );
             try {
               await MllyCore.assignTeamToManager({ managerUserId: mId, teamId: matchedTeam.id, teamName: matchedTeam.name });
               if (mgrObj) {
@@ -349,6 +409,11 @@
         const err = document.getElementById('addManagerError');
         err.textContent = '';
         if (!email.trim()) { err.textContent = 'Email kiritish majburiy'; return; }
+        const existingMgr = users.find(u => u.email.toLowerCase() === email.trim().toLowerCase() && u.role === 'manager');
+        if (existingMgr) {
+          err.textContent = "Bu foydalanuvchi allaqachon manager qilib tayinlangan!";
+          return;
+        }
         btn.disabled = true;
         btn.textContent = "Qo'shilmoqda...";
         try {
@@ -433,5 +498,5 @@
       });
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d8ec12faa2f9d',t:'MTc4MzMyOTg3OQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16da5fcecba25bc',t:'MTc4MzMzMDgzMA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
