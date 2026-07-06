@@ -12,10 +12,10 @@
     .report-tab-btn.active { background: var(--surface-sub); border-color: var(--line); color: var(--text); }
     .report-card { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: var(--surface); margin-bottom: 14px; }
     .report-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-    .report-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
-    .report-badge.pending { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
-    .report-badge.approved { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
-    .report-badge.disapproved { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .report-badge { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .report-badge.pending { background: #fef08a; color: #854d0e; border: 1px solid #fde047; box-shadow: 0 0 10px rgba(250, 204, 21, 0.2); }
+    .report-badge.approved { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+    .report-badge.disapproved { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
     .report-link { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--accent); text-decoration: none; font-size: 13px; margin: 6px 0; word-break: break-all; }
     .report-link:hover { text-decoration: underline; }
     .report-desc { font-size: 14px; line-height: 1.5; color: var(--text); background: var(--surface-sub); padding: 12px; border-radius: 8px; margin: 10px 0; white-space: pre-wrap; }
@@ -118,6 +118,17 @@
 
       mountLayout('reports', { profile, teams, notifications: data.notifications || [] });
 
+      if (teams.length === 0 && role !== 'admin' && role !== 'manager') {
+        document.getElementById('reportsRoot').innerHTML = `
+          <div class="workspace-surface pad text-center py-6">
+            <h3>Siz hech qanday jamoa a'zosi emassiz</h3>
+            <p class="muted">Hisobotlar bo'limi faqat jamoaviy workspace'ga qo'shilganingizdan so'ng ochiladi.</p>
+            <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+          </div>
+        `;
+        return;
+      }
+
       document.getElementById('userRoleBadge').textContent = role.toUpperCase();
       if (role === 'manager') {
         document.getElementById('reportHeaderTitle').textContent = "Manager - Jamoalar Hisoboti";
@@ -132,21 +143,77 @@
 
       let activeLeadTab = 'members';
       let disapprovedReportId = null;
+      let activePeriodMode = await window.MllyCore.getReportPeriodMode();
+      let currentTabPeriod = activePeriodMode; // 'daily', 'weekly', or 'monthly'
 
       async function loadAllReports() {
         const urlParams = new URLSearchParams(window.location.search);
         const filterTeamId = urlParams.get('teamId') || '';
-        let reports = await window.MllyCore.getReports({ teamId: filterTeamId });
-        renderSideStats(reports);
+        let allReportsRaw = await window.MllyCore.getReports({ teamId: filterTeamId });
+        renderSideStats(allReportsRaw);
+
+        const reports = allReportsRaw.filter(r => (r.periodType || 'daily') === currentTabPeriod);
+
+        const switcherHtml = `
+          <div style="margin-bottom:18px;">
+            ${role === 'admin' ? `
+              <div class="workspace-surface pad mb-3" style="background:var(--surface);border:1px solid var(--accent);">
+                <div class="flex justify-between items-center">
+                  <div>
+                    <h3 style="margin:0 0 4px;">Platforma Hisobot Rejimi: <b style="color:var(--accent);">${activePeriodMode === 'daily' ? 'Kunlik (Daily)' : 'Haftalik (Weekly)'}</b></h3>
+                    <p class="text-xs muted" style="margin:0;">Barcha foydalanuvchilar (Member, Lead, Manager) uchun hisobot topshirish rejimi.</p>
+                  </div>
+                  <div style="display:flex;gap:6px;">
+                    <button type="button" class="btn btn-sm ${activePeriodMode==='daily'?'btn-primary':'btn-secondary'}" id="adminModeDaily">Kunlik Qilish</button>
+                    <button type="button" class="btn btn-sm ${activePeriodMode==='weekly'?'btn-primary':'btn-secondary'}" id="adminModeWeekly">Haftalik Qilish</button>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div class="badge mb-3" style="font-size:13px;padding:8px 12px;background:var(--surface-sub);border:1px solid var(--line);display:block;">
+                🟢 Platformadagi joriy hisobot rejimi: <b>${activePeriodMode === 'daily' ? 'Kunlik Hisobot (Daily)' : 'Haftalik Hisobot (Weekly)'}</b>
+              </div>
+            `}
+            <div class="report-tabs" style="margin-bottom:14px;">
+              <button type="button" class="report-tab-btn ${currentTabPeriod==='daily'?'active':''}" id="tabPeriodDaily">☀️ Kunlik Hisobotlar</button>
+              <button type="button" class="report-tab-btn ${currentTabPeriod==='weekly'?'active':''}" id="tabPeriodWeekly">🗓️ Haftalik Hisobotlar</button>
+              <button type="button" class="report-tab-btn ${currentTabPeriod==='monthly'?'active':''}" id="tabPeriodMonthly">📅 Oylik Yakuniy (Majburiy)</button>
+            </div>
+            ${currentTabPeriod === 'monthly' ? `
+              <div class="workspace-surface pad mb-3" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);">
+                <b style="color:#60a5fa;">📅 Har oy yakunida topshiriladigan majburiy oylik hisobotlar bo'limi.</b>
+                <p class="text-xs muted" style="margin:4px 0 0;">Admin faqat kuzatuvchi bo'lib hisobotlarni ko'rib boradi va o'zgartira olmaydi.</p>
+              </div>
+            ` : ''}
+          </div>
+        `;
+
         if (role === 'member') {
-          renderMemberView(reports);
+          renderMemberView(reports, switcherHtml);
         } else if (role === 'team_lead') {
-          renderTeamLeadView(reports);
+          renderTeamLeadView(reports, switcherHtml);
         } else if (role === 'manager') {
-          renderManagerView(reports);
+          renderManagerView(reports, switcherHtml);
         } else if (role === 'admin') {
-          renderAdminView(reports);
+          renderAdminView(reports, switcherHtml);
         }
+
+        document.getElementById('adminModeDaily')?.addEventListener('click', async () => {
+          await window.MllyCore.setReportPeriodMode('daily');
+          activePeriodMode = 'daily';
+          currentTabPeriod = 'daily';
+          loadAllReports();
+        });
+        document.getElementById('adminModeWeekly')?.addEventListener('click', async () => {
+          await window.MllyCore.setReportPeriodMode('weekly');
+          activePeriodMode = 'weekly';
+          currentTabPeriod = 'weekly';
+          loadAllReports();
+        });
+
+        document.getElementById('tabPeriodDaily')?.addEventListener('click', () => { currentTabPeriod = 'daily'; loadAllReports(); });
+        document.getElementById('tabPeriodWeekly')?.addEventListener('click', () => { currentTabPeriod = 'weekly'; loadAllReports(); });
+        document.getElementById('tabPeriodMonthly')?.addEventListener('click', () => { currentTabPeriod = 'monthly'; loadAllReports(); });
       }
 
       function renderSideStats(reports) {
@@ -167,7 +234,7 @@
       // ==========================================
       // 1. MEMBER VIEW
       // ==========================================
-      function renderMemberView(allReports) {
+      function renderMemberView(allReports, switcherHtml) {
         const myReports = allReports.filter(r => r.userId === user.uid && r.type === 'member_report');
         const root = document.getElementById('reportsRoot');
 
@@ -178,9 +245,9 @@
           ? `<input type="hidden" id="memberTeamSelect" value="${teams[0].id}"><div class="text-xs muted mb-3">Workspace: <b>${escapeHtml(teams[0].name)}</b></div>`
           : `<div class="feedback-error mb-3">Siz hech qanday workspace a'zosi emassiz.</div>`;
 
-        root.innerHTML = `
+        root.innerHTML = switcherHtml + `
           <div class="workspace-surface pad mb-4">
-            <h2>Shaxsiy Hisobot Yuborish</h2>
+            <h2>Shaxsiy ${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'} Hisobot Yuborish</h2>
             <p class="text-sm muted mb-4">Qilingan ish bo'yicha link ({Notion, Figma, GitHub yoki shu kabi}) va qisqa ta'rif kiritib yuboring.</p>
             ${teamSelectHtml}
             <label class="label">Hisobot Linki (Notion / Hujjat / URL)</label>
@@ -199,7 +266,7 @@
                 <div class="report-card">
                   <div class="report-card-top">
                     <div>
-                      <span class="text-xs font-semibold muted">${escapeHtml(r.teamName || 'Workspace')} &bull; ${formatDate(r.createdAt)}</span>
+                      <span class="text-xs font-semibold muted">${escapeHtml(r.teamName || 'Workspace')} &bull; ${r.formattedDate || formatDate(r.createdAt)}</span>
                     </div>
                     ${statusBadgeHtml(r.status)}
                   </div>
@@ -251,7 +318,8 @@
               teamName: tObj?.name || 'Workspace',
               link,
               description,
-              targetRole: 'team_lead'
+              targetRole: 'team_lead',
+              periodType: currentTabPeriod
             });
             msg.textContent = 'Hisobot yuborildi!';
             msg.style.color = '#22c55e';
@@ -269,7 +337,7 @@
       // ==========================================
       // 2. TEAM LEAD VIEW
       // ==========================================
-      function renderTeamLeadView(allReports) {
+      function renderTeamLeadView(allReports, switcherHtml) {
         const teamIds = teams.map(t => t.id);
         const memberReports = allReports.filter(r => r.type === 'member_report' && (teamIds.includes(r.teamId) || teams.length === 0));
         const myProjectReports = allReports.filter(r => r.userId === user.uid && r.type === 'lead_project_report');
@@ -280,7 +348,7 @@
         const allApproved = memberReports.length > 0 && memberReports.every(r => r.status === 'approved');
         const pendingCount = memberReports.filter(r => r.status === 'pending').length;
 
-        root.innerHTML = `
+        root.innerHTML = switcherHtml + `
           <div class="report-tabs">
             <button type="button" class="report-tab-btn ${activeLeadTab === 'members' ? 'active' : ''}" id="tabBtnMembers">
               👥 A'zolar Hisobotlari (${memberReports.length})
@@ -303,7 +371,7 @@
                     <div class="report-card-top">
                       <div>
                         <h3 style="margin:0 0 4px;font-size:16px;">${escapeHtml(r.userName)} <span class="badge badge-sub">${escapeHtml(r.teamName || '')}</span></h3>
-                        <span class="text-xs muted">${formatDate(r.createdAt)}</span>
+                        <span class="text-xs muted">${r.formattedDate || formatDate(r.createdAt)}</span>
                       </div>
                       ${statusBadgeHtml(r.status)}
                     </div>
@@ -323,7 +391,7 @@
           <div id="tabContentLead" style="display:${activeLeadTab === 'lead' ? 'block' : 'none'};">
             <div class="workspace-card-grid cols-2 mb-4">
               <div class="workspace-surface pad">
-                <h3>1. Shaxsiy Loyiha Hisoboti</h3>
+                <h3>1. Shaxsiy Loyiha Hisoboti (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h3>
                 <p class="text-xs muted mb-3">O'zingiz olib borayotgan alohida loyiha/vazifa bo'yicha hisobot (huddi members ga o'xshab).</p>
                 <label class="label">Notion / Loyiha Linki</label>
                 <input type="url" class="input input-sm mb-2" id="leadProjLink" placeholder="https://notion.so/...">
@@ -334,7 +402,7 @@
               </div>
 
               <div class="workspace-surface pad">
-                <h3>2. Yakuniy Jamoaviy Hisobot</h3>
+                <h3>2. Yakuniy Jamoaviy Hisobot (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h3>
                 <p class="text-xs muted mb-3">A'zolarda xato qolmagach, barchasi bo'yicha qisqacha ta'rif berib Managerga confirm qiling.</p>
                 <div style="background:var(--surface-sub);padding:10px;border-radius:8px;margin-bottom:12px;font-size:13px;">
                   <b>A'zolar holati:</b> ${allApproved ? '<span style="color:#22c55e;">Barcha a\'zolar hisoboti tasdiqlangan ✅</span>' : `<span style="color:#eab308;">${pendingCount ? pendingCount + ' ta kutilmoqda yoki tasdiqlanmagan bor ⚠️' : 'Tasdiqlanmaganlar mavjud'}</span>`}
@@ -356,7 +424,7 @@
                     <div class="report-card-top">
                       <div>
                         <b>${r.type === 'team_report' ? '🏢 Jamoaviy Hisobot' : '🧑‍💻 Shaxsiy Loyiha Hisoboti'}</b>
-                        <span class="text-xs muted" style="margin-left:8px;">${formatDate(r.createdAt)}</span>
+                        <span class="text-xs muted" style="margin-left:8px;">${r.formattedDate || formatDate(r.createdAt)}</span>
                       </div>
                       ${statusBadgeHtml(r.status)}
                     </div>
@@ -372,11 +440,11 @@
 
         document.getElementById('tabBtnMembers')?.addEventListener('click', () => {
           activeLeadTab = 'members';
-          renderTeamLeadView(allReports);
+          renderTeamLeadView(allReports, switcherHtml);
         });
         document.getElementById('tabBtnLead')?.addEventListener('click', () => {
           activeLeadTab = 'lead';
-          renderTeamLeadView(allReports);
+          renderTeamLeadView(allReports, switcherHtml);
         });
 
         document.querySelectorAll('.action-approve').forEach(btn => {
@@ -403,7 +471,7 @@
           if (!link.trim() || !desc.trim()) { msg.textContent = 'To\'liq kiriting!'; msg.style.color = '#ef4444'; return; }
           msg.textContent = 'Yuborilmoqda...'; msg.style.color = 'var(--text)';
           const tObj = teams[0] || {};
-          await window.MllyCore.createReport({ type: 'lead_project_report', teamId: tObj.id || '', teamName: tObj.name || 'Team Lead Project', link, description: desc, targetRole: 'manager' });
+          await window.MllyCore.createReport({ type: 'lead_project_report', teamId: tObj.id || '', teamName: tObj.name || 'Team Lead Project', link, description: desc, targetRole: 'manager', periodType: currentTabPeriod });
           loadAllReports();
         });
 
@@ -414,7 +482,7 @@
           if (!desc.trim()) { msg.textContent = 'Umumiy ta\'rif kiritish majburiy!'; msg.style.color = '#ef4444'; return; }
           msg.textContent = 'Yuborilmoqda...'; msg.style.color = 'var(--text)';
           const tObj = teams[0] || {};
-          await window.MllyCore.createReport({ type: 'team_report', teamId: tObj.id || '', teamName: tObj.name || 'Workspace Team', link, description: desc, targetRole: 'manager' });
+          await window.MllyCore.createReport({ type: 'team_report', teamId: tObj.id || '', teamName: tObj.name || 'Workspace Team', link, description: desc, targetRole: 'manager', periodType: currentTabPeriod });
           loadAllReports();
         });
       }
@@ -422,7 +490,7 @@
       // ==========================================
       // 3. MANAGER VIEW
       // ==========================================
-      function renderManagerView(allReports) {
+      function renderManagerView(allReports, switcherHtml) {
         const assignedIds = Array.isArray(profile?.assignedTeams) ? profile.assignedTeams : [];
         const assignedNames = Array.isArray(profile?.assignedTeamNames) ? profile.assignedTeamNames : [];
         const badgesHtml = assignedIds.length ? assignedIds.map((tid, idx) => {
@@ -433,11 +501,11 @@
         const managerReports = allReports.filter(r => r.targetRole === 'manager' && (assignedIds.includes(r.teamId) || assignedIds.length === 0));
         const root = document.getElementById('reportsRoot');
 
-        root.innerHTML = `
+        root.innerHTML = switcherHtml + `
           <div class="workspace-surface pad mb-4" style="background:var(--surface);">
             <div class="flex justify-between items-start mb-3">
               <div>
-                <h2 style="margin:0 0 4px;">Mas'ul Jamoalar Hisobotlari</h2>
+                <h2 style="margin:0 0 4px;">Mas'ul Jamoalar Hisobotlari (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h2>
                 <p class="text-sm muted" style="margin:0;">Sizga biriktirilgan jamoalardan kelgan yakuniy hisobotlar va rahbar loyihalari. Siz yagona tepadagi nazoratchisiz.</p>
               </div>
               <div class="badge" style="font-size:13px;padding:8px 12px;background:var(--accent);color:#fff;">
@@ -453,7 +521,7 @@
           </div>
 
           <div class="workspace-surface pad">
-            <h3>Kelib Tushgan Hisobotlar</h3>
+            <h3>Kelib Tushgan Hisobotlar (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h3>
             <div style="margin-top:14px;">
               ${managerReports.length ? managerReports.map(r => `
                 <div class="report-card">
@@ -461,7 +529,7 @@
                     <div>
                       <span class="badge" style="background:var(--surface-sub);font-size:12px;margin-right:8px;">${r.type === 'team_report' ? '🏢 Jamoaviy Hisobot' : '🧑‍💻 Lead Loyiha'}</span>
                       <b style="font-size:15px;">${escapeHtml(r.userName)}</b>
-                      <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${formatDate(r.createdAt)}</span>
+                      <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${r.formattedDate || formatDate(r.createdAt)}</span>
                     </div>
                     ${statusBadgeHtml(r.status)}
                   </div>
@@ -499,12 +567,12 @@
       // ==========================================
       // 4. ADMIN VIEW
       // ==========================================
-      function renderAdminView(allReports) {
+      function renderAdminView(allReports, switcherHtml) {
         const root = document.getElementById('reportsRoot');
-        root.innerHTML = `
+        root.innerHTML = switcherHtml + `
           <div class="workspace-surface pad mb-4">
             <div class="flex justify-between items-center">
-              <h2>Platformadagi Barcha Hisobotlar Monitoringi</h2>
+              <h2>Platformadagi Barcha Hisobotlar Monitoringi (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h2>
               <a href="admin.html" class="btn btn-secondary btn-sm">Managerlarni Boshqarish &rarr;</a>
             </div>
           </div>
@@ -515,7 +583,7 @@
                   <div>
                     <span class="badge badge-sub">${escapeHtml(r.type)}</span>
                     <b style="margin-left:8px;">${escapeHtml(r.userName)} (${escapeHtml(r.userRole)})</b>
-                    <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${formatDate(r.createdAt)}</span>
+                    <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${r.formattedDate || formatDate(r.createdAt)}</span>
                   </div>
                   ${statusBadgeHtml(r.status)}
                 </div>
@@ -544,5 +612,5 @@
       loadAllReports();
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d66d33e05eed5',t:'MTc4MzMyODI0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d86ef0d21b65d',t:'MTc4MzMyOTU1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
