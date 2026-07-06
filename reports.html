@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="uz" class="auth-required">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hisobotlar - MllyCore</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+  <style>
+    .report-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    .report-tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid transparent; background: transparent; color: var(--muted); }
+    .report-tab-btn.active { background: var(--surface-sub); border-color: var(--line); color: var(--text); }
+    .report-card { border: 1px solid var(--line); border-radius: 12px; padding: 18px; background: var(--surface); margin-bottom: 14px; }
+    .report-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .report-badge { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+    .report-badge.pending { background: rgba(234, 179, 8, 0.15); color: #eab308; border: 1px solid rgba(234, 179, 8, 0.3); }
+    .report-badge.approved { background: rgba(34, 197, 94, 0.15); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .report-badge.disapproved { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .report-link { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--accent); text-decoration: none; font-size: 13px; margin: 6px 0; word-break: break-all; }
+    .report-link:hover { text-decoration: underline; }
+    .report-desc { font-size: 14px; line-height: 1.5; color: var(--text); background: var(--surface-sub); padding: 12px; border-radius: 8px; margin: 10px 0; white-space: pre-wrap; }
+    .report-feedback { font-size: 13px; color: #ef4444; background: rgba(239, 68, 68, 0.08); padding: 10px; border-radius: 8px; margin-top: 10px; border-left: 3px solid #ef4444; }
+    .report-actions { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="workspace-app">
+      <section class="workspace-command">
+        <div>
+          <h1 class="workspace-command-title" id="reportHeaderTitle">Hisobotlar Nazorati</h1>
+          <p class="workspace-command-copy" id="reportHeaderCopy">Jamoa a'zolari, Team Lead va Manager o'rtasidagi hisobot almashinuvi va nazorati.</p>
+        </div>
+        <div class="workspace-command-tools">
+          <span class="badge badge-active" id="userRoleBadge">Member</span>
+          <a class="btn btn-ghost btn-sm" href="dashboard.html">Dashboard</a>
+        </div>
+      </section>
+
+      <section class="workspace-layout">
+        <div class="workspace-main-stack" id="reportsRoot">
+          <div class="workspace-surface pad" style="text-align:center;padding:40px;">
+            <p class="muted">Hisobotlar yuklanmoqda...</p>
+          </div>
+        </div>
+
+        <aside class="workspace-side-stack">
+          <div class="workspace-surface pad">
+            <h3 style="margin:0 0 12px">Hisobot Jarayoni</h3>
+            <div class="workspace-security-list">
+              <span><b>1. Member:</b> Notion/Figma linki va qisqa ta'rif yuboradi.</span>
+              <span><b>2. Team Lead:</b> A'zolar hisobotini tekshirib tasdiqlaydi (yoki xato bo'lsa rad etadi, member qayta topshiradi).</span>
+              <span><b>3. Lead Report:</b> Lead xatolardan xoli bo'lgach jamoaviy hisobot va o'z loyihasini Managerga yuboradi.</span>
+              <span><b>4. Manager:</b> Yagona yuqori nazoratchi bo'lib jamoaviy hisobotni qabul qiladi.</span>
+            </div>
+          </div>
+          <div class="workspace-surface pad" id="sideStatsBox">
+            <h3 style="margin:0 0 12px">Qisqacha Statistika</h3>
+            <div id="reportStatsContent" class="text-sm muted">Yuklanmoqda...</div>
+          </div>
+        </aside>
+      </section>
+    </div>
+  </div>
+
+  <!-- Rad etish (Disapprove) Modali -->
+  <div class="modal-backdrop" id="disapproveModal" onclick="if(event.target===this)UTIL.closeModal('disapproveModal')">
+    <div class="modal">
+      <h3>Hisobotni Rad Etish</h3>
+      <p class="modal-sub">Nima sababdan rad etilayotganini izohlang (A'zo yoki Lead buni ko'rib xatoni to'g'rilaydi).</p>
+      <div class="workspace-modal-field">
+        <label class="label">Rad etish sababi / Izoh</label>
+        <textarea class="textarea" id="disapproveReason" rows="3" placeholder="Masalan: Link ochilmayapti yoki ta'rif to'liq emas..."></textarea>
+      </div>
+      <div class="workspace-modal-error" id="disapproveError"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('disapproveModal')">Bekor qilish</button>
+        <button class="btn btn-danger" type="button" id="confirmDisapproveBtn">Rad Etish</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/theme.js"></script>
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-service.js"></script>
+  <script src="js/auth-guard.js"></script>
+  <script src="js/layout.js"></script>
+  <script>
+    window.UTIL = window.UTIL || {
+      openModal: (id) => document.getElementById(id)?.classList.add('open'),
+      closeModal: (id) => document.getElementById(id)?.classList.remove('open')
+    };
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function formatDate(ms) {
+      if (!ms) return '';
+      const d = new Date(ms);
+      return d.toLocaleDateString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+
+    function statusBadgeHtml(status) {
+      if (status === 'approved') return '<span class="report-badge approved">Tasdiqlandi</span>';
+      if (status === 'disapproved') return '<span class="report-badge disapproved">Rad etildi</span>';
+      return '<span class="report-badge pending">Kutilmoqda</span>';
+    }
+
+    (async () => {
+      const user = await window.MLLYCORE_AUTH_READY;
+      if (!user) return;
+
+      const profile = window.MLLYCORE_PROFILE;
+      const data = await window.MllyCore.getDashboardData(user.uid);
+      const teams = data?.teams || [];
+      const role = profile?.role || 'member';
+
+      mountLayout('reports', { profile, teams, notifications: data.notifications || [] });
+
+      document.getElementById('userRoleBadge').textContent = role.toUpperCase();
+      if (role === 'manager') {
+        document.getElementById('reportHeaderTitle').textContent = "Manager - Jamoalar Hisoboti";
+        document.getElementById('reportHeaderCopy').textContent = "Mas'ul jamoalardan kelgan loyiha va jamoaviy hisobotlarni qabul qilish va nazorat qilish.";
+      } else if (role === 'team_lead') {
+        document.getElementById('reportHeaderTitle').textContent = "Team Lead Hisobot Markazi";
+        document.getElementById('reportHeaderCopy').textContent = "A'zolar hisobotlarini tekshirish hamda yakuniy Jamoaviy Hisobotni Managerga topshirish.";
+      } else {
+        document.getElementById('reportHeaderTitle').textContent = "Shaxsiy Hisobot Topshirish";
+        document.getElementById('reportHeaderCopy').textContent = "Qilingan ishlar bo'yicha link (Notion, Figma, GitHub) va qisqa ta'rifni yuboring.";
+      }
+
+      let activeLeadTab = 'members';
+      let disapprovedReportId = null;
+
+      async function loadAllReports() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const filterTeamId = urlParams.get('teamId') || '';
+        let reports = await window.MllyCore.getReports({ teamId: filterTeamId });
+        renderSideStats(reports);
+        if (role === 'member') {
+          renderMemberView(reports);
+        } else if (role === 'team_lead') {
+          renderTeamLeadView(reports);
+        } else if (role === 'manager') {
+          renderManagerView(reports);
+        } else if (role === 'admin') {
+          renderAdminView(reports);
+        }
+      }
+
+      function renderSideStats(reports) {
+        const statsBox = document.getElementById('reportStatsContent');
+        if (!statsBox) return;
+        const total = reports.length;
+        const pending = reports.filter(r => r.status === 'pending').length;
+        const approved = reports.filter(r => r.status === 'approved').length;
+        const disapproved = reports.filter(r => r.status === 'disapproved').length;
+        statsBox.innerHTML = `
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span>Barchasi:</span> <b>${total} ta</b></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#eab308;"><span>Kutilmoqda:</span> <b>${pending} ta</b></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#22c55e;"><span>Tasdiqlandi:</span> <b>${approved} ta</b></div>
+          <div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Rad etildi:</span> <b>${disapproved} ta</b></div>
+        `;
+      }
+
+      // ==========================================
+      // 1. MEMBER VIEW
+      // ==========================================
+      function renderMemberView(allReports) {
+        const myReports = allReports.filter(r => r.userId === user.uid && r.type === 'member_report');
+        const root = document.getElementById('reportsRoot');
+
+        const teamOptions = teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
+        const teamSelectHtml = teams.length > 1
+          ? `<label class="label">Workspace tanlang</label><select class="select mb-3" id="memberTeamSelect">${teamOptions}</select>`
+          : teams.length === 1
+          ? `<input type="hidden" id="memberTeamSelect" value="${teams[0].id}"><div class="text-xs muted mb-3">Workspace: <b>${escapeHtml(teams[0].name)}</b></div>`
+          : `<div class="feedback-error mb-3">Siz hech qanday workspace a'zosi emassiz.</div>`;
+
+        root.innerHTML = `
+          <div class="workspace-surface pad mb-4">
+            <h2>Shaxsiy Hisobot Yuborish</h2>
+            <p class="text-sm muted mb-4">Qilingan ish bo'yicha link ({Notion, Figma, GitHub yoki shu kabi}) va qisqa ta'rif kiritib yuboring.</p>
+            ${teamSelectHtml}
+            <label class="label">Hisobot Linki (Notion / Hujjat / URL)</label>
+            <input type="url" class="input mb-3" id="memberReportLink" placeholder="https://notion.so/..." required>
+            <label class="label">Qisqa Ta'rif (Nima qilindi va linkda nimalar bor?)</label>
+            <textarea class="textarea mb-3" id="memberReportDesc" rows="4" placeholder="Masalan: Frontend autentifikatsiya qismi yakunlandi, linkda barcha screen va API hujjatlar joylashtirildi."></textarea>
+            <div id="memberSubmitMsg" class="mb-3 text-sm font-semibold"></div>
+            <button type="button" class="btn btn-primary" id="submitMemberReportBtn" ${teams.length ? '' : 'disabled'}>Hisobotni Yuborish</button>
+          </div>
+
+          <div class="workspace-surface pad">
+            <h2>Yuborilgan Hisobotlarim</h2>
+            <p class="text-sm muted mb-4">Team Lead tasdiqlagan yoki qayta topshirish uchun rad etgan hisobotlaringiz.</p>
+            <div id="memberReportsList">
+              ${myReports.length ? myReports.map(r => `
+                <div class="report-card">
+                  <div class="report-card-top">
+                    <div>
+                      <span class="text-xs font-semibold muted">${escapeHtml(r.teamName || 'Workspace')} &bull; ${formatDate(r.createdAt)}</span>
+                    </div>
+                    ${statusBadgeHtml(r.status)}
+                  </div>
+                  <a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>
+                  <div class="report-desc">${escapeHtml(r.description)}</div>
+                  ${r.feedback ? `<div class="report-feedback"><b>Rahbar Izohi:</b> ${escapeHtml(r.feedback)}</div>` : ''}
+                  ${r.status === 'disapproved' || r.status === 'pending' ? `
+                    <div class="report-actions">
+                      <button type="button" class="btn btn-secondary btn-sm edit-report-btn" data-link="${escapeHtml(r.link)}" data-desc="${escapeHtml(r.description)}" data-team="${r.teamId}">Tahrirlash va Qayta Topshirish</button>
+                    </div>
+                  ` : ''}
+                </div>
+              `).join('') : '<p class="muted text-center py-4">Hozircha hisobotlar yuborilmagan.</p>'}
+            </div>
+          </div>
+        `;
+
+        document.querySelectorAll('.edit-report-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            document.getElementById('memberReportLink').value = btn.dataset.link || '';
+            document.getElementById('memberReportDesc').value = btn.dataset.desc || '';
+            const sel = document.getElementById('memberTeamSelect');
+            if (sel) sel.value = btn.dataset.team || '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            document.getElementById('memberReportLink').focus();
+          });
+        });
+
+        document.getElementById('submitMemberReportBtn')?.addEventListener('click', async () => {
+          const btn = document.getElementById('submitMemberReportBtn');
+          const msg = document.getElementById('memberSubmitMsg');
+          const teamId = document.getElementById('memberTeamSelect')?.value || '';
+          const link = document.getElementById('memberReportLink')?.value || '';
+          const description = document.getElementById('memberReportDesc')?.value || '';
+
+          if (!link.trim() || !description.trim()) {
+            msg.textContent = 'Link va ta\'rifni to\'liq kiriting.';
+            msg.style.color = '#ef4444';
+            return;
+          }
+          const tObj = teams.find(t => t.id === teamId);
+          btn.disabled = true;
+          msg.textContent = 'Yuborilmoqda...';
+          msg.style.color = 'var(--text)';
+          try {
+            await window.MllyCore.createReport({
+              type: 'member_report',
+              teamId,
+              teamName: tObj?.name || 'Workspace',
+              link,
+              description,
+              targetRole: 'team_lead'
+            });
+            msg.textContent = 'Hisobot yuborildi!';
+            msg.style.color = '#22c55e';
+            document.getElementById('memberReportLink').value = '';
+            document.getElementById('memberReportDesc').value = '';
+            setTimeout(loadAllReports, 500);
+          } catch (err) {
+            msg.textContent = err.message || 'Xatolik yuz berdi';
+            msg.style.color = '#ef4444';
+            btn.disabled = false;
+          }
+        });
+      }
+
+      // ==========================================
+      // 2. TEAM LEAD VIEW
+      // ==========================================
+      function renderTeamLeadView(allReports) {
+        const teamIds = teams.map(t => t.id);
+        const memberReports = allReports.filter(r => r.type === 'member_report' && (teamIds.includes(r.teamId) || teams.length === 0));
+        const myProjectReports = allReports.filter(r => r.userId === user.uid && r.type === 'lead_project_report');
+        const teamReports = allReports.filter(r => r.userId === user.uid && r.type === 'team_report');
+
+        const root = document.getElementById('reportsRoot');
+
+        const allApproved = memberReports.length > 0 && memberReports.every(r => r.status === 'approved');
+        const pendingCount = memberReports.filter(r => r.status === 'pending').length;
+
+        root.innerHTML = `
+          <div class="report-tabs">
+            <button type="button" class="report-tab-btn ${activeLeadTab === 'members' ? 'active' : ''}" id="tabBtnMembers">
+              👥 A'zolar Hisobotlari (${memberReports.length})
+              ${pendingCount ? `<span class="badge" style="background:#eab308;color:#000;margin-left:6px;">${pendingCount} kutilmoqda</span>` : ''}
+            </button>
+            <button type="button" class="report-tab-btn ${activeLeadTab === 'lead' ? 'active' : ''}" id="tabBtnLead">
+              🚀 Loyiha va Jamoaviy Hisobot (Managerga)
+            </button>
+          </div>
+
+          <div id="tabContentMembers" style="display:${activeLeadTab === 'members' ? 'block' : 'none'};">
+            <div class="workspace-surface pad">
+              <div class="flex justify-between items-center mb-4">
+                <h2>A'zolar Topshirgan Hisobotlar</h2>
+                <span class="text-xs muted">Agar hisobot xato bo'lsa rad eting, a'zo tuzatib qayta topshiradi.</span>
+              </div>
+              <div>
+                ${memberReports.length ? memberReports.map(r => `
+                  <div class="report-card">
+                    <div class="report-card-top">
+                      <div>
+                        <h3 style="margin:0 0 4px;font-size:16px;">${escapeHtml(r.userName)} <span class="badge badge-sub">${escapeHtml(r.teamName || '')}</span></h3>
+                        <span class="text-xs muted">${formatDate(r.createdAt)}</span>
+                      </div>
+                      ${statusBadgeHtml(r.status)}
+                    </div>
+                    <a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>
+                    <div class="report-desc">${escapeHtml(r.description)}</div>
+                    ${r.feedback ? `<div class="report-feedback"><b>Rad etish sababi:</b> ${escapeHtml(r.feedback)}</div>` : ''}
+                    <div class="report-actions">
+                      ${r.status !== 'approved' ? `<button type="button" class="btn btn-primary btn-sm action-approve" data-id="${r.id}">Tasdiqlash</button>` : ''}
+                      ${r.status !== 'disapproved' ? `<button type="button" class="btn btn-danger btn-sm action-disapprove" data-id="${r.id}">Rad etish</button>` : ''}
+                    </div>
+                  </div>
+                `).join('') : '<p class="muted text-center py-6">A\'zolar tomonidan hisobotlar yuborilmagan.</p>'}
+              </div>
+            </div>
+          </div>
+
+          <div id="tabContentLead" style="display:${activeLeadTab === 'lead' ? 'block' : 'none'};">
+            <div class="workspace-card-grid cols-2 mb-4">
+              <div class="workspace-surface pad">
+                <h3>1. Shaxsiy Loyiha Hisoboti</h3>
+                <p class="text-xs muted mb-3">O'zingiz olib borayotgan alohida loyiha/vazifa bo'yicha hisobot (huddi members ga o'xshab).</p>
+                <label class="label">Notion / Loyiha Linki</label>
+                <input type="url" class="input input-sm mb-2" id="leadProjLink" placeholder="https://notion.so/...">
+                <label class="label">Qisqa ta'rif (Nima qilindi?)</label>
+                <textarea class="textarea textarea-sm mb-3" id="leadProjDesc" rows="3" placeholder="Loyiha architekturasini tuzib chiqdim..."></textarea>
+                <div id="leadProjMsg" class="text-xs mb-2 font-semibold"></div>
+                <button type="button" class="btn btn-secondary btn-sm" id="submitLeadProjBtn">Managerga yuborish</button>
+              </div>
+
+              <div class="workspace-surface pad">
+                <h3>2. Yakuniy Jamoaviy Hisobot</h3>
+                <p class="text-xs muted mb-3">A'zolarda xato qolmagach, barchasi bo'yicha qisqacha ta'rif berib Managerga confirm qiling.</p>
+                <div style="background:var(--surface-sub);padding:10px;border-radius:8px;margin-bottom:12px;font-size:13px;">
+                  <b>A'zolar holati:</b> ${allApproved ? '<span style="color:#22c55e;">Barcha a\'zolar hisoboti tasdiqlangan ✅</span>' : `<span style="color:#eab308;">${pendingCount ? pendingCount + ' ta kutilmoqda yoki tasdiqlanmagan bor ⚠️' : 'Tasdiqlanmaganlar mavjud'}</span>`}
+                </div>
+                <label class="label">Jamoaviy Link (yoki Umumiy fayl linki)</label>
+                <input type="url" class="input input-sm mb-2" id="teamRepLink" placeholder="https://notion.so/team-workspace...">
+                <label class="label">Umumiy ta'rif (Jamoa nima qildi va nimalar bor?)</label>
+                <textarea class="textarea textarea-sm mb-3" id="teamRepDesc" rows="3" placeholder="Shu hafta jamoa tomonidan 4 ta modul to'liq bitirildi..."></textarea>
+                <div id="teamRepMsg" class="text-xs mb-2 font-semibold"></div>
+                <button type="button" class="btn btn-primary btn-sm" id="submitTeamRepBtn">Confirm & Jamoa Hisobotini Yuborish</button>
+              </div>
+            </div>
+
+            <div class="workspace-surface pad">
+              <h3>Managerga Yuborilgan Rahbar va Jamoa Hisobotlari</h3>
+              <div style="margin-top:12px;">
+                ${[...teamReports, ...myProjectReports].length ? [...teamReports, ...myProjectReports].sort((a,b)=>b.createdAt-a.createdAt).map(r => `
+                  <div class="report-card">
+                    <div class="report-card-top">
+                      <div>
+                        <b>${r.type === 'team_report' ? '🏢 Jamoaviy Hisobot' : '🧑‍💻 Shaxsiy Loyiha Hisoboti'}</b>
+                        <span class="text-xs muted" style="margin-left:8px;">${formatDate(r.createdAt)}</span>
+                      </div>
+                      ${statusBadgeHtml(r.status)}
+                    </div>
+                    ${r.link ? `<a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>` : ''}
+                    <div class="report-desc">${escapeHtml(r.description)}</div>
+                    ${r.feedback ? `<div class="report-feedback"><b>Manager Izohi:</b> ${escapeHtml(r.feedback)}</div>` : ''}
+                  </div>
+                `).join('') : '<p class="muted text-xs">Hozircha Managerga hisobot yubormadingiz.</p>'}
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('tabBtnMembers')?.addEventListener('click', () => {
+          activeLeadTab = 'members';
+          renderTeamLeadView(allReports);
+        });
+        document.getElementById('tabBtnLead')?.addEventListener('click', () => {
+          activeLeadTab = 'lead';
+          renderTeamLeadView(allReports);
+        });
+
+        document.querySelectorAll('.action-approve').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            await window.MllyCore.updateReportStatus({ reportId: btn.dataset.id, status: 'approved' });
+            loadAllReports();
+          });
+        });
+
+        document.querySelectorAll('.action-disapprove').forEach(btn => {
+          btn.addEventListener('click', () => {
+            disapprovedReportId = btn.dataset.id;
+            document.getElementById('disapproveReason').value = '';
+            document.getElementById('disapproveError').textContent = '';
+            UTIL.openModal('disapproveModal');
+          });
+        });
+
+        document.getElementById('submitLeadProjBtn')?.addEventListener('click', async () => {
+          const link = document.getElementById('leadProjLink').value;
+          const desc = document.getElementById('leadProjDesc').value;
+          const msg = document.getElementById('leadProjMsg');
+          if (!link.trim() || !desc.trim()) { msg.textContent = 'To\'liq kiriting!'; msg.style.color = '#ef4444'; return; }
+          msg.textContent = 'Yuborilmoqda...'; msg.style.color = 'var(--text)';
+          const tObj = teams[0] || {};
+          await window.MllyCore.createReport({ type: 'lead_project_report', teamId: tObj.id || '', teamName: tObj.name || 'Team Lead Project', link, description: desc, targetRole: 'manager' });
+          loadAllReports();
+        });
+
+        document.getElementById('submitTeamRepBtn')?.addEventListener('click', async () => {
+          const link = document.getElementById('teamRepLink').value;
+          const desc = document.getElementById('teamRepDesc').value;
+          const msg = document.getElementById('teamRepMsg');
+          if (!desc.trim()) { msg.textContent = 'Umumiy ta\'rif kiritish majburiy!'; msg.style.color = '#ef4444'; return; }
+          msg.textContent = 'Yuborilmoqda...'; msg.style.color = 'var(--text)';
+          const tObj = teams[0] || {};
+          await window.MllyCore.createReport({ type: 'team_report', teamId: tObj.id || '', teamName: tObj.name || 'Workspace Team', link, description: desc, targetRole: 'manager' });
+          loadAllReports();
+        });
+      }
+
+      // ==========================================
+      // 3. MANAGER VIEW
+      // ==========================================
+      function renderManagerView(allReports) {
+        const assignedIds = Array.isArray(profile?.assignedTeams) ? profile.assignedTeams : [];
+        const managerReports = allReports.filter(r => r.targetRole === 'manager' && (assignedIds.includes(r.teamId) || assignedIds.length === 0));
+        const root = document.getElementById('reportsRoot');
+
+        root.innerHTML = `
+          <div class="workspace-surface pad mb-4" style="background:var(--surface);">
+            <div class="flex justify-between items-center">
+              <div>
+                <h2 style="margin:0 0 4px;">Mas'ul Jamoalar Hisobotlari</h2>
+                <p class="text-sm muted" style="margin:0;">Sizga biriktirilgan jamoalardan kelgan yakuniy hisobotlar va rahbar loyihalari. Siz yagona tepadagi nazoratchisiz.</p>
+              </div>
+              <div class="badge" style="font-size:13px;padding:8px 12px;background:var(--accent);color:#fff;">
+                Mas'ul Jamoalar: ${assignedIds.length} ta
+              </div>
+            </div>
+          </div>
+
+          <div class="workspace-surface pad">
+            <h3>Kelib Tushgan Hisobotlar</h3>
+            <div style="margin-top:14px;">
+              ${managerReports.length ? managerReports.map(r => `
+                <div class="report-card">
+                  <div class="report-card-top">
+                    <div>
+                      <span class="badge" style="background:var(--surface-sub);font-size:12px;margin-right:8px;">${r.type === 'team_report' ? '🏢 Jamoaviy Hisobot' : '🧑‍💻 Lead Loyiha'}</span>
+                      <b style="font-size:15px;">${escapeHtml(r.userName)}</b>
+                      <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${formatDate(r.createdAt)}</span>
+                    </div>
+                    ${statusBadgeHtml(r.status)}
+                  </div>
+                  ${r.link ? `<a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>` : ''}
+                  <div class="report-desc">${escapeHtml(r.description)}</div>
+                  ${r.feedback ? `<div class="report-feedback"><b>Izohingiz:</b> ${escapeHtml(r.feedback)}</div>` : ''}
+                  <div class="report-actions">
+                    ${r.status !== 'approved' ? `<button type="button" class="btn btn-primary btn-sm mgr-approve" data-id="${r.id}">Approve (Tasdiqlash)</button>` : ''}
+                    ${r.status !== 'disapproved' ? `<button type="button" class="btn btn-danger btn-sm mgr-disapprove" data-id="${r.id}">Disapprove (Rad etish)</button>` : ''}
+                  </div>
+                </div>
+              `).join('') : '<div class="workspace-empty text-center py-6"><h3>Hisobotlar yo\'q</h3><p class="muted">Jamoa rahbarlaridan hisobotlar kelmagan.</p></div>'}
+            </div>
+          </div>
+        `;
+
+        document.querySelectorAll('.mgr-approve').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            await window.MllyCore.updateReportStatus({ reportId: btn.dataset.id, status: 'approved' });
+            loadAllReports();
+          });
+        });
+
+        document.querySelectorAll('.mgr-disapprove').forEach(btn => {
+          btn.addEventListener('click', () => {
+            disapprovedReportId = btn.dataset.id;
+            document.getElementById('disapproveReason').value = '';
+            document.getElementById('disapproveError').textContent = '';
+            UTIL.openModal('disapproveModal');
+          });
+        });
+      }
+
+      // ==========================================
+      // 4. ADMIN VIEW
+      // ==========================================
+      function renderAdminView(allReports) {
+        const root = document.getElementById('reportsRoot');
+        root.innerHTML = `
+          <div class="workspace-surface pad mb-4">
+            <div class="flex justify-between items-center">
+              <h2>Platformadagi Barcha Hisobotlar Monitoringi</h2>
+              <a href="admin.html" class="btn btn-secondary btn-sm">Managerlarni Boshqarish &rarr;</a>
+            </div>
+          </div>
+          <div class="workspace-surface pad">
+            ${allReports.length ? allReports.map(r => `
+              <div class="report-card">
+                <div class="report-card-top">
+                  <div>
+                    <span class="badge badge-sub">${escapeHtml(r.type)}</span>
+                    <b style="margin-left:8px;">${escapeHtml(r.userName)} (${escapeHtml(r.userRole)})</b>
+                    <span class="text-xs muted" style="margin-left:8px;">${escapeHtml(r.teamName || '')} &bull; ${formatDate(r.createdAt)}</span>
+                  </div>
+                  ${statusBadgeHtml(r.status)}
+                </div>
+                ${r.link ? `<a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>` : ''}
+                <div class="report-desc">${escapeHtml(r.description)}</div>
+                ${r.feedback ? `<div class="report-feedback"><b>Izoh:</b> ${escapeHtml(r.feedback)}</div>` : ''}
+              </div>
+            `).join('') : '<p class="muted text-center py-6">Tizimda hisobotlar yo\'q.</p>'}
+          </div>
+        `;
+      }
+
+      // Disapprove modal confirm handler
+      document.getElementById('confirmDisapproveBtn')?.addEventListener('click', async () => {
+        if (!disapprovedReportId) return;
+        const reason = document.getElementById('disapproveReason').value;
+        const err = document.getElementById('disapproveError');
+        if (!reason.trim()) { err.textContent = 'Rad etish sababini yozing.'; return; }
+        document.getElementById('confirmDisapproveBtn').disabled = true;
+        await window.MllyCore.updateReportStatus({ reportId: disapprovedReportId, status: 'disapproved', feedback: reason });
+        document.getElementById('confirmDisapproveBtn').disabled = false;
+        UTIL.closeModal('disapproveModal');
+        loadAllReports();
+      });
+
+      loadAllReports();
+    })();
+  </script>
+</body>
+</html>

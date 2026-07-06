@@ -147,7 +147,7 @@ window.MllyCore = {
   async getDashboardData(uid, { forceFresh = false, includeIdeas = false } = {}) {
     const state = await this.init();
     if (!state) return { teams: [], ideas: [], notifications: [], pendingInvites: [] };
-    const role = window.MLLYCORE_PROFILE?.role === 'admin' ? 'admin' : 'member';
+    const role = window.MLLYCORE_PROFILE?.role || 'member';
     const cacheKey = getCacheKey('dashboard', `${role}:${uid}:${includeIdeas ? 'full' : 'lite'}`);
     if (!forceFresh) {
       const cached = readCache(cacheKey, CACHE_TTL.dashboard);
@@ -161,6 +161,13 @@ window.MllyCore = {
         if (window.MLLYCORE_PROFILE?.role === 'admin') {
           const teamsSnap = await getDocs(collection(state.db, 'teams'));
           const teams = teamsSnap.docs.map((item) => ({ id: item.id, membershipRole: 'admin', ...item.data() }));
+          payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
+        } else if (window.MLLYCORE_PROFILE?.role === 'manager') {
+          const assignedIds = Array.isArray(window.MLLYCORE_PROFILE.assignedTeams) ? window.MLLYCORE_PROFILE.assignedTeams : [];
+          const teamDocs = await Promise.all(assignedIds.map((id) => getDoc(doc(state.db, 'teams', id))));
+          const teams = teamDocs
+            .map((teamDoc) => (teamDoc.exists() ? { id: teamDoc.id, membershipRole: 'manager', ...teamDoc.data() } : null))
+            .filter(Boolean);
           payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
         } else {
           const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
@@ -706,6 +713,150 @@ window.MllyCore = {
     } catch (_) {}
   },
 
+  async getReports({ teamId = '', type = '', userId = '', targetRole = '' } = {}, { forceFresh = false } = {}) {
+    const state = await this.init();
+    if (!state) return [];
+    const cacheKey = getCacheKey('reports', `${teamId}:${type}:${userId}:${targetRole}`);
+    if (!forceFresh) {
+      const cached = readCache(cacheKey, 1000 * 30);
+      if (cached) return cached;
+    }
+    const { collection, getDocs, query, where } = state.modules.dbMod;
+    let constraints = [];
+    if (teamId) constraints.push(where('teamId', '==', teamId));
+    if (type) constraints.push(where('type', '==', type));
+    if (userId) constraints.push(where('userId', '==', userId));
+    if (targetRole) constraints.push(where('targetRole', '==', targetRole));
+    const q = constraints.length ? query(collection(state.db, 'reports'), ...constraints) : collection(state.db, 'reports');
+    const snap = await getDocs(q);
+    const results = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })).sort(sortByCreatedAtDesc);
+    writeCache(cacheKey, results);
+    return results;
+  },
+
+  async createReport({ type, teamId = '', teamName = '', link, description, targetRole = 'team_lead' }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const authUser = await this.ensureAuthed();
+    const profile = window.MLLYCORE_PROFILE || {};
+    const { addDoc, collection } = state.modules.dbMod;
+    const now = Date.now();
+    const docRef = await addDoc(collection(state.db, 'reports'), {
+      type,
+      teamId,
+      teamName,
+      userId: authUser.uid,
+      userName: profile.name || authUser.email,
+      userRole: profile.role || 'member',
+      link: String(link || '').trim(),
+      description: String(description || '').trim(),
+      status: 'pending',
+      feedback: '',
+      targetRole,
+      createdAt: now,
+      updatedAt: now
+    });
+    invalidateCacheByPrefix(getCacheKey('reports', ''));
+    return { id: docRef.id, type, teamId, link, description, status: 'pending' };
+  },
+
+  async updateReportStatus({ reportId, status, feedback = '' }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    await this.ensureAuthed();
+    const { doc, updateDoc } = state.modules.dbMod;
+    await updateDoc(doc(state.db, 'reports', reportId), {
+      status,
+      feedback: String(feedback || '').trim(),
+      updatedAt: Date.now()
+    });
+    invalidateCacheByPrefix(getCacheKey('reports', ''));
+    return { success: true };
+  },
+
+  async createOrPromoteManager({ email, name }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    await this.ensureAuthed();
+    if (window.MLLYCORE_PROFILE?.role !== 'admin') throw new Error('Faqat admin manager qo\'sha oladi.');
+    const { collection, getDocs, query, where, doc, setDoc } = state.modules.dbMod;
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    const q = query(collection(state.db, 'users'), where('email', '==', cleanEmail));
+    const snap = await getDocs(q);
+    const now = Date.now();
+    if (!snap.empty) {
+      const userDoc = snap.docs[0];
+      await setDoc(doc(state.db, 'users', userDoc.id), {
+        role: 'manager',
+        name: name || userDoc.data().name,
+        updatedAt: now
+      }, { merge: true });
+      invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+      return { id: userDoc.id, email: cleanEmail, name: name || userDoc.data().name, role: 'manager' };
+    } else {
+      const fakeId = 'mgr_' + Math.random().toString(36).slice(2, 11);
+      await setDoc(doc(state.db, 'users', fakeId), {
+        email: cleanEmail,
+        name: name || cleanEmail.split('@')[0],
+        username: cleanEmail.split('@')[0],
+        role: 'manager',
+        assignedTeams: [],
+        assignedTeamNames: [],
+        verified: true,
+        createdAt: now,
+        updatedAt: now
+      });
+      invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+      return { id: fakeId, email: cleanEmail, name: name || cleanEmail.split('@')[0], role: 'manager' };
+    }
+  },
+
+  async assignTeamToManager({ managerUserId, teamId, teamName }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (window.MLLYCORE_PROFILE?.role !== 'admin') throw new Error('Faqat admin tayinlay oladi.');
+    const { doc, getDoc, updateDoc } = state.modules.dbMod;
+    const userRef = doc(state.db, 'users', managerUserId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error('Manager topilmadi.');
+    const data = userSnap.data();
+    const assignedTeams = Array.isArray(data.assignedTeams) ? [...data.assignedTeams] : [];
+    const assignedTeamNames = Array.isArray(data.assignedTeamNames) ? [...data.assignedTeamNames] : [];
+    if (!assignedTeams.includes(teamId)) {
+      assignedTeams.push(teamId);
+      assignedTeamNames.push(teamName);
+      await updateDoc(userRef, { assignedTeams, assignedTeamNames, updatedAt: Date.now() });
+    }
+    const teamRef = doc(state.db, 'teams', teamId);
+    const teamSnap = await getDoc(teamRef);
+    if (teamSnap.exists()) {
+      await updateDoc(teamRef, { managerUserId, updatedAt: Date.now() });
+    }
+    invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+    return { success: true, assignedTeams, assignedTeamNames };
+  },
+
+  async removeTeamFromManager({ managerUserId, teamId }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (window.MLLYCORE_PROFILE?.role !== 'admin') throw new Error('Faqat admin olib tashlay oladi.');
+    const { doc, getDoc, updateDoc } = state.modules.dbMod;
+    const userRef = doc(state.db, 'users', managerUserId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error('Manager topilmadi.');
+    const data = userSnap.data();
+    const assignedTeams = Array.isArray(data.assignedTeams) ? data.assignedTeams.filter(id => id !== teamId) : [];
+    const assignedTeamNames = Array.isArray(data.assignedTeamNames) ? data.assignedTeamNames.filter((name, idx) => (data.assignedTeams || [])[idx] !== teamId) : [];
+    await updateDoc(userRef, { assignedTeams, assignedTeamNames, updatedAt: Date.now() });
+    const teamRef = doc(state.db, 'teams', teamId);
+    const teamSnap = await getDoc(teamRef);
+    if (teamSnap.exists() && teamSnap.data().managerUserId === managerUserId) {
+      await updateDoc(teamRef, { managerUserId: '', updatedAt: Date.now() });
+    }
+    invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+    return { success: true };
+  },
+
   async deleteWorkspace(teamId, adminPassword) {
     await this.reauthenticate(adminPassword);
     const authUser = window.MLLYCORE_AUTH_USER;
@@ -961,7 +1112,7 @@ function patchTeamCache(teamId, updater) {
 }
 
 function updateDashboardNotificationCaches(uid, notifications) {
-  ['admin', 'member'].forEach((role) => {
+  ['admin', 'manager', 'team_lead', 'member'].forEach((role) => {
     ['lite', 'full'].forEach((mode) => {
       const cacheKey = getCacheKey('dashboard', `${role}:${uid}:${mode}`);
       const cached = readCache(cacheKey, Number.POSITIVE_INFINITY);

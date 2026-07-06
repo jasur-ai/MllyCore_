@@ -399,6 +399,7 @@
             <p class="workspace-command-copy">${escapeHtml(data.team.description || 'Workspace ichidagi idea, startup, task va chat oqimi.')}</p>
           </div>
           <div class="workspace-command-tools">
+            <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
             <span class="badge badge-active">${escapeHtml(membership?.role || 'member')}</span>
             ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
           </div>

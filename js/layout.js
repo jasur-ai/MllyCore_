@@ -9,19 +9,31 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   const notifications = context.notifications || [];
   const unread = notifications.filter((n) => n.unread || n.isRead === false).length;
   const isAdmin = profile.role === 'admin';
-  const teamLinks = !isAdmin && teams.map((team) => `
+  const isManager = profile.role === 'manager';
+  const teamLinks = (!isAdmin && !isManager) && teams.map((team) => `
         <a href="team.html?id=${team.id}" class="nav-item">
           <div class="team-logo ${team.color || 'tl-1'}" style="width:26px;height:26px;border-radius:8px;font-size:11px">${team.logo || 'W'}</div>
           <span style="font-size:13px">${team.name}</span>
         </a>
       `).join('') || '<div class="text-xs muted" style="padding:8px 10px">Workspace yoq</div>';
 
-  const navItems = isAdmin ? `
+  let navItems = '';
+  if (isAdmin) {
+    navItems = `
       <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Statistika</a>
       <a href="admin.html" class="nav-item ${active === 'admin' ? 'active' : ''}">Admin paneli</a>
+      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Barcha Hisobotlar</a>
       <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
-    ` : `
+    `;
+  } else if (isManager) {
+    navItems = `
+      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Team Hisobotlari</a>
+      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
+    `;
+  } else {
+    navItems = `
       <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
+      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>
       <a href="my-ideas.html" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
       <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
@@ -32,6 +44,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       <div class="nav-section">Workspace'larim</div>
       ${teamLinks}
     `;
+  }
 
   return `
   <header class="mobile-header">
@@ -54,7 +67,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       <div class="brand-logo">M</div>
       <div>
         <div class="brand-name">MllyCore</div>
-        <div class="text-xs muted">${isAdmin ? 'Admin boshqaruvi' : "G'oyalar platformasi"}</div>
+        <div class="text-xs muted">${isAdmin ? 'Admin boshqaruvi' : isManager ? 'Manager boshqaruvi' : "G'oyalar platformasi"}</div>
       </div>
     </a>
 

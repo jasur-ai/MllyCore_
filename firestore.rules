@@ -12,6 +12,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
+    function isManager() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+    }
+
     function isTeamMember(teamId) {
       return signedIn()
         && exists(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid));
@@ -43,9 +49,9 @@ service cloud.firestore {
     }
 
     match /teams/{teamId} {
-      allow read: if isAdmin() || isTeamMember(teamId);
+      allow read: if signedIn();
       allow create: if isAdmin();
-      allow update: if isTeamLead(teamId);
+      allow update: if isAdmin() || isManager() || isTeamLead(teamId);
       allow delete: if isAdmin();
     }
 
@@ -140,6 +146,10 @@ service cloud.firestore {
 
     match /auditLogs/{logId} {
       allow read, write: if isAdmin();
+    }
+
+    match /reports/{reportId} {
+      allow read, write: if signedIn();
     }
 
     match /settings/{settingId} {

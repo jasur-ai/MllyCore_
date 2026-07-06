@@ -143,6 +143,10 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const profile = window.MLLYCORE_PROFILE;
+      if (profile?.role === 'manager') {
+        location.href = 'reports.html';
+        return;
+      }
       const data = await window.MllyCore.getDashboardData(user.uid);
       const isAdmin = profile?.role === 'admin';
 
