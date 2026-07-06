@@ -424,18 +424,30 @@
       // ==========================================
       function renderManagerView(allReports) {
         const assignedIds = Array.isArray(profile?.assignedTeams) ? profile.assignedTeams : [];
+        const assignedNames = Array.isArray(profile?.assignedTeamNames) ? profile.assignedTeamNames : [];
+        const badgesHtml = assignedIds.length ? assignedIds.map((tid, idx) => {
+          const tName = assignedNames[idx] || (teams.find(t => t.id === tid)?.name) || 'Komanda';
+          return `<span class="badge" style="background:var(--surface-sub);border:1px solid var(--line);padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(tName)}</span>`;
+        }).join('') : '<span class="text-xs muted">Hozircha mas\'ul jamoalar tayinlanmagan</span>';
+
         const managerReports = allReports.filter(r => r.targetRole === 'manager' && (assignedIds.includes(r.teamId) || assignedIds.length === 0));
         const root = document.getElementById('reportsRoot');
 
         root.innerHTML = `
           <div class="workspace-surface pad mb-4" style="background:var(--surface);">
-            <div class="flex justify-between items-center">
+            <div class="flex justify-between items-start mb-3">
               <div>
                 <h2 style="margin:0 0 4px;">Mas'ul Jamoalar Hisobotlari</h2>
                 <p class="text-sm muted" style="margin:0;">Sizga biriktirilgan jamoalardan kelgan yakuniy hisobotlar va rahbar loyihalari. Siz yagona tepadagi nazoratchisiz.</p>
               </div>
               <div class="badge" style="font-size:13px;padding:8px 12px;background:var(--accent);color:#fff;">
-                Mas'ul Jamoalar: ${assignedIds.length} ta
+                Jami: ${assignedIds.length} ta komanda
+              </div>
+            </div>
+            <div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px;">
+              <div class="text-xs font-semibold muted mb-2">Siz boshqaradigan mas'ul komandalar ro'yxati:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;">
+                ${badgesHtml}
               </div>
             </div>
           </div>
@@ -532,5 +544,5 @@
       loadAllReports();
     })();
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d66d33e05eed5',t:'MTc4MzMyODI0Mw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
