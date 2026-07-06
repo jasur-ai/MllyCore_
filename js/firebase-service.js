@@ -863,6 +863,29 @@ window.MllyCore = {
     return { success: true };
   },
 
+  async revokeManagerRole(managerUserId, adminPassword) {
+    await this.reauthenticate(adminPassword);
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    if (window.MLLYCORE_PROFILE?.role !== 'admin') throw new Error('Faqat admin olib tashlay oladi.');
+    const { doc, getDoc, updateDoc } = state.modules.dbMod;
+    const userRef = doc(state.db, 'users', managerUserId);
+    const userSnap = await getDoc(userRef);
+    if (!userSnap.exists()) throw new Error('Manager topilmadi.');
+    const data = userSnap.data();
+    const assignedTeams = Array.isArray(data.assignedTeams) ? data.assignedTeams : [];
+    for (const tId of assignedTeams) {
+      const teamRef = doc(state.db, 'teams', tId);
+      const teamSnap = await getDoc(teamRef);
+      if (teamSnap.exists() && teamSnap.data().managerUserId === managerUserId) {
+        await updateDoc(teamRef, { managerUserId: '', updatedAt: Date.now() });
+      }
+    }
+    await updateDoc(userRef, { role: 'member', assignedTeams: [], assignedTeamNames: [], updatedAt: Date.now() });
+    invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+    return { success: true };
+  },
+
   async deleteWorkspace(teamId, adminPassword) {
     await this.reauthenticate(adminPassword);
     const authUser = window.MLLYCORE_AUTH_USER;
