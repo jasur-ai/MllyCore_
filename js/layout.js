@@ -31,10 +31,14 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else {
+    // FAQAT TEAM LEAD bo'lsa yoki jamoasi bo'lsa hisobotlar panelini ko'rsatish
+    // Agar foydalanuvchi jamoada oddiy a'zo (member) bo'lsa, "Hisobotlar paneli" chiqmaydi
+    const isTeamLead = teams.some(t => t.membershipRole === 'team_lead');
     const hasTeam = teams && teams.length > 0;
+    
     navItems = `
       <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
-      ${hasTeam ? `<a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>` : ''}
+      ${(hasTeam && isTeamLead) ? `<a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>` : ''}
       <a href="my-ideas.html" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
       <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
