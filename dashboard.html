@@ -253,17 +253,22 @@
             </aside>
           </section>
         `;
+        
+        // BU YERDA XAVFSIZ MODAL CHARIQILADI (Parol kiritish majburiy qilindi)
         document.querySelectorAll('[data-admin-delete]').forEach((button) => {
           button.addEventListener('click', async () => {
             const teamId = button.dataset.adminDelete;
             const team = teams.find((item) => item.id === teamId);
-            if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
+            
             selectedTeamId = teamId;
             selectedTeamName = team?.name || 'Workspace';
-            document.getElementById('deleteWorkspaceSubtitle').textContent = `${selectedTeamName} o'chirilsa, workspace, member bog'lanishlari, chat va idea yozuvlari bazadan ham o'chadi.`;
+            
+            // Hech qanday so'rov yuborishdan oldin faqat parollik modalni ochamiz
+            document.getElementById('deleteWorkspaceSubtitle').textContent = `${selectedTeamName} o'chirilsa, workspace, member bog'lanishlari, chat va g'oyalar bazadan butunlay o'chadi. Davom etish uchun parolingizni kiriting.`;
             document.getElementById('deleteWorkspacePassword').value = '';
             document.getElementById('deleteWorkspaceError').textContent = '';
             document.getElementById('confirmDeleteWorkspaceBtn').disabled = false;
+            
             UTIL.openModal('deleteWorkspaceModal');
           });
         });
@@ -282,13 +287,20 @@
         const button = document.getElementById('confirmDeleteWorkspaceBtn');
         const password = document.getElementById('deleteWorkspacePassword').value;
         const errorBox = document.getElementById('deleteWorkspaceError');
+        
+        if (!password) {
+          errorBox.textContent = "Admin parolini kiritishingiz shart!";
+          return;
+        }
+
         button.disabled = true;
         errorBox.textContent = '';
         try {
+          // Firebase auth backend orqali parolni tekshiradi
           await MllyCore.deleteWorkspace(selectedTeamId, password);
           location.reload();
         } catch (error) {
-          errorBox.textContent = error.message || "Workspace o'chirilmadi.";
+          errorBox.textContent = error.message || "Admin paroli noto'g'ri yoki workspace o'chirilmadi.";
           button.disabled = false;
         }
       });
