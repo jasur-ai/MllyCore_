@@ -116,6 +116,21 @@
       const teams = data?.teams || [];
       const role = profile?.role || 'member';
 
+      // Qat'iy nazorat: Oddiy jamoa a'zosi bo'lsa (va team lead ham bo'lmasa) kirish butunlay yopiladi
+      const isTeamLead = teams.some(t => t.membershipRole === 'team_lead');
+      if (role !== 'admin' && role !== 'manager' && !isTeamLead) {
+        document.getElementById('reportsRoot').innerHTML = `
+          <div class="workspace-surface pad text-center py-6" style="padding: 40px; text-align: center;">
+            <h3>Sizda hisobotlar bo'limiga kirish ruxsati yo'q</h3>
+            <p class="muted">Hisobotlar paneli faqat Admin, Manager va Team Lead'lar uchun ochiq.</p>
+            <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+          </div>
+        `;
+        // Sidebar elementlaridan ham "Hisobotlar paneli" olib tashlanadi
+        mountLayout('dashboard', { profile, teams, notifications: data.notifications || [] });
+        return;
+      }
+
       mountLayout('reports', { profile, teams, notifications: data.notifications || [] });
 
       if (teams.length === 0 && role !== 'admin' && role !== 'manager') {
@@ -133,12 +148,9 @@
       if (role === 'manager') {
         document.getElementById('reportHeaderTitle').textContent = "Manager - Jamoalar Hisoboti";
         document.getElementById('reportHeaderCopy').textContent = "Mas'ul jamoalardan kelgan loyiha va jamoaviy hisobotlarni qabul qilish va nazorat qilish.";
-      } else if (role === 'team_lead') {
+      } else if (role === 'team_lead' || isTeamLead) {
         document.getElementById('reportHeaderTitle').textContent = "Team Lead Hisobot Markazi";
         document.getElementById('reportHeaderCopy').textContent = "A'zolar hisobotlarini tekshirish hamda yakuniy Jamoaviy Hisobotni Managerga topshirish.";
-      } else {
-        document.getElementById('reportHeaderTitle').textContent = "Shaxsiy Hisobot Topshirish";
-        document.getElementById('reportHeaderCopy').textContent = "Qilingan ishlar bo'yicha link (Notion, Figma, GitHub) va qisqa ta'rifni yuboring.";
       }
 
       let activeLeadTab = 'members';
@@ -188,9 +200,7 @@
           </div>
         `;
 
-        if (role === 'member') {
-          renderMemberView(reports, switcherHtml);
-        } else if (role === 'team_lead') {
+        if (role === 'team_lead' || isTeamLead) {
           renderTeamLeadView(reports, switcherHtml);
         } else if (role === 'manager') {
           renderManagerView(reports, switcherHtml);
@@ -229,109 +239,6 @@
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;color:#22c55e;"><span>Tasdiqlandi:</span> <b>${approved} ta</b></div>
           <div style="display:flex;justify-content:space-between;color:#ef4444;"><span>Rad etildi:</span> <b>${disapproved} ta</b></div>
         `;
-      }
-
-      // ==========================================
-      // 1. MEMBER VIEW
-      // ==========================================
-      function renderMemberView(allReports, switcherHtml) {
-        const myReports = allReports.filter(r => r.userId === user.uid && r.type === 'member_report');
-        const root = document.getElementById('reportsRoot');
-
-        const teamOptions = teams.map(t => `<option value="${t.id}">${escapeHtml(t.name)}</option>`).join('');
-        const teamSelectHtml = teams.length > 1
-          ? `<label class="label">Workspace tanlang</label><select class="select mb-3" id="memberTeamSelect">${teamOptions}</select>`
-          : teams.length === 1
-          ? `<input type="hidden" id="memberTeamSelect" value="${teams[0].id}"><div class="text-xs muted mb-3">Workspace: <b>${escapeHtml(teams[0].name)}</b></div>`
-          : `<div class="feedback-error mb-3">Siz hech qanday workspace a'zosi emassiz.</div>`;
-
-        root.innerHTML = switcherHtml + `
-          <div class="workspace-surface pad mb-4">
-            <h2>Shaxsiy ${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'} Hisobot Yuborish</h2>
-            <p class="text-sm muted mb-4">Qilingan ish bo'yicha link ({Notion, Figma, GitHub yoki shu kabi}) va qisqa ta'rif kiritib yuboring.</p>
-            ${teamSelectHtml}
-            <label class="label">Hisobot Linki (Notion / Hujjat / URL)</label>
-            <input type="url" class="input mb-3" id="memberReportLink" placeholder="https://notion.so/..." required>
-            <label class="label">Qisqa Ta'rif (Nima qilindi va linkda nimalar bor?)</label>
-            <textarea class="textarea mb-3" id="memberReportDesc" rows="4" placeholder="Masalan: Frontend autentifikatsiya qismi yakunlandi, linkda barcha screen va API hujjatlar joylashtirildi."></textarea>
-            <div id="memberSubmitMsg" class="mb-3 text-sm font-semibold"></div>
-            <button type="button" class="btn btn-primary" id="submitMemberReportBtn" ${teams.length ? '' : 'disabled'}>Hisobotni Yuborish</button>
-          </div>
-
-          <div class="workspace-surface pad">
-            <h2>Yuborilgan Hisobotlarim</h2>
-            <p class="text-sm muted mb-4">Team Lead tasdiqlagan yoki qayta topshirish uchun rad etgan hisobotlaringiz.</p>
-            <div id="memberReportsList">
-              ${myReports.length ? myReports.map(r => `
-                <div class="report-card">
-                  <div class="report-card-top">
-                    <div>
-                      <span class="text-xs font-semibold muted">${escapeHtml(r.teamName || 'Workspace')} &bull; ${r.formattedDate || formatDate(r.createdAt)}</span>
-                    </div>
-                    ${statusBadgeHtml(r.status)}
-                  </div>
-                  <a href="${escapeHtml(r.link)}" target="_blank" class="report-link">🔗 ${escapeHtml(r.link)}</a>
-                  <div class="report-desc">${escapeHtml(r.description)}</div>
-                  ${r.feedback ? `<div class="report-feedback"><b>Rahbar Izohi:</b> ${escapeHtml(r.feedback)}</div>` : ''}
-                  ${r.status === 'disapproved' || r.status === 'pending' ? `
-                    <div class="report-actions">
-                      <button type="button" class="btn btn-secondary btn-sm edit-report-btn" data-link="${escapeHtml(r.link)}" data-desc="${escapeHtml(r.description)}" data-team="${r.teamId}">Tahrirlash va Qayta Topshirish</button>
-                    </div>
-                  ` : ''}
-                </div>
-              `).join('') : '<p class="muted text-center py-4">Hozircha hisobotlar yuborilmagan.</p>'}
-            </div>
-          </div>
-        `;
-
-        document.querySelectorAll('.edit-report-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
-            document.getElementById('memberReportLink').value = btn.dataset.link || '';
-            document.getElementById('memberReportDesc').value = btn.dataset.desc || '';
-            const sel = document.getElementById('memberTeamSelect');
-            if (sel) sel.value = btn.dataset.team || '';
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            document.getElementById('memberReportLink').focus();
-          });
-        });
-
-        document.getElementById('submitMemberReportBtn')?.addEventListener('click', async () => {
-          const btn = document.getElementById('submitMemberReportBtn');
-          const msg = document.getElementById('memberSubmitMsg');
-          const teamId = document.getElementById('memberTeamSelect')?.value || '';
-          const link = document.getElementById('memberReportLink')?.value || '';
-          const description = document.getElementById('memberReportDesc')?.value || '';
-
-          if (!link.trim() || !description.trim()) {
-            msg.textContent = 'Link va ta\'rifni to\'liq kiriting.';
-            msg.style.color = '#ef4444';
-            return;
-          }
-          const tObj = teams.find(t => t.id === teamId);
-          btn.disabled = true;
-          msg.textContent = 'Yuborilmoqda...';
-          msg.style.color = 'var(--text)';
-          try {
-            await window.MllyCore.createReport({
-              type: 'member_report',
-              teamId,
-              teamName: tObj?.name || 'Workspace',
-              link,
-              description,
-              targetRole: 'team_lead',
-              periodType: currentTabPeriod
-            });
-            msg.textContent = 'Hisobot yuborildi!';
-            msg.style.color = '#22c55e';
-            document.getElementById('memberReportLink').value = '';
-            document.getElementById('memberReportDesc').value = '';
-            setTimeout(loadAllReports, 500);
-          } catch (err) {
-            msg.textContent = err.message || 'Xatolik yuz berdi';
-            msg.style.color = '#ef4444';
-            btn.disabled = false;
-          }
-        });
       }
 
       // ==========================================
@@ -612,5 +519,5 @@
       loadAllReports();
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d86ef0d21b65d',t:'MTc4MzMyOTU1OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
