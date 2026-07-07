@@ -19,8 +19,20 @@ function initAdmin() {
 
 function parseServiceAccount(value) {
   const trimmed = value.trim();
-  if (trimmed.startsWith('{')) return JSON.parse(trimmed);
-  return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+  let serviceAccount;
+  
+  if (trimmed.startsWith('{')) {
+    serviceAccount = JSON.parse(trimmed);
+  } else {
+    serviceAccount = JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+  }
+
+  // Private key formatini to'g'rilash (Vercel env \n muammosi)
+  if (serviceAccount.private_key && typeof serviceAccount.private_key === 'string') {
+    serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+  }
+  
+  return serviceAccount;
 }
 
 // Utility Functions
