@@ -26,7 +26,7 @@
       <section class="workspace-layout">
         <div class="workspace-main-stack">
           <div class="workspace-surface pad">
-            <div class="section-head"><h2>Admin qoidası</h2></div>
+            <div class="section-head"><h2>Admin qoidasi</h2></div>
             <div class="workspace-note-bar">Admin idea, chat yoki secret key oqimiga aralashmaydi. Admin faqat workspace yaratadi, team leadni belgilaydi va kerak bo'lsa workspace'ni o'chiradi.</div>
           </div>
 
@@ -103,7 +103,7 @@
       <div class="workspace-modal-error" id="revokeManagerError"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('revokeManagerModal')">Bekor qilish</button>
-        <button class="btn btn-danger" type="button" id="confirmRevokeManagerBtn">Olib Tashlash</button>
+        <button class="btn btn-danger" type="button" id="confirmRevokeManagerBtn">O'chirish</button>
       </div>
     </div>
   </div>
@@ -153,13 +153,12 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
 
-      mountLayout('admin', { profile: window.MLLYCORE_PROFILE || {}, teams: [], notifications: [] });
-
       const [users, teams] = await Promise.all([
         MllyCore.getCollection('users'),
         MllyCore.getCollection('teams')
       ]);
 
+      // Faqat bir marta, barcha ma'lumotlar kelgandan keyin layout render qilinadi (Sidebar endi buzilmaydi!)
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
 
       const updateAdminStats = () => {
@@ -235,7 +234,7 @@
                   </h3>
                   <div class="text-xs muted">${mgr.email}</div>
                 </div>
-                <button type="button" class="btn btn-danger btn-sm revoke-mgr-btn" data-mgr-id="${mgr.id}" data-mgr-name="${escapeHtml(mgr.name || mgr.email)}">Managerlikdan olib tashlash</button>
+                <button type="button" class="btn btn-danger btn-sm revoke-mgr-btn" data-mgr-id="${mgr.id}" data-mgr-name="${mgr.name || mgr.email}">Managerlikdan olib tashlash</button>
               </div>
               <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px;">
                 <div class="text-xs font-semibold mb-2" style="margin-bottom:6px;">Mas'ul komandalar:</div>
@@ -316,7 +315,7 @@
         });
 
         document.querySelectorAll('.mgr-assign-btn').forEach(btn => {
-          btn.addEventListener('click', () => {
+          btn.addEventListener('click', async () => {
             const mId = btn.dataset.mgrId;
             const inp = document.getElementById('input_' + mId);
             const errDiv = document.getElementById('err_' + mId);
@@ -352,21 +351,6 @@
                 }
               }
             );
-            try {
-              await MllyCore.assignTeamToManager({ managerUserId: mId, teamId: matchedTeam.id, teamName: matchedTeam.name });
-              if (mgrObj) {
-                mgrObj.assignedTeams = mgrObj.assignedTeams || [];
-                mgrObj.assignedTeamNames = mgrObj.assignedTeamNames || [];
-                if (!mgrObj.assignedTeams.includes(matchedTeam.id)) {
-                  mgrObj.assignedTeams.push(matchedTeam.id);
-                  mgrObj.assignedTeamNames.push(matchedTeam.name);
-                }
-              }
-              renderManagers();
-            } catch (err) {
-              errDiv.textContent = err.message;
-              errDiv.style.display = 'block';
-            }
           });
         });
       };
@@ -500,5 +484,5 @@
       });
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16dc3b6dfb4bbca',t:'MTc4MzMzMjA0OA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
