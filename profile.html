@@ -19,7 +19,53 @@
 
       <section class="workspace-layout">
         <div class="workspace-main-stack">
-          <div class="workspace-surface pad">
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>📊 Mening Statistikam</h2>
+                <div class="workspace-surface-copy">Shaxsiy faoliyat va performance metrikalari.</div>
+              </div>
+            </div>
+            <div id="personalStatsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
+          </div>
+
+          <div class="workspace-surface pad" style="margin-top:20px;">
+            <div class="section-head"><h2>⏰ Ish vaqti va Sozlamalar</h2></div>
+            <div class="workspace-form-grid">
+              <div>
+                <label class="label">Ish boshlash vaqti (HH:MM)</label>
+                <input class="input" id="workingHoursStart" type="time" placeholder="09:00">
+              </div>
+              <div>
+                <label class="label">Ish tugash vaqti (HH:MM)</label>
+                <input class="input" id="workingHoursEnd" type="time" placeholder="18:00">
+              </div>
+              <div>
+                <label class="label">Timezone</label>
+                <select class="input" id="timezone">
+                  <option value="Asia/Tashkent">Asia/Tashkent (UTC+5)</option>
+                  <option value="UTC">UTC</option>
+                  <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Email Digest Chastotasi</label>
+                <select class="input" id="emailDigestFrequency">
+                  <option value="never">Hech qachon</option>
+                  <option value="daily">Kuniga bir marta</option>
+                  <option value="weekly">Haftada bir marta</option>
+                  <option value="immediately">Darhol</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Telegram Username (ixtiyoriy)</label>
+                <input class="input" id="telegramUsername" placeholder="@username">
+              </div>
+              <button class="btn btn-primary" id="savePreferencesBtn">Sozlamalarni Saqlash</button>
+            </div>
+          </div>
+
+          <div class="workspace-surface pad" style="margin-top:20px;">
             <div class="section-head"><h2>Profil</h2></div>
             <div class="workspace-form-grid">
               <div>
@@ -73,6 +119,7 @@
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
+  <script src="js/analytics-widgets.js"></script>
   <script>
     window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
     (async () => {
@@ -84,6 +131,47 @@
       document.getElementById('username').value = profile.username || '';
       document.getElementById('email').value = profile.email || user.email || '';
 
+      // Load Personal Statistics
+      (async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/index?action=member-stats', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          const data = await response.json();
+          if (data.personalStats) {
+            const container = document.getElementById('personalStatsContainer');
+            container.innerHTML = `
+              ${window.AnalyticsWidgets.renderStatCard('Bajarilgan Vazifalar', data.personalStats.completedTasks || 0, 'Bu oy', '✅')}
+              ${window.AnalyticsWidgets.renderStatCard('Jami Vazifalar', data.personalStats.totalTasks || 0, 'Biriktirilgan', '📋')}
+              ${window.AnalyticsWidgets.renderStatCard('Yaratilgan G\'oyalar', data.personalStats.ideasCreated || 0, 'Jami', '💡')}
+              ${window.AnalyticsWidgets.renderStatCard('Ball', data.score || 0, 'Gamifikatsiya', '⭐')}
+            `;
+          }
+        } catch (error) {
+          console.error('Personal statistika olishda xatolik:', error);
+        }
+      })();
+
+      // Load User Preferences
+      (async () => {
+        try {
+          const users = await MllyCore.getCollection('users');
+          const userDoc = users.find(u => u.id === user.uid);
+          if (userDoc) {
+            if (userDoc.workingHours) {
+              document.getElementById('workingHoursStart').value = userDoc.workingHours.start || '09:00';
+              document.getElementById('workingHoursEnd').value = userDoc.workingHours.end || '18:00';
+            }
+            if (userDoc.timezone) document.getElementById('timezone').value = userDoc.timezone;
+            if (userDoc.emailDigestFrequency) document.getElementById('emailDigestFrequency').value = userDoc.emailDigestFrequency;
+            if (userDoc.telegramUsername) document.getElementById('telegramUsername').value = userDoc.telegramUsername;
+          }
+        } catch (error) {
+          console.error('Preferences yuklashda xatolik:', error);
+        }
+      })();
+
       document.getElementById('saveProfileBtn').addEventListener('click', async () => {
         try {
           await MllyCore.updateUserProfile({
@@ -93,6 +181,35 @@
           UTIL.toast('Profil saqlandi');
         } catch (error) {
           UTIL.toast(error.message || 'Profil saqlanmadi');
+        }
+      });
+
+      document.getElementById('savePreferencesBtn').addEventListener('click', async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const start = document.getElementById('workingHoursStart').value;
+          const end = document.getElementById('workingHoursEnd').value;
+          const response = await fetch('/api/index?action=update-preferences', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${idToken}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              workingHours: start && end ? { start, end } : null,
+              timezone: document.getElementById('timezone').value,
+              emailDigestFrequency: document.getElementById('emailDigestFrequency').value,
+              telegramUsername: document.getElementById('telegramUsername').value || null
+            })
+          });
+          const data = await response.json();
+          if (data.success) {
+            UTIL.toast('Sozlamalar saqlandi');
+          } else {
+            UTIL.toast(data.error || 'Sozlamalar saqlanmadi');
+          }
+        } catch (error) {
+          UTIL.toast(error.message || 'Sozlamalar saqlanmadi');
         }
       });
 

@@ -23,7 +23,32 @@
 
       <section class="workspace-overview" id="stats"></section>
 
-      <section class="workspace-layout">
+      <section class="workspace-layout" style="margin-top:24px;">
+        <div class="workspace-main-stack">
+          <div class="workspace-surface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>📊 Global Analytics</h2>
+                <div class="workspace-surface-copy">Platformaning umumiy statistikasi va performance metrikalari.</div>
+              </div>
+            </div>
+            <div id="globalAnalytics" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
+          </div>
+
+          <div class="workspace-surface" style="margin-top:20px;">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>🔒 Audit Logs</h2>
+                <div class="workspace-surface-copy">Tizimdagi barcha muhim o'zgarishlar va amallari.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="refreshAuditLogs()">Yangilash</button>
+            </div>
+            <div id="auditLogsContainer" style="padding:16px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="workspace-layout" style="margin-top:0;">
         <div class="workspace-main-stack">
           <div class="workspace-surface pad">
             <div class="section-head"><h2>Admin qoidasi</h2></div>
@@ -143,6 +168,7 @@
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
+  <script src="js/analytics-widgets.js"></script>
   <script>
     window.UTIL = window.UTIL || {
       openModal: (id) => document.getElementById(id)?.classList.add('open'),
@@ -179,6 +205,71 @@
         `).join('');
       };
       updateAdminStats();
+
+      // Load Global Analytics
+      (async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/index?action=admin-stats', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          const data = await response.json();
+          if (data.platform) {
+            const container = document.getElementById('globalAnalytics');
+            container.innerHTML = `
+              ${window.AnalyticsWidgets.renderStatCard('Jami Foydalanuvchilar', data.platform.totalUsers || 0, 'Platformadagi barcha userlar', '👥')}
+              ${window.AnalyticsWidgets.renderStatCard('Jami Teamlar', data.platform.totalTeams || 0, 'Aktiv workspace\'lar', '🏢')}
+              ${window.AnalyticsWidgets.renderStatCard('O\'rtacha Health Score', data.platform.avgHealthScore || 0, 'Barcha teamlar', '📊')}
+            `;
+          }
+        } catch (error) {
+          console.error('Analytics olishda xatolik:', error);
+        }
+      })();
+
+      // Load Audit Logs
+      window.refreshAuditLogs = async () => {
+        try {
+          const idToken = await user.getIdToken();
+          const response = await fetch('/api/index?action=audit-logs&limit=50', {
+            headers: { 'Authorization': `Bearer ${idToken}` }
+          });
+          const data = await response.json();
+          if (data.logs) {
+            const container = document.getElementById('auditLogsContainer');
+            if (data.logs.length === 0) {
+              container.innerHTML = '<div class="workspace-empty" style="text-align:center;padding:20px;">Hozircha audit logs yo\'q</div>';
+              return;
+            }
+            container.innerHTML = `
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--line);">
+                      <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Amal</th>
+                      <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Foydalanuvchi</th>
+                      <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Vaqt</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${data.logs.map(log => `
+                      <tr style="border-bottom:1px solid var(--line);">
+                        <td style="padding:12px;font-weight:500;">${log.action || 'Unknown'}</td>
+                        <td style="padding:12px;">${log.userName || 'Unknown'}</td>
+                        <td style="padding:12px;font-size:12px;color:var(--text-muted);">${new Date(log.timestamp?.toMillis?.() || log.timestamp || 0).toLocaleString('uz-UZ')}</td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            `;
+          }
+        } catch (error) {
+          console.error('Audit logs olishda xatolik:', error);
+          document.getElementById('auditLogsContainer').innerHTML = '<div class="workspace-empty">Audit logs yuklashda xatolik</div>';
+        }
+      };
+      window.refreshAuditLogs();
 
       let selectedRevokeManagerId = null;
       let customConfirmCallback = null;
