@@ -1,5 +1,19 @@
 {
   "version": 2,
   "cleanUrls": false,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/api/get-admin-stats", "destination": "/api/stats?action=admin-stats" },
+    { "source": "/api/get-manager-stats", "destination": "/api/stats?action=manager-stats" },
+    { "source": "/api/get-team-member-stats", "destination": "/api/team-stats?action=member-stats" },
+    { "source": "/api/get-leaderboard", "destination": "/api/team-stats?action=leaderboard" },
+    { "source": "/api/get-health-score", "destination": "/api/utils?action=health-score" },
+    { "source": "/api/get-audit-logs", "destination": "/api/utils?action=audit-logs" },
+    { "source": "/api/get-search-results", "destination": "/api/utils?action=search" },
+    { "source": "/api/convert-idea-to-task", "destination": "/api/actions?action=convert-idea" },
+    { "source": "/api/update-user-preferences", "destination": "/api/actions?action=update-preferences" },
+    { "source": "/api/get-overdue-tasks", "destination": "/api/actions?action=overdue-tasks" },
+    { "source": "/api/export-stats", "destination": "/api/export?action=export-stats" },
+    { "source": "/api/get-member-stats", "destination": "/api/export?action=member-stats" }
+  ]
 }

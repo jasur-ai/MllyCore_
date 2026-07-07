@@ -8,13 +8,13 @@ Ushbu hujjat MllyCore loyihasiga qo'shilgan 13 ta yangi funksiyaning frontend va
 
 Barcha yangi API endpointlari `/api` papkasida joylashgan va Vercel serverless funksiyalari sifatida ishlaydigan:
 
-### 1. Admin Statistika (`api/get-admin-stats.js`)
+### 1. Admin Statistika (`api/stats?action=admin-stats`)
 
 **Maqsad:** Platformaning global statistikasini olish (faqat admin uchun)
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-admin-stats', {
+const response = await fetch('/api/stats?action=admin-stats', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -52,13 +52,13 @@ const data = await response.json();
 }
 ```
 
-### 2. Manager Statistika (`api/get-manager-stats.js`)
+### 2. Manager Statistika (`api/stats?action=manager-stats`)
 
 **Maqsad:** Manager uchun o'ziga biriktirilgan teamlar taqqoslovi
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-manager-stats', {
+const response = await fetch('/api/stats?action=manager-stats', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -92,13 +92,13 @@ const response = await fetch('/api/get-manager-stats', {
 }
 ```
 
-### 3. Team A'zolari Statistikasi (`api/get-team-member-stats.js`)
+### 3. Team A'zolari Statistikasi (`api/team-stats?action=member-stats`)
 
 **Maqsad:** Team lead uchun har bir a'zoning individual statistikasi
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-team-member-stats?teamId=team1', {
+const response = await fetch('/api/team-stats?action=member-stats&teamId=team1', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -144,32 +144,32 @@ const response = await fetch('/api/get-team-member-stats?teamId=team1', {
 }
 ```
 
-### 4. Shaxsiy Statistika (`api/get-member-stats.js`)
+### 4. Shaxsiy Statistika (`api/export?action=member-stats`)
 
 **Maqsad:** Member o'zining shaxsiy statistikasini ko'rish
 
 **So'rov:**
 ```javascript
 // Faqat o'z statistikasi
-const response = await fetch('/api/get-member-stats', {
+const response = await fetch('/api/export?action=member-stats', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
 
 // Yoki biror team'da
-const response = await fetch('/api/get-member-stats?teamId=team1', {
+const response = await fetch('/api/export?action=member-stats&teamId=team1', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
 ```
 
-### 5. Health Score (`api/get-health-score.js`)
+### 5. Health Score (`api/utils?action=health-score`)
 
 **Maqsad:** Team'ning salomatlik indeksini hisoblash (0-100)
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-health-score?teamId=team1', {
+const response = await fetch('/api/utils?action=health-score&teamId=team1', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -200,13 +200,13 @@ const response = await fetch('/api/get-health-score?teamId=team1', {
 }
 ```
 
-### 6. Audit Logs (`api/get-audit-logs.js`)
+### 6. Audit Logs (`api/utils?action=audit-logs`)
 
 **Maqsad:** Admin uchun tizimdagi barcha muhim o'zgarishlarni ko'rish
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-audit-logs?limit=50&actionType=workspace_deleted', {
+const response = await fetch('/api/utils?action=audit-logs&limit=50&actionType=workspace_deleted', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -220,25 +220,25 @@ const response = await fetch('/api/get-audit-logs?limit=50&actionType=workspace_
 - `endDate` - tugash sanasi (ISO format)
 - `startAfter` - sahifalash uchun cursor
 
-### 7. Leaderboard (`api/get-leaderboard.js`)
+### 7. Leaderboard (`api/team-stats?action=leaderboard`)
 
 **Maqsad:** Team'dagi gamifikatsiya reytingi
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-leaderboard?teamId=team1', {
+const response = await fetch('/api/team-stats?action=leaderboard&teamId=team1', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
 ```
 
-### 8. G'oyadan Vazifaga (`api/convert-idea-to-task.js`)
+### 8. G'oyadan Vazifaga (`api/actions?action=convert-idea`)
 
 **Maqsad:** Shaxsiy g'oyani jamoaviy vazifaga aylantirish
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/convert-idea-to-task', {
+const response = await fetch('/api/actions?action=convert-idea', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${idToken}`,
@@ -254,25 +254,25 @@ const response = await fetch('/api/convert-idea-to-task', {
 });
 ```
 
-### 9. Kechikkan Vazifalar (`api/get-overdue-tasks.js`)
+### 9. Kechikkan Vazifalar (`api/actions?action=overdue-tasks`)
 
 **Maqsad:** Muddatidan o'tgan vazifalarni ko'rish
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-overdue-tasks?teamId=team1', {
+const response = await fetch('/api/actions?action=overdue-tasks&teamId=team1', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
 ```
 
-### 10. Statistika Eksport (`api/export-stats.js`)
+### 10. Statistika Eksport (`api/export?action=export-stats`)
 
 **Maqsad:** Statistikani CSV yoki JSON formatda yuklab olish
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/export-stats?type=manager&period=month&format=csv', {
+const response = await fetch('/api/export?action=export-stats&type=manager&period=month&format=csv', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
@@ -286,13 +286,13 @@ const data = await response.json();
 - `period` - `week`, `month`, `quarter`, `year`
 - `format` - `csv` yoki `json`
 
-### 11. Foydalanuvchi Sozlamalari (`api/update-user-preferences.js`)
+### 11. Foydalanuvchi Sozlamalari (`api/actions?action=update-preferences`)
 
 **Maqsad:** Ish vaqti, timezone va bildirishnoma sozlamalarini yangilash
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/update-user-preferences', {
+const response = await fetch('/api/actions?action=update-preferences', {
   method: 'POST',
   headers: {
     'Authorization': `Bearer ${idToken}`,
@@ -307,13 +307,13 @@ const response = await fetch('/api/update-user-preferences', {
 });
 ```
 
-### 12. Global Qidiruv (`api/get-search-results.js`)
+### 12. Global Qidiruv (`api/utils?action=search`)
 
 **Maqsad:** Barcha teamlardagi vazifalar, g'oyalar va xabarlarni qidirish
 
 **So'rov:**
 ```javascript
-const response = await fetch('/api/get-search-results?q=qidiruv&type=all&limit=20', {
+const response = await fetch('/api/utils?action=search&q=qidiruv&type=all&limit=20', {
   method: 'GET',
   headers: { 'Authorization': `Bearer ${idToken}` }
 });
