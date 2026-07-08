@@ -1,11 +1,15 @@
 const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const root = path.resolve(__dirname, '..');
 const serviceAccountPath = path.join(root, 'serviceAccountKey.json');
-const adminEmail = 'jasurjonai@gmail.com';
-const adminPassword = 'abduvayitovv';
+
+// Credentials are NEVER hardcoded. Provide them via environment variables,
+// otherwise a random password is generated and printed to the console.
+const adminEmail = process.env.ADMIN_EMAIL || 'jasurjonai@gmail.com';
+const adminPassword = process.env.ADMIN_PASSWORD || crypto.randomBytes(10).toString('hex');
 
 if (!fs.existsSync(serviceAccountPath)) {
   console.error('serviceAccountKey.json topilmadi.');
@@ -14,7 +18,7 @@ if (!fs.existsSync(serviceAccountPath)) {
 
 admin.initializeApp({
   credential: admin.credential.cert(require(serviceAccountPath)),
-  projectId: 'mllycore'
+  projectId: 'mllycore',
 });
 
 const db = admin.firestore();
@@ -35,9 +39,7 @@ async function resetAuthUsers(adminUid) {
   do {
     const result = await admin.auth().listUsers(1000, nextPageToken);
     for (const user of result.users) {
-      if (user.uid !== adminUid) {
-        await admin.auth().deleteUser(user.uid);
-      }
+      if (user.uid !== adminUid) await admin.auth().deleteUser(user.uid);
     }
     nextPageToken = result.pageToken;
   } while (nextPageToken);
@@ -51,7 +53,7 @@ async function ensureAdmin() {
       password: adminPassword,
       emailVerified: true,
       disabled: false,
-      displayName: 'Jasur Admin'
+      displayName: 'Jasur Admin',
     });
   } catch (error) {
     if (error.code !== 'auth/user-not-found') throw error;
@@ -60,7 +62,7 @@ async function ensureAdmin() {
       password: adminPassword,
       emailVerified: true,
       displayName: 'Jasur Admin',
-      disabled: false
+      disabled: false,
     });
   }
 
@@ -73,7 +75,7 @@ async function ensureAdmin() {
     verified: true,
     blocked: false,
     joinedAt: admin.firestore.FieldValue.serverTimestamp(),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
 
   return user.uid;
@@ -90,7 +92,12 @@ async function main() {
     deleteCollection('chatMessages'),
     deleteCollection('notifications'),
     deleteCollection('auditLogs'),
-    deleteCollection('settings')
+    deleteCollection('settings'),
+    deleteCollection('tasks'),
+    deleteCollection('taskSubmissions'),
+    deleteCollection('reports'),
+    deleteCollection('workspaceInvites'),
+    deleteCollection('personalIdeas'),
   ]);
 
   const users = await db.collection('users').get();
@@ -101,7 +108,8 @@ async function main() {
   await batch.commit();
 
   await resetAuthUsers(adminUid);
-  console.log(`Reset tugadi. Faqat admin qoldi: ${adminEmail} / ${adminPassword}`);
+  console.log(`Reset tugadi. Faqat admin qoldi: ${adminEmail}`);
+  console.log(`Yangi admin paroli: ${adminPassword}  (uni xavfsiz joyga saqlang!)`);
 }
 
 main().catch((error) => {
