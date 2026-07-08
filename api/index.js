@@ -2,7 +2,11 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
-// Firebase Admin Initialization with Robust Key Parsing
+/**
+ * Firebase Admin Initialization
+ * Barcha API endpointlarini bitta funksiyada jamlagan router.
+ * Vercel Hobby plan limitini (12 ta funksiya) chetlab o'tish uchun yaratilgan.
+ */
 function initAdmin() {
   if (admin.apps.length) return admin.app();
   
@@ -13,64 +17,72 @@ function initAdmin() {
   
   if (raw) {
     try {
+      // 1. JSON parse qilish
       const trimmed = raw.trim();
       let parsed;
       if (trimmed.startsWith('{')) {
         parsed = JSON.parse(trimmed);
       } else {
-        // Handle Base64 encoded JSON
+        // Base64 formatda bo'lsa
         parsed = JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
       }
       
-      // CRITICAL: Robust private key parsing for Vercel environments
-      if (parsed.private_key) {
-        // Replace escaped newlines and remove extra quotes if any
-        parsed.private_key = parsed.private_key
-          .replace(/\\n/g, '\n')
-          .replace(/\n/g, '\n')
-          .trim();
-          
-        // Ensure the key starts and ends correctly
-        if (!parsed.private_key.includes('-----BEGIN PRIVATE KEY-----')) {
-          console.error('Firebase: private_key format is invalid (missing header)');
+      // 2. Private Key formatini to'g'rilash (Vercel \n muammosi)
+      if (parsed.private_key && typeof parsed.private_key === 'string') {
+        // Har qanday \\n ni haqiqiy yangi qatorga aylantiramiz
+        parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+        
+        // Agar kalit qo'shtirnoqlar ichida bo'lsa (ba'zan Vercel shunday qiladi)
+        if (parsed.private_key.startsWith('"') && parsed.private_key.endsWith('"')) {
+          parsed.private_key = parsed.private_key.substring(1, parsed.private_key.length - 1).replace(/\\n/g, '\n');
         }
       }
       
       serviceAccount = parsed;
     } catch (e) {
-      throw new Error(`FIREBASE_SERVICE_ACCOUNT_JSON parse xatosi: ${e.message}`);
+      console.error('FIREBASE_CONFIG_ERROR:', e.message);
+      throw new Error(`Firebase Config Parse Error: ${e.message}`);
     }
   } else if (fs.existsSync(localPath)) {
     serviceAccount = require(localPath);
   } else {
-    throw new Error('Vercel env FIREBASE_SERVICE_ACCOUNT_JSON sozlanmagan.');
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON topilmadi. Vercel Environment Variables sozlang.');
   }
 
-  // Validate required fields
-  if (!serviceAccount.project_id || !serviceAccount.private_key || !serviceAccount.client_email) {
-    throw new Error('Service Account JSON ichida zaruriy maydonlar (project_id, private_key, client_email) yetishmayapti.');
+  // Kalit mavjudligini tekshirish
+  if (!serviceAccount || !serviceAccount.private_key) {
+    throw new Error('Firebase Private Key topilmadi. Kalitni to\'g\'ri formatda kiriting.');
   }
 
-  return admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id
-  });
+  try {
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: serviceAccount.project_id
+    });
+  } catch (initError) {
+    console.error('FIREBASE_INIT_ERROR:', initError.message);
+    throw initError;
+  }
 }
 
 // Utility Functions
 async function verifyAuth(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) throw new Error('Token yoq.');
-  return await admin.auth().verifyIdToken(token);
+  if (!token) throw new Error('Avtorizatsiya tokeni topilmadi.');
+  try {
+    return await admin.auth().verifyIdToken(token);
+  } catch (e) {
+    throw new Error('Token yaroqsiz yoki muddati o\'tgan.');
+  }
 }
 
 async function getUserData(db, uid) {
   const userDoc = await db.collection('users').doc(uid).get();
-  if (!userDoc.exists) throw new Error('Foydalanuvchi topilmadi.');
+  if (!userDoc.exists) throw new Error('Foydalanuvchi ma\'lumotlari bazadan topilmadi.');
   return userDoc.data();
 }
 
-// ============ LEGACY HANDLERS ============
+// ============ API HANDLERS (Barcha funksiyalar birlashtirilgan) ============
 
 async function handleAcceptInvite(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
@@ -155,8 +167,6 @@ async function handleTaskAction(req, res, db, decoded) {
   await db.collection('tasks').doc(taskId).update(updateData);
   return { status: 200, success: true, message: 'Vazifa yangilandi.' };
 }
-
-// ============ NEW ANALYTICS HANDLERS ============
 
 async function handleStats(req, res, db, decoded, user) {
   const { action } = req.query;
@@ -305,12 +315,16 @@ async function handleExport(req, res, db, decoded, user) {
 // ============ MAIN ROUTER ============
 
 module.exports = async (req, res) => {
-  // CORS setup
+  // CORS Headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
   
-  if (req.method === 'OPTIONS') return res.status(200).end();
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
   try {
     initAdmin();
@@ -326,7 +340,6 @@ module.exports = async (req, res) => {
     
     const action = req.query.action || pathname.split('/').pop();
     
-    // Routing logic
     let result;
     if (pathname.includes('accept-invite')) result = await handleAcceptInvite(req, res, db, decoded);
     else if (pathname.includes('create-workspace')) result = await handleCreateWorkspace(req, res, db, decoded);
@@ -338,11 +351,11 @@ module.exports = async (req, res) => {
     else if (action === 'health-score' || action === 'audit-logs' || action === 'search') result = await handleUtils(req, res, db, decoded, user);
     else if (action === 'convert-idea' || action === 'update-preferences' || action === 'overdue-tasks') result = await handleActions(req, res, db, decoded, user);
     else if (action === 'export-stats') result = await handleExport(req, res, db, decoded, user);
-    else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
+    else result = { status: 400, error: `Noma'lum endpoint: ${action}` };
     
     res.status(result.status || 200).json(result);
   } catch (error) {
-    console.error('API Error:', error.message);
-    res.status(400).json({ error: error.message || 'Xatolik yuz berdi.' });
+    console.error('SERVER_ERROR:', error.message);
+    res.status(400).json({ error: error.message || 'Serverda xatolik yuz berdi.' });
   }
 };
