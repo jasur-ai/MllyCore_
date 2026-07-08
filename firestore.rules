@@ -2,22 +2,29 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() {
       return request.auth != null;
+    }
+
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+        && userData().role == 'admin';
     }
 
     function isManager() {
       return signedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'manager';
+        && userData().role == 'manager';
     }
 
+    // teamMembers documents are created with the ID "<teamId>_<uid>" (see api/index.js),
+    // so this helper now resolves correctly.
     function isTeamMember(teamId) {
       return signedIn()
         && exists(/databases/$(database)/documents/teamMembers/$(teamId + '_' + request.auth.uid));
@@ -35,14 +42,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/teams/$(teamId)).data.createdByUserId == request.auth.uid;
     }
 
-    function canReadIdea(ideaId) {
-      return signedIn()
-        && exists(/databases/$(database)/documents/ideas/$(ideaId))
-        && (isAdmin() || isTeamMember(get(/databases/$(database)/documents/ideas/$(ideaId)).data.teamId));
-    }
-
     match /users/{userId} {
-      allow read: if true;
+      allow read: if signedIn();
       allow create: if isAdmin() || (signedIn() && request.auth.uid == userId);
       allow update: if isAdmin() || (signedIn() && request.auth.uid == userId);
       allow delete: if isAdmin();
@@ -51,39 +52,20 @@ service cloud.firestore {
     match /teams/{teamId} {
       allow read: if signedIn();
       allow create: if isAdmin();
-      allow update: if isAdmin() || isManager() || isTeamLead(teamId);
+      allow update: if isAdmin() || isManager() || isTeamLead(teamId) || isTeamCreator(teamId);
       allow delete: if isAdmin();
     }
 
     match /teamMembers/{memberId} {
+      // All membership writes go through the admin SDK (api/index.js), so client create is admin-only.
       allow read: if signedIn();
-      allow create: if (isAdmin()
-          && request.resource.data.role == 'team_lead'
-          && request.resource.data.teamId is string
-          && request.resource.data.userId is string)
-        || (signedIn()
-          && request.resource.data.teamId is string
-          && request.resource.data.userId is string
-          && request.resource.data.role == 'member'
-          && isTeamLead(request.resource.data.teamId))
-        || (signedIn()
-          && request.resource.data.teamId is string
-          && request.resource.data.userId == request.auth.uid
-          && request.resource.data.role == 'team_lead'
-          && isTeamCreator(request.resource.data.teamId));
-      allow update: if (isAdmin()
-          && request.resource.data.role == 'team_lead'
-          && request.resource.data.teamId is string
-          && request.resource.data.userId is string)
-        || (signedIn()
-          && resource.data.teamId is string
-          && request.resource.data.role == 'member'
-          && isTeamLead(resource.data.teamId));
-      allow delete: if signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (signedIn() && isTeamLead(resource.data.teamId));
+      allow delete: if isAdmin() || (signedIn() && isTeamLead(resource.data.teamId));
     }
 
     match /ideas/{ideaId} {
-      allow read: if isAdmin() || (resource.data.teamId is string && isTeamMember(resource.data.teamId));
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
       allow create: if signedIn() && isTeamMember(request.resource.data.teamId);
       allow update: if isAdmin()
         || isTeamLead(resource.data.teamId)
@@ -92,13 +74,16 @@ service cloud.firestore {
     }
 
     match /ideaComments/{commentId} {
-      allow read: if canReadIdea(resource.data.ideaId);
+      allow read: if isAdmin()
+        || (signedIn()
+            && exists(/databases/$(database)/documents/ideas/$(resource.data.ideaId))
+            && isTeamMember(get(/databases/$(database)/documents/ideas/$(resource.data.ideaId)).data.teamId));
       allow create: if signedIn()
-        && request.resource.data.ideaId is string
         && request.resource.data.userId == request.auth.uid
-        && canReadIdea(request.resource.data.ideaId);
-      allow update, delete: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
+        && (isAdmin()
+            || (exists(/databases/$(database)/documents/ideas/$(request.resource.data.ideaId))
+                && isTeamMember(get(/databases/$(database)/documents/ideas/$(request.resource.data.ideaId)).data.teamId)));
+      allow update, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /chatMessages/{messageId} {
@@ -106,42 +91,38 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.teamId is string
         && request.resource.data.senderUserId == request.auth.uid
-        && isTeamMember(request.resource.data.teamId);
+        && (isAdmin() || isTeamMember(request.resource.data.teamId));
       allow update, delete: if isAdmin()
         || isTeamLead(resource.data.teamId)
         || (signedIn() && resource.data.senderUserId == request.auth.uid);
     }
 
     match /notifications/{notificationId} {
-      allow read, update: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow read, update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow create, delete: if isAdmin();
     }
 
     match /workspaceInvites/{inviteId} {
       allow read: if isAdmin()
         || (signedIn() && resource.data.inviteeUserId == request.auth.uid)
-        || (signedIn() && resource.data.teamId is string && isTeamLead(resource.data.teamId));
-      allow write: if isAdmin();
+        || (signedIn() && isTeamLead(resource.data.teamId));
+      allow write: if isAdmin() || isTeamLead(resource.data.teamId);
     }
 
     match /personalIdeas/{ideaId} {
-      allow read, delete: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
-      allow create: if isAdmin()
-        || (signedIn() && request.resource.data.userId == request.auth.uid);
-      allow update: if isAdmin()
-        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow read, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+      allow create: if isAdmin() || (signedIn() && request.resource.data.userId == request.auth.uid);
+      allow update: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
     }
 
     match /tasks/{taskId} {
       allow read: if isAdmin() || isTeamMember(resource.data.teamId);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isTeamLead(resource.data.teamId);
     }
 
     match /taskSubmissions/{submissionId} {
       allow read: if isAdmin() || isTeamMember(resource.data.teamId);
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isTeamMember(resource.data.teamId);
     }
 
     match /auditLogs/{logId} {
@@ -149,7 +130,12 @@ service cloud.firestore {
     }
 
     match /reports/{reportId} {
-      allow read, write: if signedIn();
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || (signedIn() && isTeamLead(resource.data.teamId));
+      allow create: if signedIn() && (isAdmin() || isTeamMember(resource.data.teamId));
+      allow update: if isAdmin() || isTeamLead(resource.data.teamId);
+      allow delete: if isAdmin() || isTeamLead(resource.data.teamId);
     }
 
     match /settings/{settingId} {
