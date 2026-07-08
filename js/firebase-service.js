@@ -32,7 +32,23 @@ window.MllyCore = {
     firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
     firebaseState.auth = authMod.getAuth(firebaseState.app);
     await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
-    firebaseState.db = dbMod.getFirestore(firebaseState.app);
+
+    // Offline-first: persist Firestore data locally (IndexedDB) so the app keeps
+    // working without a network connection and re-syncs automatically.
+    let db;
+    try {
+      if (dbMod.initializeFirestore && dbMod.persistentLocalCache) {
+        db = dbMod.initializeFirestore(firebaseState.app, {
+          localCache: dbMod.persistentLocalCache({ tabManager: dbMod.persistentMultipleTabManager() }),
+        });
+      } else {
+        db = dbMod.getFirestore(firebaseState.app);
+      }
+    } catch (e) {
+      db = dbMod.getFirestore(firebaseState.app);
+    }
+    firebaseState.db = db;
+
     firebaseState.modules = { authMod, dbMod };
     firebaseState.ready = true;
     return firebaseState;
@@ -859,20 +875,9 @@ window.MllyCore = {
       invalidateCacheByPrefix(getCacheKey('dashboard', ''));
       return { id: userDoc.id, email: cleanEmail, name: name || userDoc.data().name, role: 'manager' };
     } else {
-      const fakeId = 'mgr_' + Math.random().toString(36).slice(2, 11);
-      await setDoc(doc(state.db, 'users', fakeId), {
-        email: cleanEmail,
-        name: name || cleanEmail.split('@')[0],
-        username: cleanEmail.split('@')[0],
-        role: 'manager',
-        assignedTeams: [],
-        assignedTeamNames: [],
-        verified: true,
-        createdAt: now,
-        updatedAt: now
-      });
-      invalidateCacheByPrefix(getCacheKey('dashboard', ''));
-      return { id: fakeId, email: cleanEmail, name: name || cleanEmail.split('@')[0], role: 'manager' };
+      // Do NOT create an orphan Firestore doc without a matching Auth account
+      // (it could never log in). The user must register first.
+      throw new Error('Bu email bilan foydalanuvchi topilmadi. Avval ro\'yxatdan o\'tsin.');
     }
   },
 
