@@ -3,9 +3,7 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Firebase Admin Initialization
- * Barcha API endpointlarini bitta funksiyada jamlagan router.
- * Vercel Hobby plan limitini (12 ta funksiya) chetlab o'tish uchun yaratilgan.
+ * Firebase Admin Initialization with Advanced Key Normalization & Diagnostics
  */
 function initAdmin() {
   if (admin.apps.length) return admin.app();
@@ -17,46 +15,67 @@ function initAdmin() {
   
   if (raw) {
     try {
-      // 1. JSON parse qilish
       const trimmed = raw.trim();
       let parsed;
       if (trimmed.startsWith('{')) {
         parsed = JSON.parse(trimmed);
       } else {
-        // Base64 formatda bo'lsa
         parsed = JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
       }
       
-      // 2. Private Key formatini to'g'rilash (Vercel \n muammosi)
-      if (parsed.private_key && typeof parsed.private_key === 'string') {
-        // Har qanday \\n ni haqiqiy yangi qatorga aylantiramiz
-        parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
+      // DIAGNOSTIC LOGGING (Vercel loglarida ko'rinadi)
+      console.log('Firebase Config Diagnostic:');
+      console.log('- Project ID:', parsed.project_id);
+      console.log('- Client Email:', parsed.client_email);
+      
+      if (parsed.private_key) {
+        console.log('- Raw Private Key Length:', parsed.private_key.length);
         
-        // Agar kalit qo'shtirnoqlar ichida bo'lsa (ba'zan Vercel shunday qiladi)
-        if (parsed.private_key.startsWith('"') && parsed.private_key.endsWith('"')) {
-          parsed.private_key = parsed.private_key.substring(1, parsed.private_key.length - 1).replace(/\\n/g, '\n');
+        // ADVANCED NORMALIZATION
+        // 1. Ortiqcha qo'shtirnoqlarni tozalash
+        let key = parsed.private_key.trim();
+        if (key.startsWith('"') && key.endsWith('"')) {
+          key = key.substring(1, key.length - 1);
         }
+        
+        // 2. Noto'g'ri yangi qator belgilarini haqiqiy \n ga aylantirish
+        // Ba'zan Vercel \\n ni \n ga o'zgartiradi, ba'zan esa \\\\n bo'lib qoladi.
+        key = key.replace(/\\n/g, '\n');
+        
+        // 3. Agar hali ham \n lar bo'lmasa, lekin kalit juda uzun bo'lsa (bir qatorga yig'ilib qolgan bo'lsa)
+        // Header va Footer orasidagi bo'shliqlarni \n ga aylantirish kerak bo'lishi mumkin.
+        // Lekin standart RSA kalitida bu shart emas, asosiysi header/footer alohida qatorda bo'lishi.
+        
+        parsed.private_key = key;
+        
+        console.log('- Normalized Key Length:', parsed.private_key.length);
+        console.log('- Key Header OK:', parsed.private_key.includes('-----BEGIN PRIVATE KEY-----'));
+        console.log('- Key Footer OK:', parsed.private_key.includes('-----END PRIVATE KEY-----'));
       }
       
       serviceAccount = parsed;
     } catch (e) {
-      console.error('FIREBASE_CONFIG_ERROR:', e.message);
+      console.error('FIREBASE_CONFIG_PARSE_ERROR:', e.message);
       throw new Error(`Firebase Config Parse Error: ${e.message}`);
     }
   } else if (fs.existsSync(localPath)) {
     serviceAccount = require(localPath);
   } else {
-    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON topilmadi. Vercel Environment Variables sozlang.');
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON topilmadi.');
   }
 
-  // Kalit mavjudligini tekshirish
-  if (!serviceAccount || !serviceAccount.private_key) {
-    throw new Error('Firebase Private Key topilmadi. Kalitni to\'g\'ri formatda kiriting.');
+  // Final check and explicit credential creation
+  if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
+    throw new Error('Firebase Config: Zaruriy maydonlar yetishmayapti.');
   }
 
   try {
     return admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
+      credential: admin.credential.cert({
+        projectId: serviceAccount.project_id,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key
+      }),
       projectId: serviceAccount.project_id
     });
   } catch (initError) {
@@ -68,26 +87,21 @@ function initAdmin() {
 // Utility Functions
 async function verifyAuth(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
-  if (!token) throw new Error('Avtorizatsiya tokeni topilmadi.');
-  try {
-    return await admin.auth().verifyIdToken(token);
-  } catch (e) {
-    throw new Error('Token yaroqsiz yoki muddati o\'tgan.');
-  }
+  if (!token) throw new Error('Token topilmadi.');
+  return await admin.auth().verifyIdToken(token);
 }
 
 async function getUserData(db, uid) {
   const userDoc = await db.collection('users').doc(uid).get();
-  if (!userDoc.exists) throw new Error('Foydalanuvchi ma\'lumotlari bazadan topilmadi.');
+  if (!userDoc.exists) throw new Error('User topilmadi.');
   return userDoc.data();
 }
 
-// ============ API HANDLERS (Barcha funksiyalar birlashtirilgan) ============
+// ============ API HANDLERS ============
 
 async function handleAcceptInvite(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
   const { inviteId } = req.body || {};
-  if (!inviteId) return { status: 400, error: 'inviteId talab etiladi.' };
   const inviteDoc = await db.collection('invites').doc(inviteId).get();
   if (!inviteDoc.exists) return { status: 404, error: 'Taklif topilmadi.' };
   const invite = inviteDoc.data();
@@ -105,7 +119,6 @@ async function handleAcceptInvite(req, res, db, decoded) {
 async function handleCreateWorkspace(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
   const { name, description } = req.body || {};
-  if (!name) return { status: 400, error: 'Team nomi talab etiladi.' };
   const teamRef = await db.collection('teams').add({
     name,
     description: description || '',
@@ -120,13 +133,12 @@ async function handleCreateWorkspace(req, res, db, decoded) {
     role: 'team_lead',
     joinedAt: admin.firestore.FieldValue.serverTimestamp()
   });
-  return { status: 201, success: true, teamId: teamRef.id, message: 'Team muvaffaqiyatli yaratildi.' };
+  return { status: 201, success: true, teamId: teamRef.id, message: 'Team yaratildi.' };
 }
 
 async function handleCreateTask(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
   const { teamId, title, description, assignedTo, priority, dueDate } = req.body || {};
-  if (!teamId || !title) return { status: 400, error: 'teamId va title talab etiladi.' };
   const taskRef = await db.collection('tasks').add({
     teamId,
     title,
@@ -144,7 +156,6 @@ async function handleCreateTask(req, res, db, decoded) {
 async function handleSendChat(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
   const { teamId, text } = req.body || {};
-  if (!teamId || !text) return { status: 400, error: 'teamId va text talab etiladi.' };
   const messageRef = await db.collection('chatMessages').add({
     teamId,
     userId: decoded.uid,
@@ -157,7 +168,6 @@ async function handleSendChat(req, res, db, decoded) {
 async function handleTaskAction(req, res, db, decoded) {
   if (req.method !== 'POST') return { status: 405, error: 'Method not allowed' };
   const { taskId, action, status } = req.body || {};
-  if (!taskId || !action) return { status: 400, error: 'taskId va action talab etiladi.' };
   const updateData = { updatedAt: admin.firestore.FieldValue.serverTimestamp() };
   if (status) updateData.status = status;
   if (action === 'complete') {
@@ -171,7 +181,7 @@ async function handleTaskAction(req, res, db, decoded) {
 async function handleStats(req, res, db, decoded, user) {
   const { action } = req.query;
   if (action === 'admin-stats') {
-    if (user.role !== 'admin') return { status: 403, error: 'Admin huquqi talab etiladi.' };
+    if (user.role !== 'admin') return { status: 403, error: 'Admin emas.' };
     const teamsSnap = await db.collection('teams').get();
     const teams = teamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const totalUsers = (await db.collection('users').get()).size;
@@ -185,7 +195,7 @@ async function handleStats(req, res, db, decoded, user) {
     };
   }
   if (action === 'manager-stats') {
-    if (user.role !== 'manager') return { status: 403, error: 'Manager huquqi talab etiladi.' };
+    if (user.role !== 'manager') return { status: 403, error: 'Manager emas.' };
     const assignedIds = Array.isArray(user.assignedTeams) ? user.assignedTeams : [];
     const teams = await Promise.all(assignedIds.map(id => db.collection('teams').doc(id).get()));
     return {
@@ -194,12 +204,12 @@ async function handleStats(req, res, db, decoded, user) {
       teams: teams.filter(t => t.exists).map(t => ({ id: t.id, ...t.data() }))
     };
   }
-  return { status: 400, error: 'Noto\'g\'ri action.' };
+  return { status: 400, error: 'Action xato.' };
 }
 
 async function handleTeamStats(req, res, db, decoded, user) {
   const { action, teamId } = req.query;
-  if (!teamId) return { status: 400, error: 'teamId talab etiladi.' };
+  if (!teamId) return { status: 400, error: 'teamId yoq.' };
   if (action === 'member-stats') {
     const membersSnap = await db.collection('teamMembers').where('teamId', '==', teamId).get();
     const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -211,13 +221,13 @@ async function handleTeamStats(req, res, db, decoded, user) {
     const sorted = members.sort((a, b) => (b.score || 0) - (a.score || 0));
     return { status: 200, teamId, leaderboard: sorted.map((m, i) => ({ ...m, rank: i + 1 })) };
   }
-  return { status: 400, error: 'Noto\'g\'ri action.' };
+  return { status: 400, error: 'Action xato.' };
 }
 
 async function handleUtils(req, res, db, decoded, user) {
   const { action, teamId, q } = req.query;
   if (action === 'health-score') {
-    if (!teamId) return { status: 400, error: 'teamId talab etiladi.' };
+    if (!teamId) return { status: 400, error: 'teamId yoq.' };
     const tasksSnap = await db.collection('tasks').where('teamId', '==', teamId).get();
     const tasks = tasksSnap.docs.map(doc => doc.data());
     const completedTasks = tasks.filter(t => t.status === 'done').length;
@@ -226,27 +236,26 @@ async function handleUtils(req, res, db, decoded, user) {
     return { status: 200, teamId, healthScore, components: { taskCompletionRate: Math.round(taskCompletionRate) } };
   }
   if (action === 'audit-logs') {
-    if (user.role !== 'admin') return { status: 403, error: 'Admin huquqi talab etiladi.' };
+    if (user.role !== 'admin') return { status: 403, error: 'Admin emas.' };
     const logsSnap = await db.collection('auditLogs').orderBy('timestamp', 'desc').limit(50).get();
     const logs = logsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     return { status: 200, logs };
   }
   if (action === 'search') {
-    if (!q || q.length < 2) return { status: 400, error: 'Qidiruv so\'zi kamida 2 ta belgi.' };
+    if (!q || q.length < 2) return { status: 400, error: 'Qidiruv so\'zi kam.' };
     const tasksSnap = await db.collection('tasks').limit(20).get();
     const tasks = tasksSnap.docs
       .map(doc => doc.data())
       .filter(t => (t.title || '').toLowerCase().includes(q.toLowerCase()));
     return { status: 200, results: { tasks } };
   }
-  return { status: 400, error: 'Noto\'g\'ri action.' };
+  return { status: 400, error: 'Action xato.' };
 }
 
 async function handleActions(req, res, db, decoded, user) {
   const { action } = req.query;
   if (action === 'convert-idea' && req.method === 'POST') {
     const { ideaId, teamId, title } = req.body || {};
-    if (!ideaId || !teamId) return { status: 400, error: 'ideaId va teamId talab etiladi.' };
     const ideaDoc = await db.collection('ideas').doc(ideaId).get();
     if (!ideaDoc.exists) return { status: 404, error: 'Idea topilmadi.' };
     const taskRef = await db.collection('tasks').add({
@@ -270,7 +279,7 @@ async function handleActions(req, res, db, decoded, user) {
     if (emailDigestFrequency) updateData.emailDigestFrequency = emailDigestFrequency;
     if (telegramUsername) updateData.telegramUsername = telegramUsername;
     await db.collection('users').doc(decoded.uid).update(updateData);
-    return { status: 200, success: true, message: 'Sozlamalar yangilandi.' };
+    return { status: 200, success: true, message: 'Yangilandi.' };
   }
   if (action === 'overdue-tasks') {
     const tasksSnap = await db.collection('tasks').where('status', '!=', 'done').get();
@@ -282,13 +291,13 @@ async function handleActions(req, res, db, decoded, user) {
     });
     return { status: 200, tasks: overdue, totalOverdue: overdue.length };
   }
-  return { status: 400, error: 'Noto\'g\'ri action.' };
+  return { status: 400, error: 'Action xato.' };
 }
 
 async function handleExport(req, res, db, decoded, user) {
   const { action } = req.query;
   if (action === 'export-stats') {
-    if (user.role !== 'admin' && user.role !== 'manager') return { status: 403, error: 'Admin yoki Manager huquqi talab etiladi.' };
+    if (user.role !== 'admin' && user.role !== 'manager') return { status: 403, error: 'Ruxsat yoq.' };
     const teamsSnap = await db.collection('teams').get();
     const teams = teamsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     const csv = ['Team Nomi,Health Score', ...teams.map(t => `"${t.name}",${t.healthScore || 0}`)].join('\n');
@@ -309,22 +318,17 @@ async function handleExport(req, res, db, decoded, user) {
       }
     };
   }
-  return { status: 400, error: 'Noto\'g\'ri action.' };
+  return { status: 400, error: 'Action xato.' };
 }
 
 // ============ MAIN ROUTER ============
 
 module.exports = async (req, res) => {
-  // CORS Headers
-  res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
   
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
     initAdmin();
@@ -351,11 +355,11 @@ module.exports = async (req, res) => {
     else if (action === 'health-score' || action === 'audit-logs' || action === 'search') result = await handleUtils(req, res, db, decoded, user);
     else if (action === 'convert-idea' || action === 'update-preferences' || action === 'overdue-tasks') result = await handleActions(req, res, db, decoded, user);
     else if (action === 'export-stats') result = await handleExport(req, res, db, decoded, user);
-    else result = { status: 400, error: `Noma'lum endpoint: ${action}` };
+    else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
     
     res.status(result.status || 200).json(result);
   } catch (error) {
-    console.error('SERVER_ERROR:', error.message);
-    res.status(400).json({ error: error.message || 'Serverda xatolik yuz berdi.' });
+    console.error('API_ERROR:', error.message);
+    res.status(400).json({ error: error.message || 'Xatolik yuz berdi.' });
   }
 };
