@@ -142,5 +142,36 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+
+    // --- Yangi kolleksiyalar (T1/T4/T6/T9/T11/T13/T16) ---
+    match /featureFlags/{flagId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /timeLogs/{logId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if signedIn()
+        && (isAdmin()
+            || isTeamMember(request.resource.data.teamId)
+            || (request.resource.data.userId == request.auth.uid));
+      allow update, delete: if isAdmin();
+    }
+
+    match /templates/{templateId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /presence/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /attachments/{attachmentId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if signedIn() && (isAdmin() || isTeamMember(request.resource.data.teamId));
+      allow update, delete: if isAdmin();
+    }
   }
 }
