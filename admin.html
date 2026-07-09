@@ -45,6 +45,17 @@
             </div>
             <div id="auditLogsContainer" style="padding:16px;"></div>
           </div>
+
+          <div class="workspace-surface" style="margin-top:20px;">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>🎚️ Feature Flags (T6)</h2>
+                <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="saveFeatureFlags()">Saqlash</button>
+            </div>
+            <div id="featureFlagsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+          </div>
         </div>
       </section>
 
@@ -163,6 +174,18 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="permissionsModal" onclick="if(event.target===this)UTIL.closeModal('permissionsModal')">
+    <div class="modal" style="max-width:480px;">
+      <h3 id="permissionsModalTitle">A'zo ruxsatlari</h3>
+      <p class="modal-sub">Har bir a'zo uchun maxsus ruxsatlarni belgilang (T11). Belgilanmagan ruxsat standart rolga bo'ysunadi.</p>
+      <div id="permissionsModalBody" style="max-height:50vh;overflow:auto;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('permissionsModal')">Bekor qilish</button>
+        <button class="btn btn-primary" type="button" id="confirmPermissionsBtn">Saqlash</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
@@ -249,6 +272,7 @@
                       <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Amal</th>
                       <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Foydalanuvchi</th>
                       <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Vaqt</th>
+                      <th style="padding:12px;text-align:left;font-weight:600;color:var(--text-muted);">Qaytarish</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -257,6 +281,7 @@
                         <td style="padding:12px;font-weight:500;">${log.action || 'Unknown'}</td>
                         <td style="padding:12px;">${log.userName || 'Unknown'}</td>
                         <td style="padding:12px;font-size:12px;color:var(--text-muted);">${new Date(log.timestamp?.toMillis?.() || log.timestamp || 0).toLocaleString('uz-UZ')}</td>
+                        <td style="padding:12px;">${log.previousState !== undefined ? `<button class="btn btn-sm btn-secondary" onclick="rollbackLog('${log.id}')">Qaytarish</button>` : '<span class="text-xs muted">—</span>'}</td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -270,6 +295,76 @@
         }
       };
       window.refreshAuditLogs();
+
+      // ===== T6 Feature Flags =====
+      const FLAG_DEFS = [
+        { key: 'timeTracking', label: 'Vaqt kuzatuvi (T4)' },
+        { key: 'guestRole', label: 'Mehmon/Viewer roli (T2)' },
+        { key: 'twoFactor', label: 'Admin uchun 2FA (T3)' },
+        { key: 'dependencies', label: 'Vazifa bog\'liqligi (T8)' },
+        { key: 'templates', label: 'Shablonlar (T13)' },
+        { key: 'quietHours', label: 'Quiet Hours (T14)' },
+        { key: 'encryptedFiles', label: 'Shifrlangan fayllar (T16)' },
+        { key: 'weeklyDigest', label: 'Haftalik Digest (T17)' }
+      ];
+      const loadFeatureFlags = async () => {
+        try {
+          const data = await MllyCore.getFeatureFlags({});
+          const flags = (data.flags && data.flags.global) || {};
+          document.getElementById('featureFlagsContainer').innerHTML = FLAG_DEFS.map(f => `
+            <label style="display:flex;align-items:center;gap:10px;background:var(--surface-sub);padding:12px;border-radius:10px;border:1px solid var(--line);cursor:pointer;">
+              <input type="checkbox" class="ff-toggle" data-key="${f.key}" ${flags[f.key] ? 'checked' : ''}>
+              <span style="font-size:13px;">${f.label}</span>
+            </label>
+          `).join('');
+        } catch (e) { console.error('Flags load', e); }
+      };
+      window.saveFeatureFlags = async () => {
+        const flags = {};
+        document.querySelectorAll('.ff-toggle').forEach(cb => { flags[cb.dataset.key] = cb.checked; });
+        try { await MllyCore.setFeatureFlags({ flags, target: 'global' }); alert('Feature flags saqlandi.'); }
+        catch (e) { alert(e.message); }
+      };
+      loadFeatureFlags();
+
+      // ===== T12 Rollback =====
+      window.rollbackLog = async (id) => {
+        if (!confirm('Bu amal qaytarilsinmi? (faqat 24 soat ichida)')) return;
+        try { await MllyCore.rollbackAction(id); alert('Qaytarildi.'); refreshAuditLogs(); }
+        catch (e) { alert(e.message); }
+      };
+
+      // ===== T11 Permissions modal =====
+      window.openPermissionsModal = async (teamId, teamName) => {
+        try {
+          const td = await MllyCore.getTeamData(teamId);
+          const members = (td && td.members) || [];
+          const list = members.map(m => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+              <span style="flex:1;font-size:13px;">${m.user?.name || m.userId}</span>
+              <label style="font-size:12px;"><input type="checkbox" class="perm-cb" data-user="${m.userId}" data-perm="canDeleteTask"> O'chirish</label>
+              <label style="font-size:12px;"><input type="checkbox" class="perm-cb" data-user="${m.userId}" data-perm="canInvite"> Taklif</label>
+            </div>
+          `).join('') || '<div class="muted">A\'zo yoq</div>';
+          document.getElementById('permissionsModalBody').innerHTML = `<div style="margin-bottom:10px;" class="muted text-sm">${teamName}</div>${list}`;
+          document.getElementById('permissionsModalTitle').textContent = 'A\'zo ruxsatlari';
+          document.getElementById('confirmPermissionsBtn').onclick = async () => {
+            const overrides = {};
+            document.querySelectorAll('.perm-cb').forEach(cb => {
+              const { user, perm } = cb.dataset;
+              if (!overrides[user]) overrides[user] = { canDeleteTask: true, canInvite: true };
+              overrides[user][perm] = cb.checked;
+            });
+            try {
+              for (const [userId, permissionsOverride] of Object.entries(overrides)) {
+                await MllyCore.updateMemberPermissions({ teamId, userId, permissionsOverride });
+              }
+              UTIL.closeModal('permissionsModal'); alert('Ruxsatlar saqlandi.');
+            } catch (e) { alert(e.message); }
+          };
+          UTIL.openModal('permissionsModal');
+        } catch (e) { alert(e.message); }
+      };
 
       let selectedRevokeManagerId = null;
       let customConfirmCallback = null;
@@ -520,17 +615,39 @@
         <div class="workspace-record">
           <div class="workspace-record-top">
             <div>
-              <h3>${team.name}</h3>
+              <h3>${team.name} ${team.status === 'archived' ? '<span class="badge" style="background:#475569;color:#fff;font-size:11px;">Arxivlangan</span>' : ''}</h3>
               <div class="workspace-inline-meta">
                 <span>${team.membersCount || 0} a'zo</span>
                 <span>${team.leadUserId ? 'Lead biriktirilgan' : 'Lead kutilmoqda'}</span>
               </div>
             </div>
-            <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}">Ruxsatlar</button>
+              <button class="btn btn-sm" style="background:#475569;color:#fff;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
+              <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
+            </div>
           </div>
           <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
         </div>
       `).join('') : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace dashboard orqali yaratiladi.</p></div>';
+
+      document.querySelectorAll('[data-archive-workspace]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const teamId = button.dataset.archiveWorkspace;
+          const isRestore = button.textContent.trim() === 'Tiklash';
+          if (!confirm(`"${button.dataset.archiveName}" ${isRestore ? 'tiklansinmi' : 'arxivlansinmi'}?`)) return;
+          try {
+            await MllyCore.archiveWorkspace(teamId, isRestore);
+            location.reload();
+          } catch (err) { alert(err.message); }
+        });
+      });
+
+      document.querySelectorAll('[data-permissions-workspace]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          await window.openPermissionsModal(button.dataset.permissionsWorkspace, button.dataset.permissionsName);
+        });
+      });
 
       let selectedTeamId = null;
       let selectedTeamName = '';
@@ -575,5 +692,5 @@
       });
     })();
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a18747c4efe99cc4',t:'MTc4MzU5OTYwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
