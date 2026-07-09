@@ -598,8 +598,8 @@ window.MllyCore = {
       window.addEventListener('beforeunload', () => write('offline'));
     } catch (_) {}
   },
-  subscribePresence(uid, onChange) {
-    const state = this.init();
+  async subscribePresence(uid, onChange) {
+    const state = await this.init();
     if (!state || !state.modules) return () => {};
     const { doc, onSnapshot } = state.modules.dbMod;
     return onSnapshot(doc(state.db, 'presence', uid), (snap) => onChange(snap.exists() ? snap.data() : null));
@@ -613,13 +613,14 @@ window.MllyCore = {
     return result;
   },
 
-  async inviteWorkspaceMember({ teamId, email }) {
+  async inviteWorkspaceMember({ teamId, email, role = 'member' }) {
     const authUser = await this.ensureAuthed();
     if (!teamId) throw new Error('Workspace topilmadi.');
     if (!email?.trim()) throw new Error('Email kiriting.');
     const result = await apiPost('/api/invite-member', authUser, {
       teamId,
-      email: email.trim().toLowerCase()
+      email: email.trim().toLowerCase(),
+      role
     });
     invalidateTeamCache(teamId);
     return result;
@@ -1045,6 +1046,72 @@ window.MllyCore = {
     const authUser = window.MLLYCORE_AUTH_USER || state.auth.currentUser;
     if (!authUser) throw new Error('Avval tizimga kiring.');
     return authUser;
+  },
+
+  // ===== T3 Admin 2FA =====
+  async enable2FA() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/enable-2fa', authUser, {});
+  },
+  async verify2FA(code) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/verify-2fa', authUser, { code });
+  },
+  async disable2FA(code) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/disable-2fa', authUser, { code });
+  },
+
+  // ===== T9 Presence (server orqali o'qish) =====
+  async getTeamPresence(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/presence', authUser, { teamId });
+  },
+
+  // ===== T10 AI klasterlash =====
+  async analyzeIdeas(teamId) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/analyze-ideas', authUser, { teamId });
+    invalidateTeamCache(teamId);
+    return result;
+  },
+
+  // ===== T13 Shablonlar =====
+  async getTemplates() {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/get-templates', authUser, {});
+    return result.templates || [];
+  },
+  async createTemplate(payload) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/create-template', authUser, payload);
+  },
+
+  // ===== T14 Quiet Hours notify =====
+  async notify(payload) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/notify', authUser, payload);
+  },
+
+  // ===== T16 Shifrlangan fayl yuklash (client-side AES-GCM + Storage) =====
+  async uploadEncryptedFile({ filePath, data, contentType = 'application/octet-stream' }) {
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const authUser = await this.ensureAuthed();
+    const storageMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-storage.js');
+    const storage = storageMod.getStorage(state.app);
+    const { ref, uploadBytes, getDownloadURL } = storageMod;
+    const storageRef = ref(storage, filePath);
+    const bytes = data instanceof Uint8Array ? data : new TextEncoder().encode(JSON.stringify(data));
+    await uploadBytes(storageRef, bytes, { contentType });
+    const url = await getDownloadURL(storageRef);
+    return { url };
+  },
+
+  // ===== T17 Weekly Digest =====
+  async generateWeeklyDigest() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/weekly-digest', authUser, {});
   },
 
   async requireAuth() {

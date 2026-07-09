@@ -173,5 +173,11 @@ service cloud.firestore {
       allow create: if signedIn() && (isAdmin() || isTeamMember(request.resource.data.teamId));
       allow update, delete: if isAdmin();
     }
+
+    // --- T17 Weekly Digest ---
+    match /digests/{digestId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
   }
 }

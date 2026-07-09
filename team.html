@@ -183,7 +183,7 @@
       if (!target) return;
       target.innerHTML = data.members.map((member) => `
         <div class="workspace-list-row">
-          <div class="avatar">${escapeHtml(member.user?.avatar || 'U')}</div>
+          <div class="avatar" style="position:relative">${escapeHtml(member.user?.avatar || 'U')}<span class="presence-dot" id="presence-${member.userId}" title="offline" style="position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;background:#64748b;border:2px solid var(--surface,#0f172a);"></span></div>
           <div class="workspace-list-copy">
             <strong>${escapeHtml(member.user?.name || member.user?.email || member.userId)}</strong>
             <span>@${escapeHtml(member.user?.username || 'user')} / ${escapeHtml(member.user?.email || '')}</span>
@@ -298,6 +298,7 @@
                 <div class="workspace-task-meta">
                   <span class="badge">${escapeHtml(task.assignmentMode || 'open')}</span>
                   <span class="badge">${escapeHtml(task.status || 'open')}</span>
+                  <span class="badge" style="${task.blocked ? 'background:#7f1d1d;color:#fff' : ''}">${task.blocked ? '🔒 Bloklangan' : 'Ochiq'}</span>
                   <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo\'q')}</span>
                 </div>
               </div>
@@ -308,6 +309,7 @@
               <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(task.assignedUserName || (task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
               <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
               ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
+              ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="workspace-detail-row"><span>Bog'liq (T8)</span><strong>${task.dependsOn.map((id) => escapeHtml(((data.tasks || []).find((t) => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
             </div>
             ${taskSubs.length ? `
               <div class="workspace-message-stack">
@@ -330,6 +332,12 @@
                 </div>
               ` : ''}
             </div>
+            <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+              <button class="btn btn-ghost btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
+              <button class="btn btn-ghost btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
+              <input type="file" id="file-${task.id}" style="display:none">
+            </div>
+            <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
             <div class="text-sm muted" data-task-feedback="${task.id}"></div>
           </div>
         `;
@@ -375,6 +383,61 @@
         });
       });
 
+      // T4 - Vaqt kuzatuvi (log-time)
+      document.querySelectorAll('[data-task-logtime]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const taskId = button.dataset.taskLogtime;
+          const minutes = window.prompt('Sarflangan vaqtni daqiqalarda kiriting:', '30');
+          if (minutes === null) return;
+          const ms = parseInt(minutes, 10) * 60000;
+          if (!(ms > 0)) { UTIL.toast('Iltimos, musbat son kiriting.'); return; }
+          button.disabled = true;
+          try {
+            await MllyCore.logTime({ teamId: data.team.id, taskId, durationMs: ms });
+            UTIL.toast("Vaqt qo'shildi.");
+          } catch (error) {
+            UTIL.toast(error.message || "Vaqt qo'shilmadi.");
+          } finally {
+            button.disabled = false;
+          }
+        });
+      });
+
+      // T16 - Shifrlangan fayl biriktirish (client-side AES-GCM, server ochiq fayl ko'rmaydi)
+      document.querySelectorAll('[data-task-attach]').forEach((button) => {
+        button.addEventListener('click', () => {
+          document.getElementById('file-' + button.dataset.taskAttach)?.click();
+        });
+      });
+      document.querySelectorAll('[id^="file-"]').forEach((input) => {
+        input.addEventListener('change', async () => {
+          const taskId = input.id.replace('file-', '');
+          const file = input.files && input.files[0];
+          const fb = document.querySelector(`[data-attach-feedback="${taskId}"]`);
+          if (!file) return;
+          if (fb) fb.textContent = 'Shifrlanmoqda...';
+          try {
+            const buf = await file.arrayBuffer();
+            const rawKey = crypto.getRandomValues(new Uint8Array(32));
+            const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt']);
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buf);
+            const enc = new Uint8Array(ct);
+            const path = `attachments/${data.team.id}/${taskId}/${Date.now()}_${file.name}.enc`;
+            await MllyCore.uploadEncryptedFile({ filePath: path, data: enc, contentType: 'application/octet-stream' });
+            const ivB64 = btoa(String.fromCharCode.apply(null, iv));
+            await MllyCore.createAttachmentMeta({ teamId: data.team.id, taskId, fileName: file.name, size: file.size, iv: ivB64 });
+            const keyB64 = btoa(String.fromCharCode.apply(null, rawKey));
+            if (fb) fb.textContent = "✅ Yuklandi. Shifr kaliti (qabul qiluvchiga alohida ulashingiz kerak): " + keyB64;
+            UTIL.toast('Fayl shifrlab yuklandi.');
+          } catch (error) {
+            if (fb) fb.textContent = error.message || 'Yuklashda xatolik.';
+          } finally {
+            input.value = '';
+          }
+        });
+      });
+
       if (isLead) {
         const assignmentMode = document.getElementById('taskAssignmentMode');
         const assigneeWrap = document.getElementById('taskAssigneeWrap');
@@ -402,6 +465,7 @@
             <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
             <span class="badge badge-active">${escapeHtml(membership?.role || 'member')}</span>
             ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
+            ${data.team.templateId ? `<span class="badge" title="Shablon asosida yaratilgan">📋 Shablon</span>` : ''}
           </div>
         </section>
 
@@ -447,6 +511,10 @@
                     <label class="label">Yangi a'zo emaili</label>
                     <div class="workspace-form-inline">
                       <input class="input" id="memberEmail" type="email" placeholder="member@email.com">
+                      <select class="select" id="inviteRole" title="A'zo roli">
+                        <option value="member">Member (yozishi mumkin)</option>
+                        <option value="viewer">Viewer (faqat o'qiydi)</option>
+                      </select>
                       <button class="btn btn-primary" id="inviteMemberBtn">Taklif yuborish</button>
                     </div>
                     <div class="text-sm muted" id="memberInviteFeedback"></div>
@@ -563,6 +631,12 @@
                       </div>
                     </div>
                     <div>
+                      <label class="label">Bog'liq vazifalar (T8) — старост bajarib bo'lmaguncha blokda turadi</label>
+                      <select class="select" id="taskDependsOn" multiple size="3">
+                        ${(data.tasks || []).map((t) => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('')}
+                      </select>
+                    </div>
+                    <div>
                       <label class="label">Deadline</label>
                       <input class="input" id="taskDeadline" type="datetime-local" value="${fmtDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000))}">
                     </div>
@@ -654,6 +728,19 @@
       renderEntries(data, currentUserId, isLead);
       renderTasks(data, currentUserId, isLead);
       renderMembers(data, currentUserId);
+      // T9 - Presence: har bir a'zo holatini realtime obuna qilish
+      if (data.members) {
+        data.members.forEach((member) => {
+          MllyCore.subscribePresence(member.userId, (p) => {
+            const dot = document.getElementById('presence-' + member.userId);
+            if (dot) {
+              const st = (p && p.status) || 'offline';
+              dot.style.background = st === 'online' ? '#22c55e' : st === 'away' ? '#f59e0b' : '#64748b';
+              dot.title = st;
+            }
+          }).catch(() => {});
+        });
+      }
       renderChat(data.messages || [], currentUserId);
       scheduleChatSeen(data.messages || [], currentUserId, data.team.id);
 
@@ -757,7 +844,7 @@
         setFeedback('memberInviteFeedback', '', 'error');
         button.disabled = true;
         try {
-          await MllyCore.inviteWorkspaceMember({ teamId: data.team.id, email: input.value });
+          await MllyCore.inviteWorkspaceMember({ teamId: data.team.id, email: input.value, role: document.getElementById('inviteRole')?.value || 'member' });
           setFeedback('memberInviteFeedback', "Taklif yuborildi. User secret key orqali qo'shiladi.", 'success');
           input.value = '';
         } catch (error) {
@@ -772,13 +859,16 @@
         setFeedback('taskCreateFeedback', '', 'error');
         button.disabled = true;
         try {
+          const dependsSel = document.getElementById('taskDependsOn');
+          const dependsOn = dependsSel ? Array.from(dependsSel.selectedOptions).map((o) => o.value) : [];
           await MllyCore.createTask({
             teamId: data.team.id,
             title: document.getElementById('taskTitle').value,
             description: document.getElementById('taskDescription').value,
             assignmentMode: document.getElementById('taskAssignmentMode').value,
             assignedUserId: document.getElementById('taskAssignedUserId')?.value || '',
-            deadline: document.getElementById('taskDeadline').value
+            deadline: document.getElementById('taskDeadline').value,
+            dependsOn
           });
           setFeedback('taskCreateFeedback', "Topshiriq qo'shildi.", 'success');
           document.getElementById('taskTitle').value = '';
@@ -846,11 +936,13 @@
         return;
       }
       await renderWorkspace(workspaceState, user.uid);
+      MllyCore.updatePresence('online').catch(() => {});
     })();
 
     window.addEventListener('beforeunload', () => {
       if (typeof chatUnsubscribe === 'function') chatUnsubscribe();
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
+      MllyCore.updatePresence('offline').catch(() => {});
     });
 
     window.addEventListener('focus', () => {

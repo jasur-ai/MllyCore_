@@ -66,6 +66,50 @@ function generateSecretKey() {
   return parts.join('-');
 }
 
+/* ----------------- T3 Admin 2FA (HMAC-SHA1 TOTP) ----------------- */
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Decode(input) {
+  const clean = String(input || '').toUpperCase().replace(/=+$/, '').replace(/\s+/g, '');
+  let bits = '';
+  for (const ch of clean) {
+    const idx = BASE32_ALPHABET.indexOf(ch);
+    if (idx === -1) continue;
+    bits += idx.toString(2).padStart(5, '0');
+  }
+  const bytes = [];
+  for (let i = 0; i + 8 <= bits.length; i += 8) bytes.push(parseInt(bits.slice(i, i + 8), 2));
+  return Buffer.from(bytes);
+}
+
+function totpAt(secret, timeStep = 30, forTime = Date.now()) {
+  const counter = Math.floor(forTime / 1000 / timeStep);
+  const buf = Buffer.alloc(8);
+  buf.writeBigInt64BE(BigInt(counter));
+  const key = base32Decode(secret);
+  const hmac = crypto.createHmac('sha1', key).update(buf).digest();
+  const offset = hmac[hmac.length - 1] & 0xf;
+  const code = ((hmac[offset] & 0x7f) << 24) | ((hmac[offset + 1] & 0xff) << 16) |
+    ((hmac[offset + 2] & 0xff) << 8) | (hmac[offset + 3] & 0xff);
+  return (code % 1000000).toString().padStart(6, '0');
+}
+
+function verifyTOTP(secret, code, windowSize = 1) {
+  if (!secret || !code) return false;
+  const cleanCode = String(code).trim();
+  for (let w = -windowSize; w <= windowSize; w += 1) {
+    if (totpAt(secret, 30, Date.now() + w * 30 * 1000) === cleanCode) return true;
+  }
+  return false;
+}
+
+function generateTotpSecret() {
+  const bytes = crypto.randomBytes(20);
+  let out = '';
+  for (const b of bytes) out += BASE32_ALPHABET[b & 0x1f];
+  return out;
+}
+
 /* ------------------------- Auth / helpers ------------------------- */
 async function verifyAuth(req) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
@@ -114,6 +158,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
     if (!snap.empty) leadUid = snap.docs[0].id;
   }
 
+  const { templateId } = req.body || {};
   const teamRef = await db.collection('teams').add({
     name: name.trim(),
     description: description || '',
@@ -122,8 +167,35 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
     membersCount: 1,
     healthScore: 50,
     status: 'active',
+    templateId: templateId || null,
     createdAt: SV(),
   });
+
+  // T13 - shablon bo'yicha oldindan tayyor vazifalarni urug'lash (seeding)
+  if (templateId) {
+    try {
+      const tpl = await db.collection('templates').doc(templateId).get();
+      if (tpl.exists) {
+        const seed = tpl.data().seedTasks || [];
+        const batch = db.batch();
+        seed.slice(0, 50).forEach((st) => {
+          const r = db.collection('tasks').doc();
+          batch.set(r, {
+            teamId: teamRef.id,
+            title: st.title || 'Vazifa',
+            description: st.description || '',
+            status: 'todo',
+            priority: st.priority || 'medium',
+            createdBy: decoded.uid,
+            assignedTo: null,
+            dueDate: null,
+            createdAt: SV(),
+          });
+        });
+        await batch.commit();
+      }
+    } catch (_) { /* non-fatal */ }
+  }
 
   await db.collection('teamMembers').doc(teamRef.id + '_' + leadUid).set({
     teamId: teamRef.id,
@@ -136,6 +208,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
   return { status: 201, success: true, teamId: teamRef.id, message: 'Team yaratildi.' };
 }
 
+// T2 - Taklifda rol belgilash (member yoki viewer). Viewer faqat o'qiydi.
 async function handleInviteMember(req, res, db, decoded, user) {
   const { teamId, email } = req.body || {};
   if (!teamId || !email) return { status: 400, error: 'teamId va email kerak.' };
@@ -149,6 +222,7 @@ async function handleInviteMember(req, res, db, decoded, user) {
   const userSnap = await db.collection('users').where('email', '==', cleanEmail).limit(1).get();
   if (userSnap.empty) return { status: 404, error: 'Foydalanuvchi topilmadi.' };
 
+  const role = (req.body && req.body.role === 'viewer') ? 'viewer' : 'member';
   const target = userSnap.docs[0];
   const secretKey = generateSecretKey();
   await db.collection('workspaceInvites').add({
@@ -156,13 +230,19 @@ async function handleInviteMember(req, res, db, decoded, user) {
     inviteeUserId: target.id,
     inviteeEmail: cleanEmail,
     inviterUserId: decoded.uid,
+    role,
     secretKey,
     status: 'pending',
     createdAt: SV(),
   });
 
-  await audit(db, 'member_invited', { teamId, inviteeUserId: target.id });
+  await audit(db, 'member_invited', { teamId, inviteeUserId: target.id, role });
   return { status: 201, success: true, message: 'Taklif yuborildi.', secretKey };
+}
+
+// T2 - Faqat o'qish huquqiga ega a'zo yozish amallarini bajara olmaydi.
+function isReadOnlyMember(membership) {
+  return !!(membership && membership.role === 'viewer');
 }
 
 async function handleAcceptInvite(req, res, db, decoded) {
@@ -190,7 +270,7 @@ async function handleAcceptInvite(req, res, db, decoded) {
   await db.collection('teamMembers').doc(data.teamId + '_' + decoded.uid).set({
     teamId: data.teamId,
     userId: decoded.uid,
-    role: 'member',
+    role: data.role === 'viewer' ? 'viewer' : 'member',
     joinedAt: SV(),
   });
 
@@ -213,7 +293,9 @@ async function handleCreateTask(req, res, db, decoded, user) {
   if (user.role !== 'admin' && !(membership && ['team_lead', 'member'].includes(membership.role))) {
     return { status: 403, error: 'Ruxsat yoq.' };
   }
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
+  const dependsOn = Array.isArray(req.body.dependsOn) ? req.body.dependsOn.filter(Boolean) : [];
   const ref = await db.collection('tasks').add({
     teamId,
     title,
@@ -223,6 +305,8 @@ async function handleCreateTask(req, res, db, decoded, user) {
     createdBy: decoded.uid,
     assignedTo: assignedTo || null,
     dueDate: dueDate ? new Date(dueDate) : null,
+    dependsOn,
+    blocked: dependsOn.length > 0,
     createdAt: SV(),
   });
 
@@ -237,6 +321,7 @@ async function handleSendChat(req, res, db, decoded, user) {
   const membership = await getMembership(db, teamId, decoded.uid);
   const allowed = membership || user.role === 'admin';
   if (!allowed) return { status: 403, error: 'Ruxsat yoq.' };
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
   if (markSeen) {
     const snap = await db.collection('chatMessages').where('teamId', '==', teamId).get();
@@ -283,7 +368,19 @@ async function handleTaskAction(req, res, db, decoded, user) {
 
   const update = { updatedAt: SV() };
   if (status) update.status = status;
-  if (action === 'complete') { update.status = 'done'; update.completedAt = SV(); }
+  if (action === 'complete') {
+    update.status = 'done';
+    update.completedAt = SV();
+    // T8 - bog'liq vazifalarni blokdan chiqarish
+    try {
+      const dependents = await db.collection('tasks').where('teamId', '==', t.teamId).where('dependsOn', 'array-contains', taskId).get();
+      if (!dependents.empty) {
+        const batch = db.batch();
+        dependents.docs.forEach((d) => batch.update(d.ref, { blocked: false }));
+        await batch.commit();
+      }
+    } catch (_) { /* non-fatal */ }
+  }
   if (action === 'claim') { update.assignedTo = decoded.uid; update.assignmentMode = 'assigned'; }
   if (action === 'submit') {
     update.submission = { text: resultText || '', link: resultLink || '', byUserId: decoded.uid, at: SV() };
@@ -302,6 +399,14 @@ async function handleDeleteWorkspace(req, res, db, decoded, user) {
   const { teamId } = req.body || {};
   if (!teamId) return { status: 400, error: 'teamId kerak.' };
   if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+
+  // T3 - Agar adminda 2FA yoqilgan bo'lsa, kodni talab qilamiz (parol re-auth bilan birga, R3).
+  if (user.twoFactorEnabled && user.twoFactorSecret) {
+    const code = req.body && req.body.twoFactorCode;
+    if (!verifyTOTP(user.twoFactorSecret, code)) {
+      return { status: 401, error: '2FA kod noto\'g\'ri.' };
+    }
+  }
 
   await deleteTeamCascade(db, teamId);
   await audit(db, 'workspace_deleted', { teamId });
@@ -334,6 +439,7 @@ async function handleCreateEntry(req, res, db, decoded, user) {
 
   const membership = await getMembership(db, teamId, decoded.uid);
   if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
   const ref = await db.collection('ideas').add({
     teamId,
@@ -359,6 +465,7 @@ async function handleUpdateEntryOwner(req, res, db, decoded, user) {
   if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') {
     return { status: 403, error: 'Ruxsat yoq.' };
   }
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
   const ideaDoc = await db.collection('ideas').doc(ideaId).get();
   const oldOwner = ideaDoc.exists ? ideaDoc.data().ownerUserId : null;
@@ -857,6 +964,7 @@ async function handleLogTime(req, res, db, decoded, user) {
   if (!(ms > 0)) return { status: 400, error: 'durationMs musbat bolishi kerak.' };
   const membership = await getMembership(db, teamId, decoded.uid);
   if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
   await db.collection('timeLogs').add({ teamId, taskId, userId: decoded.uid, durationMs: ms, loggedAt: SV() });
   await audit(db, 'time_logged', { teamId, taskId, durationMs: ms });
   return { status: 201, success: true };
@@ -876,6 +984,260 @@ async function handleExportMyData(req, res, db, decoded) {
     exportedAt: new Date().toISOString(),
   };
   return { status: 200, fileName: `my-data-${decoded.uid}.json`, data: Buffer.from(JSON.stringify(data)).toString('base64') };
+}
+
+// T16 - Shifrlangan fayl metadata (fayl byte'lari Storage'ga client-side yoziladi).
+async function handleCreateAttachment(req, res, db, decoded, user) {
+  const { teamId, taskId, ideaId, fileName, size, iv } = req.body || {};
+  if (!teamId || !fileName) return { status: 400, error: 'teamId va fileName kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
+  const ref = await db.collection('attachments').add({
+    teamId,
+    taskId: taskId || null,
+    ideaId: ideaId || null,
+    fileName,
+    size: size || 0,
+    iv: iv || null, // client-side shifr uchun IV (server ochiq fayl ko'rmaydi)
+    uploadedBy: decoded.uid,
+    createdAt: SV(),
+  });
+  await audit(db, 'attachment_added', { teamId, attachmentId: ref.id });
+  return { status: 201, success: true, attachmentId: ref.id };
+}
+
+/* ---------------- T3 Admin 2FA (enable / verify / disable) ---------------- */
+async function handleEnable2FA(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const secret = generateTotpSecret();
+  await db.collection('users').doc(decoded.uid).update({ twoFactorSecret: secret, twoFactorEnabled: false });
+  const label = encodeURIComponent(user.email || decoded.uid);
+  const otpauth = `otpauth://totp/MllyCore:${label}?secret=${secret}&issuer=MllyCore&period=30&digits=6`;
+  return { status: 200, success: true, secret, otpauth };
+}
+
+async function handleVerify2FA(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const { code } = req.body || {};
+  const docSnap = await db.collection('users').doc(decoded.uid).get();
+  const data = docSnap.exists ? docSnap.data() : {};
+  if (!data.twoFactorSecret) return { status: 400, error: 'Avval 2FA ni yoqing.' };
+  if (!verifyTOTP(data.twoFactorSecret, code)) return { status: 401, error: 'Kod noto\'g\'ri.' };
+  await db.collection('users').doc(decoded.uid).update({ twoFactorEnabled: true });
+  await audit(db, 'two_factor_enabled', { userId: decoded.uid });
+  return { status: 200, success: true, enabled: true };
+}
+
+async function handleDisable2FA(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const { code } = req.body || {};
+  const docSnap = await db.collection('users').doc(decoded.uid).get();
+  const data = docSnap.exists ? docSnap.data() : {};
+  if (data.twoFactorEnabled && data.twoFactorSecret) {
+    if (!verifyTOTP(data.twoFactorSecret, code)) return { status: 401, error: '2FA kod noto\'g\'ri.' };
+  }
+  await db.collection('users').doc(decoded.uid).update({ twoFactorEnabled: false });
+  await audit(db, 'two_factor_disabled', { userId: decoded.uid });
+  return { status: 200, success: true, enabled: false };
+}
+
+/* --------------------------- T9 Presence (read) --------------------------- */
+async function handlePresence(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const memSnap = await db.collection('teamMembers').where('teamId', '==', teamId).get();
+  const uids = memSnap.docs.map((d) => d.data().userId);
+  const presence = {};
+  await Promise.all(uids.map(async (uid) => {
+    const p = await db.collection('presence').doc(uid).get();
+    presence[uid] = p.exists ? p.data() : { status: 'offline', lastSeen: null };
+  }));
+  return { status: 200, teamId, presence };
+}
+
+/* --------------------------- T10 AI klasterlash / dublikat --------------------------- */
+function tokenize(text) {
+  return new Set(String(text || '').toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/).filter((w) => w.length > 2));
+}
+
+function jaccard(a, b) {
+  if (!a.size || !b.size) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter += 1;
+  const union = a.size + b.size - inter;
+  return union ? inter / union : 0;
+}
+
+function unionFind(n) {
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+  const union = (a, b) => { parent[find(a)] = find(b); };
+  return { find, union };
+}
+
+async function handleAnalyzeIdeas(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+
+  const snap = await db.collection('ideas').where('teamId', '==', teamId).get();
+  const ideas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (ideas.length < 2) return { status: 200, success: true, clusters: [], duplicates: [], message: 'Klasterlash uchun kamida 2 ta g\'oya kerak.' };
+
+  const tokens = ideas.map((it) => tokenize(`${it.title || ''} ${it.description || ''}`));
+  const THRESHOLD = 0.25;
+  const similarTo = {};
+  ideas.forEach((it) => { similarTo[it.id] = []; });
+  const uf = unionFind(ideas.length);
+
+  for (let i = 0; i < ideas.length; i += 1) {
+    for (let j = i + 1; j < ideas.length; j += 1) {
+      const score = jaccard(tokens[i], tokens[j]);
+      if (score >= THRESHOLD) {
+        similarTo[ideas[i].id].push({ id: ideas[j].id, score });
+        similarTo[ideas[j].id].push({ id: ideas[i].id, score });
+        uf.union(i, j);
+      }
+    }
+  }
+
+  // similarTo ni saqlash (batched)
+  const batch = db.batch();
+  ideas.forEach((it) => {
+    const sim = (similarTo[it.id] || []).map((s) => s.id);
+    batch.update(db.collection('ideas').doc(it.id), { similarTo: sim });
+  });
+  await batch.commit();
+
+  const clustersMap = {};
+  ideas.forEach((it, idx) => {
+    const root = uf.find(idx);
+    if (!clustersMap[root]) clustersMap[root] = [];
+    clustersMap[root].push(it.id);
+  });
+  const clusters = Object.values(clustersMap).filter((c) => c.length > 1);
+  const duplicates = Object.entries(similarTo).filter(([, v]) => v.length > 0).map(([id, v]) => ({ id, similarTo: v }));
+
+  await audit(db, 'ideas_analyzed', { teamId, clusters: clusters.length, pairs: duplicates.length });
+  return { status: 200, success: true, clusters, duplicates, message: `${clusters.length} klaster, ${duplicates.length} o'xshash juftlik topildi.` };
+}
+
+/* --------------------------- T13 Shablonlar --------------------------- */
+async function handleGetTemplates(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const snap = await db.collection('templates').get();
+  return { status: 200, templates: snap.docs.map((d) => ({ id: d.id, ...d.data() })) };
+}
+
+async function handleCreateTemplate(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const { name, description, seedTasks } = req.body || {};
+  if (!name || !name.trim()) return { status: 400, error: 'Shablon nomi kerak.' };
+  const ref = await db.collection('templates').add({
+    name: name.trim(),
+    description: description || '',
+    seedTasks: Array.isArray(seedTasks) ? seedTasks.slice(0, 50) : [],
+    createdBy: decoded.uid,
+    createdAt: SV(),
+  });
+  await audit(db, 'template_created', { templateId: ref.id });
+  return { status: 201, success: true, templateId: ref.id };
+}
+
+/* --------------------------- T14 Quiet Hours (notify) --------------------------- */
+function isWithinWorkingHours(profile) {
+  const wh = profile && profile.workingHours;
+  if (!wh || !wh.start || !wh.end) return true;
+  const tz = (profile && profile.timezone) || 'UTC';
+  let nowHHMM;
+  try {
+    nowHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  } catch (_) { return true; }
+  return nowHHMM >= wh.start && nowHHMM <= wh.end;
+}
+
+async function handleNotify(req, res, db, decoded, user) {
+  const { userId, teamId, type, text, urgent, link } = req.body || {};
+  if (!userId || !text) return { status: 400, error: 'userId va text kerak.' };
+  const userSnap = await db.collection('users').doc(userId).get();
+  if (!userSnap.exists) return { status: 404, error: 'Foydalanuvchi topilmadi.' };
+  const recipient = userSnap.data();
+
+  // Quiet Hours faqat yoqilgan feature-flag va urgent bo'lmaganda ishlaydi (T14).
+  let quiet = false;
+  if (!urgent) {
+    const flagDoc = await db.collection('featureFlags').doc('global').get();
+    const flags = flagDoc.exists ? flagDoc.data() : {};
+    if (flags.quietHours && !isWithinWorkingHours(recipient)) quiet = true;
+  }
+
+  const ref = await db.collection('notifications').add({
+    userId,
+    teamId: teamId || '',
+    type: type || 'general',
+    text: String(text),
+    link: link || '',
+    unread: true,
+    isRead: false,
+    quietHoursSuppressed: quiet,
+    deliverAt: quiet ? SV() : SV(),
+    createdAt: SV(),
+  });
+  return { status: 201, success: true, notificationId: ref.id, suppressed: quiet, delivered: !quiet };
+}
+
+/* --------------------------- T17 Weekly Digest (cron) --------------------------- */
+async function handleWeeklyDigest(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const flagDoc = await db.collection('featureFlags').doc('global').get();
+  const flags = flagDoc.exists ? flagDoc.data() : {};
+  if (flags.weeklyDigest === false) return { status: 200, success: true, skipped: true, message: 'Weekly digest o\'chirilgan.' };
+
+  const teamsSnap = await db.collection('teams').where('status', '!=', 'archived').get();
+  const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const generated = [];
+
+  for (const t of teamsSnap.docs) {
+    const teamId = t.id;
+    const [taskSnap, ideaSnap, memberSnap] = await Promise.all([
+      db.collection('tasks').where('teamId', '==', teamId).get(),
+      db.collection('ideas').where('teamId', '==', teamId).where('createdAt', '>=', weekStart).get(),
+      db.collection('teamMembers').where('teamId', '==', teamId).get(),
+    ]);
+    const tasks = taskSnap.docs.map((d) => d.data());
+    const completed = tasks.filter((x) => x.status === 'done').length;
+    const members = memberSnap.docs.map((d) => d.data());
+    const contributions = {};
+    tasks.forEach((tk) => {
+      const who = tk.assignedTo || tk.createdBy;
+      if (who) contributions[who] = (contributions[who] || 0) + 1;
+    });
+    let topContributor = null; let topCount = -1;
+    Object.entries(contributions).forEach(([uid, c]) => { if (c > topCount) { topCount = c; topContributor = uid; } });
+
+    await db.collection('digests').add({
+      teamId,
+      teamName: t.data().name || '',
+      weekStart: weekStart.toISOString(),
+      generatedAt: SV(),
+      stats: {
+        totalTasks: tasks.length,
+        completedTasks: completed,
+        newIdeas: ideaSnap.size,
+        members: members.length,
+      },
+      topContributor,
+      topContributorCount: topCount > 0 ? topCount : 0,
+    });
+    generated.push(teamId);
+  }
+  return { status: 200, success: true, teams: generated.length, processedTeamIds: generated };
 }
 
 /* --------------------------- Router ------------------------------- */
@@ -926,6 +1288,16 @@ module.exports = async (req, res) => {
     else if (action === 'my-overview') result = await handleGetMyOverview(req, res, db, decoded, user);
     else if (action === 'log-time') result = await handleLogTime(req, res, db, decoded, user);
     else if (action === 'export-my-data') result = await handleExportMyData(req, res, db, decoded, user);
+    else if (pathname.includes('create-attachment')) result = await handleCreateAttachment(req, res, db, decoded, user);
+    else if (action === 'enable-2fa') result = await handleEnable2FA(req, res, db, decoded, user);
+    else if (action === 'verify-2fa') result = await handleVerify2FA(req, res, db, decoded, user);
+    else if (action === 'disable-2fa') result = await handleDisable2FA(req, res, db, decoded, user);
+    else if (action === 'presence') result = await handlePresence(req, res, db, decoded, user);
+    else if (action === 'analyze-ideas') result = await handleAnalyzeIdeas(req, res, db, decoded, user);
+    else if (action === 'get-templates') result = await handleGetTemplates(req, res, db, decoded, user);
+    else if (action === 'create-template') result = await handleCreateTemplate(req, res, db, decoded, user);
+    else if (action === 'notify') result = await handleNotify(req, res, db, decoded, user);
+    else if (action === 'weekly-digest') result = await handleWeeklyDigest(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);
@@ -933,4 +1305,12 @@ module.exports = async (req, res) => {
     console.error('API_ERROR:', error && error.message);
     res.status(400).json({ error: (error && error.message) || 'Xatolik yuz berdi.' });
   }
+};
+
+// T17 - Cron (Vercel) dan chaqirish uchun eksport (authsiz ishlaydi)
+module.exports.initAdmin = initAdmin;
+module.exports.runWeeklyDigest = async () => {
+  initAdmin();
+  const db = admin.firestore();
+  return handleWeeklyDigest({ method: 'POST', body: {} }, {}, db, { uid: 'cron' }, { role: 'admin' });
 };

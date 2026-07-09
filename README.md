@@ -2,6 +2,31 @@
 
 MllyCore startap g'oyalarini jamoa bilan boshqarish, muhokama qilish va rivojlantirish uchun qurilgan web platforma. Frontend statik HTML/CSS/JS asosida, backend esa Firebase Auth va Firestore orqali ishlaydi.
 
+## Loyiha holati — T1–T17 bajarilganligi
+
+Barcha kengaytma funksiyalar (T1–T17) backend (`api/index.js`), frontend (`js/firebase-service.js` + tegishli sahifalar) va `firestore.rules` darajasida to'liq integratsiyalangan.
+
+| # | Funksiya | Holati | Qayerda | Qisqacha |
+|---|----------|--------|---------|----------|
+| T1 | Workspace arxivlash | ✅ | `admin.html` | `archive-workspace` (soft delete, tiklash) |
+| T2 | Viewer roli | ✅ | `team.html` | `invite-member` `role='viewer'`; yozish bloklangan |
+| T3 | Admin 2FA | ✅ | `profile.html` | `enable/verify/disable-2fa` (TOTP); delete'da kod |
+| T4 | Vaqt kuzatuvi | ✅ | `team.html` | `log-time` + `timeLogs` |
+| T6 | Feature Flags | ✅ | `admin.html` | `feature-flags` / `set-feature-flags` |
+| T7 | Export My Data | ✅ | `profile.html` | `export-my-data` |
+| T8 | Vazifa bog'liqligi | ✅ | `team.html` | `create-task` `dependsOn` + complete'da unblock |
+| T9 | Presence (onlayn holat) | ✅ | `team.html` | `presence` + `subscribePresence` nuqta |
+| T10 | AI klasterlash / dublikat | ✅ | `admin.html`, `idea.html` | `analyze-ideas` + `ideas.similarTo` |
+| T11 | Permission Override | ✅ | `admin.html` | `member-permissions` |
+| T12 | Rollback (audit) | ✅ | `admin.html` | `rollback` + `auditLogs.previousState` |
+| T13 | Shablonlar | ✅ | `admin.html`, `dashboard.html` | `get/create-template` + `create-workspace?templateId` |
+| T14 | Quiet Hours | ✅ | `profile.html` | `notify` + `users.workingHours/timezone` |
+| T15 | Cross-WS Overview | ✅ | `profile.html` | `my-overview` |
+| T16 | Shifrlangan fayllar (E2E) | ✅ | `team.html` | AES-GCM + Storage + `create-attachment` |
+| T17 | Haftalik Digest (cron) | ✅ | `api/weekly-digest.js`, `vercel.json` | `weekly-digest` + `scripts/generate-weekly-digest.js` |
+
+> Batafsil tizimli xarita: `MllyCore_SYSTEM_ARCHITECTURE.md`
+
 ## Firebase loyihasi
 
 - Project name: MllyCore

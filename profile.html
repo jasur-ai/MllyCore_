@@ -77,6 +77,25 @@
             </div>
           </div>
 
+          <div class="workspace-surface pad" style="margin-top:20px;" id="twoFactorPanel" ${profile?.role === 'admin' ? '' : 'style="display:none"'}>
+            <div class="section-head"><h2>🔐 Ikki bosqichli tasdiqlash (T3)</h2></div>
+            <p class="muted text-sm">Admin hisobi uchun TOTP (Google Authenticator) orqali qo'shimcha himoya. Yoqilgandan so'ng workspace o'chirish uchun ham kod talab qilinadi.</p>
+            <div id="twoFactorStatus" class="text-sm muted" style="margin:8px 0;"></div>
+            <div id="twoFactorSetup" style="display:none;margin-bottom:12px;">
+              <div class="text-sm">1. Secret ni autentifikatorga kiriting yoki QR ochang:</div>
+              <code id="twoFactorSecret" style="display:block;word-break:break-all;background:var(--surface-sub);padding:8px;border-radius:8px;margin:6px 0;"></code>
+              <a id="twoFactorOtpauth" class="btn btn-ghost btn-sm" target="_blank" rel="noopener">QR ochish</a>
+              <div class="workspace-form-grid" style="margin-top:10px;">
+                <input class="input" id="twoFactorCode" placeholder="6 xonali kod">
+                <button class="btn btn-primary" id="twoFactorVerifyBtn">Tasdiqlash</button>
+              </div>
+            </div>
+            <div class="workspace-form-actions" style="justify-content:flex-start;">
+              <button class="btn btn-primary" id="twoFactorEnableBtn">2FA ni yoqish</button>
+              <button class="btn btn-danger" id="twoFactorDisableBtn" style="display:none;">2FA ni o'chirish</button>
+            </div>
+          </div>
+
           <div class="workspace-surface pad" style="margin-top:20px;">
             <div class="section-head"><h2>Profil</h2></div>
             <div class="workspace-form-grid">
@@ -222,6 +241,62 @@
         }
       })();
 
+      // ===== T3 Admin 2FA =====
+      (async () => {
+        const panel = document.getElementById('twoFactorPanel');
+        const statusEl = document.getElementById('twoFactorStatus');
+        const setupEl = document.getElementById('twoFactorSetup');
+        const enableBtn = document.getElementById('twoFactorEnableBtn');
+        const disableBtn = document.getElementById('twoFactorDisableBtn');
+        const verifyBtn = document.getElementById('twoFactorVerifyBtn');
+        if (!panel) return;
+        let enabled = false;
+        try {
+          const users = await MllyCore.getCollection('users');
+          const me = users.find((u) => u.id === user.uid);
+          enabled = !!(me && me.twoFactorEnabled);
+        } catch (_) {}
+        const render = () => {
+          if (enabled) {
+            statusEl.textContent = "✅ 2FA yoqilgan. Workspace o'chirishda kod talab qilinadi.";
+            setupEl.style.display = 'none';
+            enableBtn.style.display = 'none';
+            disableBtn.style.display = '';
+          } else {
+            statusEl.textContent = "2FA o'chirilgan.";
+            enableBtn.style.display = '';
+            disableBtn.style.display = 'none';
+          }
+        };
+        render();
+        enableBtn?.addEventListener('click', async () => {
+          try {
+            const res = await MllyCore.enable2FA();
+            document.getElementById('twoFactorSecret').textContent = res.secret || '';
+            const otp = document.getElementById('twoFactorOtpauth');
+            if (otp && res.otpauth) otp.href = res.otpauth;
+            setupEl.style.display = 'block';
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        verifyBtn?.addEventListener('click', async () => {
+          const code = document.getElementById('twoFactorCode').value;
+          try {
+            await MllyCore.verify2FA(code);
+            enabled = true; render();
+            UTIL.toast('2FA yoqildi.');
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        disableBtn?.addEventListener('click', async () => {
+          const code = window.prompt('2FA kodni kiriting:');
+          if (!code) return;
+          try {
+            await MllyCore.disable2FA(code);
+            enabled = false; render();
+            UTIL.toast("2FA o'chirildi.");
+          } catch (e) { UTIL.toast(e.message); }
+        });
+      })();
+
       document.getElementById('saveProfileBtn').addEventListener('click', async () => {
         try {
           await MllyCore.updateUserProfile({
@@ -292,5 +367,5 @@
       });
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1874dbe3fb38fc8',t:'MTc4MzU5OTg0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

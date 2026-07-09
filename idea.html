@@ -64,6 +64,11 @@
               <p class="workspace-helper" style="font-size:14px">${escapeHtml(idea.description || 'Tavsif kiritilmagan.')}</p>
             </div>
 
+            <div class="workspace-surface pad" id="similarIdeasSurface" style="display:none;">
+              <div class="section-head"><h2>🧠 O'xshash g'oyalar (T10)</h2></div>
+              <div id="similarIdeasList"></div>
+            </div>
+
             <div class="workspace-surface pad">
               <div class="section-head"><h2>Keyingi qadam</h2></div>
               <div class="workspace-note-bar">${escapeHtml(team?.name || 'Workspace')} ichiga qaytib, task va chat oqimi bilan bog'lab ishlashingiz mumkin.</div>
@@ -87,6 +92,29 @@
           </aside>
         </section>
       `;
+
+      // T10 - O'xshash g'oyalarni ko'rsatish (analyze-ideas orqali to'ldirilgan)
+      if (Array.isArray(idea.similarTo) && idea.similarTo.length) {
+        const surface = document.getElementById('similarIdeasSurface');
+        const list = document.getElementById('similarIdeasList');
+        if (surface && list) {
+          surface.style.display = '';
+          for (const sid of idea.similarTo) {
+            try {
+              const sim = await MllyCore.getIdeaById(sid);
+              if (sim) {
+                const a = document.createElement('a');
+                a.className = 'workspace-record';
+                a.href = 'idea.html?id=' + sid;
+                a.style.display = 'block';
+                a.style.marginBottom = '8px';
+                a.innerHTML = `<div class="workspace-record-top"><h3>${escapeHtml(sim.title || sid)}</h3></div>`;
+                list.appendChild(a);
+              }
+            } catch (_) {}
+          }
+        }
+      }
 
       await MllyCore.markNotificationsRead({
         relatedEntityId: idea.id,

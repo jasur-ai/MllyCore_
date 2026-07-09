@@ -49,6 +49,37 @@
           <div class="workspace-surface" style="margin-top:20px;">
             <div class="workspace-surface-head">
               <div>
+                <h2>🧠 G'oyalar tahlili (T10)</h2>
+                <div class="workspace-surface-copy">AI-klasterlash va dublikatlarni aniqlash.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="analyzeIdeas()">Tahlil qilish</button>
+            </div>
+            <div class="workspace-form-stack" style="padding:16px;">
+              <label class="label">Workspace tanlang</label>
+              <select class="select" id="analyzeTeamId">${teams.length ? teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join('') : '<option value="">Workspace yo\'q</option>'}</select>
+            </div>
+            <div id="analyzeResult" style="padding:0 16px 16px;"></div>
+          </div>
+
+          <div class="workspace-surface" style="margin-top:20px;">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>📋 Shablonlar (T13)</h2>
+                <div class="workspace-surface-copy">Workspace yaratishda ishlatiladigan tayyor shablonlar (urug' vazifalari).</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="loadTemplates()">Yangilash</button>
+            </div>
+            <div id="templatesContainer" style="padding:16px;"></div>
+            <div class="workspace-form-stack" style="padding:0 16px 16px;">
+              <input class="input mb-3" id="templateName" placeholder="Shablon nomi">
+              <textarea class="textarea mb-3" id="templateSeed" rows="3" placeholder="Har qatorda bitta tayanch vazifa nomi"></textarea>
+              <button class="btn btn-primary" id="createTemplateBtn">Shablon yaratish</button>
+            </div>
+          </div>
+
+          <div class="workspace-surface" style="margin-top:20px;">
+            <div class="workspace-surface-head">
+              <div>
                 <h2>🎚️ Feature Flags (T6)</h2>
                 <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
               </div>
@@ -326,6 +357,56 @@
         catch (e) { alert(e.message); }
       };
       loadFeatureFlags();
+
+      // ===== T10 AI klasterlash / dublikat aniqlash =====
+      window.analyzeIdeas = async () => {
+        const teamId = document.getElementById('analyzeTeamId')?.value;
+        const out = document.getElementById('analyzeResult');
+        if (!teamId) { if (out) out.innerHTML = '<div class="muted">Avval workspace tanlang.</div>'; return; }
+        if (out) out.innerHTML = '<div class="muted">Tahlil qilinmoqda...</div>';
+        try {
+          const res = await MllyCore.analyzeIdeas(teamId);
+          if (out) out.innerHTML = `
+            <div class="muted text-sm" style="margin-bottom:8px;">${res.message || ''}</div>
+            ${res.clusters && res.clusters.length ? res.clusters.map((c, i) => `
+              <div style="margin-bottom:8px;"><b>Klaster ${i + 1}:</b> ${c.map((id) => id).join(', ')}</div>
+            `).join('') : '<div class="muted">Klaster topilmadi.</div>'}
+          `;
+        } catch (e) { if (out) out.innerHTML = '<div class="muted">Xatolik: ' + (e.message || '') + '</div>'; }
+      };
+
+      // ===== T13 Shablonlar boshqaruvi =====
+      window.loadTemplates = async () => {
+        const container = document.getElementById('templatesContainer');
+        if (!container) return;
+        try {
+          const templates = await MllyCore.getTemplates();
+          container.innerHTML = templates.length ? templates.map((t) => `
+            <div class="workspace-record" style="margin-bottom:10px;padding:12px;">
+              <div class="workspace-record-top">
+                <h3 style="margin:0;">${t.name}</h3>
+                <span class="badge">${Array.isArray(t.seedTasks) ? t.seedTasks.length : 0} vazifa</span>
+              </div>
+              <p class="muted text-sm">${t.description || ''}</p>
+            </div>
+          `).join('') : '<div class="muted">Hozircha shablon mavjud emas.</div>';
+        } catch (e) { container.innerHTML = '<div class="muted">Xatolik: ' + (e.message || '') + '</div>'; }
+      };
+      window.loadTemplates();
+
+      document.getElementById('createTemplateBtn')?.addEventListener('click', async () => {
+        const name = document.getElementById('templateName').value;
+        const seedRaw = document.getElementById('templateSeed').value;
+        if (!name.trim()) { alert('Shablon nomi kerak.'); return; }
+        const seedTasks = seedRaw.split('\\n').map((s) => s.trim()).filter(Boolean).map((title) => ({ title, priority: 'medium' }));
+        try {
+          await MllyCore.createTemplate({ name: name.trim(), seedTasks });
+          document.getElementById('templateName').value = '';
+          document.getElementById('templateSeed').value = '';
+          window.loadTemplates();
+          alert('Shablon yaratildi.');
+        } catch (e) { alert(e.message); }
+      });
 
       // ===== T12 Rollback =====
       window.rollbackLog = async (id) => {
@@ -692,5 +773,5 @@
       });
     })();
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a18747c4efe99cc4',t:'MTc4MzU5OTYwMQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

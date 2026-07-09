@@ -88,6 +88,8 @@
       <label class="label">Workspace nomi</label><input class="input mb-3" id="workspaceName" placeholder="Masalan: MllyCore Workspace">
       <label class="label">Team lead email</label><input class="input mb-3" id="workspaceLeadEmail" type="email" required placeholder="teamlead@email.com">
       <label class="label">Tavsif</label><textarea class="textarea" id="workspaceDescription" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
+      <label class="label">Shablon (ixtiyoriy, T13)</label>
+      <select class="input mb-3" id="workspaceTemplate"><option value="">Shablonsiz</option></select>
       <p class="text-sm muted" id="workspaceMessage" style="min-height:20px;margin:12px 0 0"></p>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
@@ -154,6 +156,16 @@
 
       window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
       mountLayout('dashboard', window.APP_CONTEXT);
+
+      // T13 - Shablonlarni yuklash (faqat admin)
+      if (isAdmin) {
+        MllyCore.getTemplates().then((templates) => {
+          const sel = document.getElementById('workspaceTemplate');
+          if (sel && templates.length) {
+            sel.innerHTML = '<option value="">Shablonsiz</option>' + templates.map((t) => `<option value="${t.id}">${t.name || t.id}</option>`).join('');
+          }
+        }).catch(() => {});
+      }
 
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
       document.getElementById('dashboardSubtitle').textContent = isAdmin
@@ -368,7 +380,8 @@
           const created = await MllyCore.createWorkspace({
             name: document.getElementById('workspaceName').value,
             leadEmail: document.getElementById('workspaceLeadEmail').value,
-            description: document.getElementById('workspaceDescription').value
+            description: document.getElementById('workspaceDescription').value,
+            templateId: document.getElementById('workspaceTemplate')?.value || ''
           });
           message.textContent = created.temporaryPassword
             ? `Workspace yaratildi. Team lead paroli: ${created.temporaryPassword}. Secret key: ${created.secretKey}`
