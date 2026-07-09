@@ -172,6 +172,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
     healthScore: 50,
     status: 'active',
     templateId: templateId || null,
+    secretKey: generateSecretKey(),
     createdAt: SV(),
   });
 
@@ -228,20 +229,18 @@ async function handleInviteMember(req, res, db, decoded, user) {
 
   const role = (req.body && req.body.role === 'viewer') ? 'viewer' : 'member';
   const target = userSnap.docs[0];
-  const secretKey = generateSecretKey();
   await db.collection('workspaceInvites').add({
     teamId,
     inviteeUserId: target.id,
     inviteeEmail: cleanEmail,
     inviterUserId: decoded.uid,
     role,
-    secretKey,
     status: 'pending',
     createdAt: SV(),
   });
 
   await audit(db, 'member_invited', { teamId, inviteeUserId: target.id, role });
-  return { status: 201, success: true, message: 'Taklif yuborildi.', secretKey };
+  return { status: 201, success: true, message: 'Taklif yuborildi.' };
 }
 
 // T2 - Faqat o'qish huquqiga ega a'zo yozish amallarini bajara olmaydi.
@@ -258,7 +257,11 @@ async function handleAcceptInvite(req, res, db, decoded) {
   if (!inv.exists) return { status: 404, error: 'Taklif topilmadi.' };
 
   const data = inv.data();
-  if ((data.secretKey || '').toUpperCase() !== String(secretKey).trim().toUpperCase()) {
+  // Secret key — workspace-level (teams.secretKey / invitationCode) ga tekshiriladi.
+  // Shunday qilib "Secret key reset" qilganda eski takliflar yangi key bilan ishlaydi.
+  const teamKeySnap = await db.collection('teams').doc(data.teamId).get();
+  const teamKey = teamKeySnap.exists ? (teamKeySnap.data().secretKey || teamKeySnap.data().invitationCode || '') : '';
+  if (String(teamKey).trim().toUpperCase() !== String(secretKey).trim().toUpperCase()) {
     return { status: 403, error: "Secret key noto'g'ri." };
   }
   if (data.inviteeUserId && data.inviteeUserId !== decoded.uid) {
