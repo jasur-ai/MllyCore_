@@ -705,7 +705,8 @@
             <div style="display:flex;gap:6px;flex-wrap:wrap;">
               <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}">Ruxsatlar</button>
               <button class="btn btn-sm" style="background:#475569;color:#fff;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
-              <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
+                <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
+                <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash (T37)</button>
             </div>
           </div>
           <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
@@ -754,6 +755,20 @@
         const reveal = input.type === 'password';
         input.type = reveal ? 'text' : 'password';
         toggle.textContent = reveal ? 'Yashir' : "Ko'rsat";
+      });
+
+      document.querySelectorAll('[data-clone-workspace]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const teamId = button.dataset.cloneWorkspace;
+          const name = window.prompt('Yangi workspace nomi:', (button.dataset.cloneName || 'Workspace') + ' (copy)');
+          if (!name) return;
+          const leadEmail = window.prompt('Team lead email:', '');
+          if (!leadEmail) return;
+          try {
+            const r = await MllyCore.cloneWorkspace({ teamId, name, leadEmail });
+            UTIL.toast('Nusxalandi: ' + r.teamId);
+          } catch (e) { alert(e.message); }
+        });
       });
 
       document.getElementById('confirmDeleteWorkspaceBtn').addEventListener('click', async () => {

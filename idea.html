@@ -69,6 +69,61 @@
               <div id="similarIdeasList"></div>
             </div>
 
+            <div class="workspace-surface pad" id="extraIdeaPanel">
+              <div class="section-head"><h2>Qo'shimcha imkoniyatlar (T18–T37)</h2></div>
+              <div class="workspace-form-grid">
+                <div>
+                  <label class="label">Bosqich (T29)</label>
+                  <select class="select" id="ideaStage">
+                    <option value="Raw">Raw</option>
+                    <option value="Validated">Validated</option>
+                    <option value="Building">Building</option>
+                    <option value="Launched">Launched</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">Ovoz (T34)</label>
+                  <button class="btn btn-secondary btn-sm" id="voteIdeaBtn">👍 Ovoz berish</button>
+                  <span id="voteCount" class="muted text-sm"></span>
+                </div>
+                <div>
+                  <label class="label">Public (T20)</label>
+                  <button class="btn btn-secondary btn-sm" id="togglePublicBtn">Public qilish</button>
+                  <span id="publicToken" class="muted text-sm"></span>
+                </div>
+                <div>
+                  <label class="label">Pitch (T19)</label>
+                  <button class="btn btn-secondary btn-sm" id="pitchBtn">One-Pager yasash</button>
+                </div>
+              </div>
+              <div class="workspace-form-grid" style="margin-top:12px;">
+                <div>
+                  <label class="label">Scoring ICE/RICE (T18)</label>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <input class="input" id="scoreImpact" type="number" min="0" max="10" placeholder="Impact">
+                    <input class="input" id="scoreConfidence" type="number" min="0" max="10" placeholder="Conf">
+                    <input class="input" id="scoreEase" type="number" min="0" max="10" placeholder="Ease">
+                    <button class="btn btn-primary btn-sm" id="scoreBtn">Ballash</button>
+                  </div>
+                  <span id="riceOut" class="muted text-sm"></span>
+                </div>
+              </div>
+              <div style="margin-top:12px;">
+                <label class="label">Izoh + @mention (T27)</label>
+                <textarea class="textarea" id="commentText" rows="2" placeholder="@username ga izoh"></textarea>
+                <button class="btn btn-primary btn-sm" id="commentBtn" style="margin-top:6px;">Yuborish</button>
+              </div>
+              <div style="margin-top:12px;">
+                <label class="label">Xavf (T35)</label>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                  <input class="input" id="riskTitle" placeholder="Xavf nomi">
+                  <input class="input" id="riskLikelihood" type="number" min="1" max="5" placeholder="Ehtimol">
+                  <input class="input" id="riskImpact" type="number" min="1" max="5" placeholder="Ta'sir">
+                  <button class="btn btn-primary btn-sm" id="riskBtn">Qo'shish</button>
+                </div>
+              </div>
+            </div>
+
             <div class="workspace-surface pad">
               <div class="section-head"><h2>Keyingi qadam</h2></div>
               <div class="workspace-note-bar">${escapeHtml(team?.name || 'Workspace')} ichiga qaytib, task va chat oqimi bilan bog'lab ishlashingiz mumkin.</div>
@@ -115,6 +170,56 @@
           }
         }
       }
+
+      // T18–T37 idea.html UI
+      (async () => {
+        const ideaId = idea.id; const teamId = idea.teamId;
+        const stageSel = document.getElementById('ideaStage');
+        if (stageSel && idea.stage) stageSel.value = idea.stage;
+        stageSel?.addEventListener('change', async () => {
+          try { await MllyCore.setStage(ideaId, stageSel.value); UTIL.toast('Bosqich yangilandi'); }
+          catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('voteIdeaBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.voteIdea(ideaId); document.getElementById('voteCount').textContent = 'Ovoz: ' + (r.voteCount || 0); UTIL.toast('Ovoz bermadingiz'); }
+          catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('togglePublicBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.setPublic(ideaId, true); document.getElementById('publicToken').textContent = 'Token: ' + (r.publicToken || ''); UTIL.toast('Public qilindi'); }
+          catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('pitchBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.generatePitch(ideaId); const blob = new Blob([r.html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pitch.html'; a.click(); }
+          catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('scoreBtn')?.addEventListener('click', async () => {
+          try {
+            const r = await MllyCore.scoreIdea(ideaId, {
+              impact: +document.getElementById('scoreImpact').value || 0,
+              confidence: +document.getElementById('scoreConfidence').value || 0,
+              ease: +document.getElementById('scoreEase').value || 0
+            });
+            document.getElementById('riceOut').textContent = 'RICE: ' + (r.rice || 0);
+            UTIL.toast('Ballandi');
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('commentBtn')?.addEventListener('click', async () => {
+          try {
+            const text = document.getElementById('commentText').value;
+            const mentions = (text.match(/@(\w+)/g) || []).map((m) => m.slice(1));
+            await MllyCore.addComment({ ideaId, text, mentions });
+            document.getElementById('commentText').value = '';
+            UTIL.toast('Izoh yuborildi');
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('riskBtn')?.addEventListener('click', async () => {
+          try {
+            await MllyCore.addRisk({ teamId, title: document.getElementById('riskTitle').value, likelihood: +document.getElementById('riskLikelihood').value || 1, impact: +document.getElementById('riskImpact').value || 1 });
+            document.getElementById('riskTitle').value = '';
+            UTIL.toast("Xavf qo'shildi");
+          } catch (e) { UTIL.toast(e.message); }
+        });
+      })();
 
       await MllyCore.markNotificationsRead({
         relatedEntityId: idea.id,

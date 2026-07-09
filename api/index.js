@@ -146,6 +146,10 @@ function tryParse(body) {
   try { return JSON.parse(body); } catch (_) { return {}; }
 }
 
+function escapeHtml(value) {
+  return String(value || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+
 /* --------------------------- Handlers ----------------------------- */
 
 async function handleCreateWorkspace(req, res, db, decoded, user) {
@@ -296,6 +300,7 @@ async function handleCreateTask(req, res, db, decoded, user) {
   if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
   const dependsOn = Array.isArray(req.body.dependsOn) ? req.body.dependsOn.filter(Boolean) : [];
+  const requiredSkill = req.body.requiredSkill ? String(req.body.requiredSkill).slice(0, 60) : '';
   const ref = await db.collection('tasks').add({
     teamId,
     title,
@@ -306,6 +311,7 @@ async function handleCreateTask(req, res, db, decoded, user) {
     assignedTo: assignedTo || null,
     dueDate: dueDate ? new Date(dueDate) : null,
     dependsOn,
+    requiredSkill,
     blocked: dependsOn.length > 0,
     createdAt: SV(),
   });
@@ -806,12 +812,13 @@ async function handleActions(req, res, db, decoded, user) {
   }
 
   if (action === 'update-preferences' && req.method === 'POST') {
-    const { workingHours, timezone, emailDigestFrequency, telegramUsername } = req.body || {};
+    const { workingHours, timezone, emailDigestFrequency, telegramUsername, locale } = req.body || {};
     const upd = {};
     if (workingHours) upd.workingHours = workingHours;
     if (timezone) upd.timezone = timezone;
     if (emailDigestFrequency) upd.emailDigestFrequency = emailDigestFrequency;
     if (telegramUsername) upd.telegramUsername = telegramUsername;
+    if (locale) upd.locale = String(locale).slice(0, 10);
     await db.collection('users').doc(decoded.uid).update(upd);
     return { status: 200, success: true, message: 'Yangilandi.' };
   }
@@ -1189,6 +1196,7 @@ async function handleNotify(req, res, db, decoded, user) {
     deliverAt: quiet ? SV() : SV(),
     createdAt: SV(),
   });
+  if (!quiet) pushTelegram(db, userId, String(text)).catch(() => {});
   return { status: 201, success: true, notificationId: ref.id, suppressed: quiet, delivered: !quiet };
 }
 
@@ -1240,11 +1248,393 @@ async function handleWeeklyDigest(req, res, db, decoded, user) {
   return { status: 200, success: true, teams: generated.length, processedTeamIds: generated };
 }
 
+/* ===================== T18–T37 (kodlangan kengaytmalar) ===================== */
+
+// T18 - Idea Scoring (ICE/RICE)
+async function handleScoreIdea(req, res, db, decoded, user) {
+  const { ideaId, impact, confidence, ease } = req.body || {};
+  if (!ideaId) return { status: 400, error: 'ideaId kerak.' };
+  const ref = db.collection('ideas').doc(ideaId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const idea = snap.data();
+  const membership = await getMembership(db, idea.teamId, decoded.uid);
+  if (!(membership && ['team_lead', 'member'].includes(membership.role)) && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const imp = Number(impact) || 0; const conf = Number(confidence) || 0; const eas = Number(ease) || 0;
+  const rice = Math.max(0, Math.min(100, Math.round((imp * conf * eas) / 100)));
+  await ref.update({ score: { impact: imp, confidence: conf, ease: eas, rice }, updatedAt: SV() });
+  await audit(db, 'idea_scored', { ideaId, rice });
+  return { status: 200, success: true, rice };
+}
+
+// T19 - Pitch One-Pager (HTML)
+async function handleGeneratePitch(req, res, db, decoded, user) {
+  const { ideaId } = req.body || {};
+  if (!ideaId) return { status: 400, error: 'ideaId kerak.' };
+  const ideaSnap = await db.collection('ideas').doc(ideaId).get();
+  if (!ideaSnap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const idea = ideaSnap.data();
+  const membership = await getMembership(db, idea.teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const [taskSnap, memberSnap] = await Promise.all([
+    db.collection('tasks').where('teamId', '==', idea.teamId).get(),
+    db.collection('teamMembers').where('teamId', '==', idea.teamId).get()
+  ]);
+  const members = [];
+  for (const m of memberSnap.docs) {
+    const p = await db.collection('users').doc(m.data().userId).get();
+    const pd = p.exists ? p.data() : {};
+    members.push(pd.name || pd.email || m.data().userId);
+  }
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>${escapeHtml(idea.title)}</title></head>` +
+    `<body style="font-family:sans-serif;max-width:820px;margin:40px auto;padding:0 20px;color:#0f172a;">` +
+    `<h1>${escapeHtml(idea.title)}</h1><p>${escapeHtml(idea.description || '')}</p>` +
+    `<h2>Jamoa</h2><ul>${(members.map((n) => `<li>${escapeHtml(n)}</li>`)).join('')}</ul>` +
+    `<h2>Vazifalar</h2><ul>${(taskSnap.docs.map((d) => `<li>${escapeHtml(d.data().title)} — ${escapeHtml(d.data().status || 'open')}</li>`)).join('')}</ul>` +
+    `</body></html>`;
+  await audit(db, 'pitch_generated', { ideaId });
+  return { status: 200, success: true, html };
+}
+
+// T20 - Public Showcase (opt-in)
+async function handleSetPublic(req, res, db, decoded, user) {
+  const { ideaId, isPublic } = req.body || {};
+  if (!ideaId) return { status: 400, error: 'ideaId kerak.' };
+  const ref = db.collection('ideas').doc(ideaId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const membership = await getMembership(db, snap.data().teamId, decoded.uid);
+  if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') return { status: 403, error: 'Faqat lead/admin.' };
+  if (isPublic) {
+    const token = crypto.randomBytes(16).toString('hex');
+    await ref.update({ isPublic: true, publicToken: token });
+    return { status: 200, success: true, publicToken: token };
+  }
+  await ref.update({ isPublic: false, publicToken: '' });
+  return { status: 200, success: true };
+}
+async function handlePublicIdea(req, res, db) {
+  const token = req.query.token;
+  if (!token) return { status: 400, error: 'token kerak.' };
+  const snap = await db.collection('ideas').where('publicToken', '==', token).where('isPublic', '==', true).limit(1).get();
+  if (snap.empty) return { status: 404, error: 'Topilmadi.' };
+  const idea = snap.docs[0].data();
+  return { status: 200, idea: { title: idea.title, description: idea.description, status: idea.status, score: idea.score || null, stage: idea.stage || null } };
+}
+
+// T21 - Roadmap / Timeline
+async function handleRoadmap(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snap = await db.collection('tasks').where('teamId', '==', teamId).orderBy('dueDate', 'asc').get();
+  const tasks = snap.docs.map((d) => ({ id: d.id, title: d.data().title, status: d.data().status, dueDate: d.data().dueDate, dependsOn: d.data().dependsOn || [], assignedTo: d.data().assignedTo }));
+  return { status: 200, teamId, tasks };
+}
+
+// T22 - Telegram
+async function handleLinkTelegram(req, res, db, decoded, user) {
+  const { chatId } = req.body || {};
+  if (!chatId) return { status: 400, error: 'chatId kerak.' };
+  await db.collection('users').doc(decoded.uid).update({ telegramChatId: String(chatId) });
+  return { status: 200, success: true };
+}
+async function handleTelegramWebhook(req, res) {
+  return { status: 200, ok: true };
+}
+async function pushTelegram(db, userId, text) {
+  try {
+    const u = await db.collection('users').doc(userId).get();
+    const data = u.exists ? u.data() : {};
+    if (!data.telegramChatId) return;
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) return;
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: data.telegramChatId, text: String(text).slice(0, 4000) })
+    });
+  } catch (_) {}
+}
+
+// T23 - Financial Runway
+async function handleFinances(req, res, db, decoded, user) {
+  const { teamId, monthlyBudget, burnRate, currency } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') return { status: 403, error: 'Faqat lead/admin.' };
+  await db.collection('finances').doc(teamId).set({
+    teamId, monthlyBudget: Number(monthlyBudget) || 0, burnRate: Number(burnRate) || 0, currency: currency || 'USD', updatedAt: SV()
+  }, { merge: true });
+  return { status: 200, success: true };
+}
+async function handleRunway(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snap = await db.collection('finances').doc(teamId).get();
+  const f = snap.exists ? snap.data() : { monthlyBudget: 0, burnRate: 0 };
+  const runway = f.burnRate > 0 ? Math.floor(f.monthlyBudget / f.burnRate) : null;
+  return { status: 200, teamId, monthlyBudget: f.monthlyBudget, burnRate: f.burnRate, runwayMonths: runway };
+}
+
+// T24 - Decision Log
+async function handleDecisionLog(req, res, db, decoded, user) {
+  const { teamId, title, rationale, decision } = req.body || {};
+  if (!teamId || !title) return { status: 400, error: 'teamId va title kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = await db.collection('decisions').add({
+    teamId, title, rationale: rationale || '', decision: decision || '',
+    authorId: decoded.uid, createdAt: SV()
+  });
+  await audit(db, 'decision_logged', { teamId, decisionId: ref.id });
+  return { status: 201, success: true, decisionId: ref.id };
+}
+
+// T25 - Skill Tagging (user skills yangilash)
+async function handleUpdateSkills(req, res, db, decoded, user) {
+  const { skills } = req.body || {};
+  if (!Array.isArray(skills)) return { status: 400, error: 'skills massiv bo\'lishi kerak.' };
+  await db.collection('users').doc(decoded.uid).update({ skills: skills.slice(0, 50) });
+  return { status: 200, success: true };
+}
+
+// T26 - Idea Health (stale)
+async function handleStaleIdeas(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const days = parseInt(req.query.days || req.body?.days || '14', 10) || 14;
+  const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const snap = await db.collection('ideas').where('status', '!=', 'archived').get();
+  const stale = [];
+  const batch = db.batch();
+  for (const d of snap.docs) {
+    const data = d.data();
+    const last = data.lastActivityAt ? (data.lastActivityAt.toMillis ? data.lastActivityAt.toMillis() : new Date(data.lastActivityAt).getTime()) : 0;
+    if (last && last < cutoff.getTime()) {
+      batch.update(d.ref, { stale: true });
+      stale.push(d.id);
+    }
+  }
+  if (stale.length) await batch.commit();
+  return { status: 200, success: true, staleCount: stale.length, stale };
+}
+
+// T27 - Threaded @Mentions (comment)
+async function handleComment(req, res, db, decoded, user) {
+  const { ideaId, text, mentions } = req.body || {};
+  if (!ideaId || !text || !text.trim()) return { status: 400, error: 'ideaId va text kerak.' };
+  const ideaSnap = await db.collection('ideas').doc(ideaId).get();
+  if (!ideaSnap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const teamId = ideaSnap.data().teamId;
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = await db.collection('ideaComments').add({
+    ideaId, teamId, userId: decoded.uid, userName: user.name || decoded.email,
+    text: text.trim(), mentions: Array.isArray(mentions) ? mentions.filter(Boolean) : [], createdAt: SV()
+  });
+  const mentioned = Array.isArray(mentions) ? mentions.filter(Boolean) : [];
+  for (const uid of mentioned) {
+    await db.collection('notifications').add({ userId: uid, teamId, type: 'mention', text: `${user.name || 'User'} sizni izohda eslatdi`, relatedEntityId: ideaId, unread: true, isRead: false, mentionedUid: uid, createdAt: SV() });
+  }
+  await db.collection('ideas').doc(ideaId).update({ lastActivityAt: SV() });
+  return { status: 201, success: true, commentId: ref.id };
+}
+
+// T28 - Reputation
+async function handleReputation(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const memSnap = await db.collection('teamMembers').where('teamId', '==', teamId).get();
+  const rows = await Promise.all(memSnap.docs.map(async (m) => {
+    const p = await db.collection('users').doc(m.data().userId).get();
+    const pd = p.exists ? p.data() : {};
+    return { userId: m.data().userId, name: pd.name || pd.email || m.data().userId, reputation: pd.reputation || 0, role: m.data().role };
+  }));
+  return { status: 200, teamId, members: rows.sort((a, b) => b.reputation - a.reputation) };
+}
+
+// T29 - Custom Idea Stage
+async function handleSetStage(req, res, db, decoded, user) {
+  const { ideaId, stage } = req.body || {};
+  if (!ideaId || !stage) return { status: 400, error: 'ideaId va stage kerak.' };
+  const ref = db.collection('ideas').doc(ideaId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const membership = await getMembership(db, snap.data().teamId, decoded.uid);
+  if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') return { status: 403, error: 'Faqat lead/admin.' };
+  await ref.update({ stage, updatedAt: SV() });
+  return { status: 200, success: true };
+}
+
+// T30 - Meeting Minutes
+async function handleMeetingNotes(req, res, db, decoded, user) {
+  const { teamId, title, notes, actionItems, decisions } = req.body || {};
+  if (!teamId || !title) return { status: 400, error: 'teamId va title kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = await db.collection('meetingNotes').add({
+    teamId, title, notes: notes || '', authorId: decoded.uid,
+    actionItems: Array.isArray(actionItems) ? actionItems : [], decisions: Array.isArray(decisions) ? decisions : [],
+    createdAt: SV()
+  });
+  // action item'larni vazifaga aylantirish
+  if (Array.isArray(actionItems)) {
+    const batch = db.batch();
+    actionItems.filter(Boolean).slice(0, 20).forEach((t) => {
+      const r = db.collection('tasks').doc();
+      batch.set(r, { teamId, title: String(t).slice(0, 200), status: 'todo', priority: 'medium', createdBy: decoded.uid, assignedTo: null, dueDate: null, createdAt: SV() });
+    });
+    await batch.commit();
+  }
+  await audit(db, 'meeting_noted', { teamId, noteId: ref.id });
+  return { status: 201, success: true, noteId: ref.id };
+}
+
+// T31 - GitHub Issues Sync
+async function handleSyncGithub(req, res, db, decoded, user) {
+  const { taskId, repo, token } = req.body || {};
+  if (!taskId || !repo) return { status: 400, error: 'taskId va repo kerak.' };
+  const taskSnap = await db.collection('tasks').doc(taskId).get();
+  if (!taskSnap.exists()) return { status: 404, error: 'Vazifa topilmadi.' };
+  const task = taskSnap.data();
+  const membership = await getMembership(db, task.teamId, decoded.uid);
+  if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') return { status: 403, error: 'Faqat lead/admin.' };
+  const ghToken = token || process.env.GITHUB_TOKEN;
+  if (!ghToken) return { status: 400, error: 'GitHub token kerak.' };
+  try {
+    const resp = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+      method: 'POST',
+      headers: { Authorization: `token ${ghToken}`, 'Content-Type': 'application/json', 'User-Agent': 'MllyCore' },
+      body: JSON.stringify({ title: task.title, body: task.description || '' })
+    });
+    const json = await resp.json();
+    if (!resp.ok) return { status: 502, error: 'GitHub xatosi: ' + (json.message || 'noma\'lum') };
+    await taskSnap.ref.update({ githubIssueId: json.id, githubIssueUrl: json.html_url });
+    return { status: 200, success: true, issueUrl: json.html_url };
+  } catch (e) {
+    return { status: 502, error: 'GitHub ga ulanish xatosi.' };
+  }
+}
+
+// T32 - Onboarding status
+async function handleOnboardingStatus(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const [memSnap, ideaSnap] = await Promise.all([
+    db.collection('teamMembers').where('teamId', '==', teamId).get(),
+    db.collection('ideas').where('teamId', '==', teamId).get()
+  ]);
+  return { status: 200, teamId, members: memSnap.size, ideas: ideaSnap.size, complete: memSnap.size > 1 && ideaSnap.size > 0 };
+}
+
+// T33 - Locale yangilash (update-preferences ga qo'shimcha)
+// (handleActions ichidagi update-preferences ga locale qo'shildi)
+
+// T34 - Idea Voting
+async function handleVoteIdea(req, res, db, decoded, user) {
+  const { ideaId } = req.body || {};
+  if (!ideaId) return { status: 400, error: 'ideaId kerak.' };
+  const ref = db.collection('ideas').doc(ideaId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'G\'oya topilmadi.' };
+  const votes = Array.isArray(snap.data().votes) ? snap.data().votes : [];
+  let next;
+  if (votes.includes(decoded.uid)) next = votes.filter((v) => v !== decoded.uid);
+  else next = [...votes, decoded.uid];
+  await ref.update({ votes: next, voteCount: next.length, lastActivityAt: SV() });
+  return { status: 200, success: true, voteCount: next.length, voted: next.includes(decoded.uid) };
+}
+
+// T35 - Risk Register
+async function handleRisk(req, res, db, decoded, user) {
+  const { teamId, ideaId, title, likelihood, impact, mitigation } = req.body || {};
+  if (!teamId || !title) return { status: 400, error: 'teamId va title kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = await db.collection('risks').add({
+    teamId, ideaId: ideaId || null, title, likelihood: Number(likelihood) || 1, impact: Number(impact) || 1,
+    mitigation: mitigation || '', authorId: decoded.uid, createdAt: SV()
+  });
+  return { status: 201, success: true, riskId: ref.id };
+}
+
+// T36 - Activity Timeline
+async function handleActivityFeed(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const logs = (await db.collection('auditLogs').where('teamId', '==', teamId).orderBy('timestamp', 'desc').limit(30).get()).docs.map((d) => ({ ...d.data(), kind: 'audit' }));
+  const notifs = (await db.collection('notifications').where('teamId', '==', teamId).orderBy('createdAt', 'desc').limit(30).get()).docs.map((d) => ({ ...d.data(), kind: 'notification' }));
+  const feed = [...logs, ...notifs].sort((a, b) => {
+    const ta = a.timestamp?.toMillis?.() || a.createdAt?.toMillis?.() || 0;
+    const tb = b.timestamp?.toMillis?.() || b.createdAt?.toMillis?.() || 0;
+    return tb - ta;
+  }).slice(0, 40);
+  return { status: 200, teamId, feed };
+}
+
+// T37 - Workspace Clone
+async function handleCloneWorkspace(req, res, db, decoded, user) {
+  const { teamId, name, leadEmail } = req.body || {};
+  if (!teamId || !name || !name.trim()) return { status: 400, error: 'teamId va name kerak.' };
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const srcSnap = await db.collection('teams').doc(teamId).get();
+  if (!srcSnap.exists()) return { status: 404, error: 'Workspace topilmadi.' };
+  const src = srcSnap.data();
+  const teamRef = await db.collection('teams').add({
+    name: name.trim(), description: src.description || '',
+    createdByUserId: decoded.uid, createdBy: user.email || decoded.email,
+    membersCount: 1, healthScore: 50, status: 'active', clonedFrom: teamId, createdAt: SV()
+  });
+  let leadUid = decoded.uid;
+  if (leadEmail && leadEmail.trim()) {
+    const ls = await db.collection('users').where('email', '==', leadEmail.trim().toLowerCase()).limit(1).get();
+    if (!ls.empty) leadUid = ls.docs[0].id;
+  }
+  await db.collection('teamMembers').doc(teamRef.id + '_' + leadUid).set({ teamId: teamRef.id, userId: leadUid, role: 'team_lead', joinedAt: SV() });
+  // Idealar va vazifalarni nusxalash
+  const [ideas, tasks] = await Promise.all([
+    db.collection('ideas').where('teamId', '==', teamId).get(),
+    db.collection('tasks').where('teamId', '==', teamId).get()
+  ]);
+  const batch = db.batch();
+  ideas.docs.slice(0, 100).forEach((d) => {
+    const r = db.collection('ideas').doc();
+    batch.set(r, { ...d.data(), teamId: teamRef.id, id: r.id, createdAt: SV(), updatedAt: SV() });
+  });
+  tasks.docs.slice(0, 200).forEach((d) => {
+    const r = db.collection('tasks').doc();
+    batch.set(r, { ...d.data(), teamId: teamRef.id, id: r.id, createdAt: SV() });
+  });
+  await batch.commit();
+  await audit(db, 'workspace_cloned', { from: teamId, to: teamRef.id });
+  return { status: 201, success: true, teamId: teamRef.id };
+}
+
 /* --------------------------- Router ------------------------------- */
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+
+  // T20 - Public Showcase: tashqi investor login qilmasdan o'qiydi (authsiz)
+  const _pathname = (req.url || '').split('?')[0];
+  if (_pathname.includes('public-idea')) {
+    try {
+      initAdmin();
+      const _db = admin.firestore();
+      const _result = await handlePublicIdea(req, res, _db);
+      return res.status(_result.status || 200).json(_result);
+    } catch (e) {
+      return res.status(400).json({ error: (e && e.message) || 'Xatolik' });
+    }
+  }
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
@@ -1298,6 +1688,27 @@ module.exports = async (req, res) => {
     else if (action === 'create-template') result = await handleCreateTemplate(req, res, db, decoded, user);
     else if (action === 'notify') result = await handleNotify(req, res, db, decoded, user);
     else if (action === 'weekly-digest') result = await handleWeeklyDigest(req, res, db, decoded, user);
+    else if (action === 'score-idea') result = await handleScoreIdea(req, res, db, decoded, user);
+    else if (action === 'generate-pitch') result = await handleGeneratePitch(req, res, db, decoded, user);
+    else if (action === 'set-public') result = await handleSetPublic(req, res, db, decoded, user);
+    else if (action === 'roadmap') result = await handleRoadmap(req, res, db, decoded, user);
+    else if (action === 'link-telegram') result = await handleLinkTelegram(req, res, db, decoded, user);
+    else if (action === 'telegram-webhook') result = await handleTelegramWebhook(req, res);
+    else if (action === 'finances') result = await handleFinances(req, res, db, decoded, user);
+    else if (action === 'runway') result = await handleRunway(req, res, db, decoded, user);
+    else if (action === 'decision-log') result = await handleDecisionLog(req, res, db, decoded, user);
+    else if (action === 'update-skills') result = await handleUpdateSkills(req, res, db, decoded, user);
+    else if (action === 'stale-ideas') result = await handleStaleIdeas(req, res, db, decoded, user);
+    else if (action === 'comment') result = await handleComment(req, res, db, decoded, user);
+    else if (action === 'reputation') result = await handleReputation(req, res, db, decoded, user);
+    else if (action === 'set-stage') result = await handleSetStage(req, res, db, decoded, user);
+    else if (action === 'meeting-notes') result = await handleMeetingNotes(req, res, db, decoded, user);
+    else if (action === 'sync-github') result = await handleSyncGithub(req, res, db, decoded, user);
+    else if (action === 'onboarding-status') result = await handleOnboardingStatus(req, res, db, decoded, user);
+    else if (action === 'vote-idea') result = await handleVoteIdea(req, res, db, decoded, user);
+    else if (action === 'risk') result = await handleRisk(req, res, db, decoded, user);
+    else if (action === 'activity-feed') result = await handleActivityFeed(req, res, db, decoded, user);
+    else if (action === 'clone-workspace') result = await handleCloneWorkspace(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);

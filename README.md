@@ -27,6 +27,8 @@ Barcha kengaytma funksiyalar (T1–T17) backend (`api/index.js`), frontend (`js/
 
 > Batafsil tizimli xarita: `MllyCore_SYSTEM_ARCHITECTURE.md`
 
+**T18–T37** (Idea Scoring, Pitch, Public Showcase, Roadmap, Telegram, Financial Runway, Decision Log, Skill Tagging, Idea Health, @Mentions, Reputation, Custom Stages, Meeting Notes, GitHub Sync, Onboarding, i18n, Voting, Risk Register, Activity Feed, Workspace Clone) ham to'liq amalga oshirilgan (`api/index.js` + `js/firebase-service.js` + tegishli sahifalar + `firestore.rules`). Barcha T1–T37 birgalikda tizimga kiritildi.
+
 ## Firebase loyihasi
 
 - Project name: MllyCore

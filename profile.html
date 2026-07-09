@@ -96,6 +96,31 @@
             </div>
           </div>
 
+          <div class="workspace-surface pad" style="margin-top:20px;" id="extraProfilePanel">
+            <div class="section-head"><h2>Qo'shimcha sozlamalar (T22 / T25 / T33)</h2></div>
+            <div class="workspace-form-grid">
+              <div>
+                <label class="label">Telegram Chat ID (T22)</label>
+                <input class="input" id="telegramChatId" placeholder="123456789">
+                <button class="btn btn-primary btn-sm" id="linkTelegramBtn" style="margin-top:6px;">Ulash</button>
+              </div>
+              <div>
+                <label class="label">Ko'nikmalar (T25, vergul bilan)</label>
+                <input class="input" id="skillsInput" placeholder="React, Figma, Marketing">
+                <button class="btn btn-primary btn-sm" id="saveSkillsBtn" style="margin-top:6px;">Saqlash</button>
+              </div>
+              <div>
+                <label class="label">Til (T33)</label>
+                <select class="input" id="localeSelect">
+                  <option value="uz">O'zbekcha</option>
+                  <option value="ru">Русский</option>
+                  <option value="en">English</option>
+                </select>
+                <button class="btn btn-primary btn-sm" id="saveLocaleBtn" style="margin-top:6px;">Saqlash</button>
+              </div>
+            </div>
+          </div>
+
           <div class="workspace-surface pad" style="margin-top:20px;">
             <div class="section-head"><h2>Profil</h2></div>
             <div class="workspace-form-grid">
@@ -294,6 +319,32 @@
             enabled = false; render();
             UTIL.toast("2FA o'chirildi.");
           } catch (e) { UTIL.toast(e.message); }
+        });
+      })();
+
+      // ===== T22 / T25 / T33 qo'shimcha profil sozlamalari =====
+      (async () => {
+        try {
+          const users = await MllyCore.getCollection('users');
+          const me = users.find((u) => u.id === user.uid);
+          if (me) {
+            if (me.telegramChatId) document.getElementById('telegramChatId').value = me.telegramChatId;
+            if (Array.isArray(me.skills)) document.getElementById('skillsInput').value = me.skills.join(', ');
+            if (me.locale) document.getElementById('localeSelect').value = me.locale;
+          }
+        } catch (_) {}
+        document.getElementById('linkTelegramBtn')?.addEventListener('click', async () => {
+          const v = document.getElementById('telegramChatId').value.trim();
+          if (!v) return UTIL.toast('Chat ID kiriting');
+          try { await MllyCore.linkTelegram(v); UTIL.toast('Telegram ulandi'); } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('saveSkillsBtn')?.addEventListener('click', async () => {
+          const v = document.getElementById('skillsInput').value.split(',').map((s) => s.trim()).filter(Boolean);
+          try { await MllyCore.updateSkills(v); UTIL.toast("Ko'nikmalar saqlandi"); } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('saveLocaleBtn')?.addEventListener('click', async () => {
+          const v = document.getElementById('localeSelect').value;
+          try { await MllyCore.updateLocale(v); UTIL.toast('Til saqlandi'); } catch (e) { UTIL.toast(e.message); }
         });
       })();
 

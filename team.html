@@ -308,6 +308,7 @@
             <div class="workspace-detail-list">
               <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(task.assignedUserName || (task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
               <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
+              ${task.requiredSkill ? `<div class="workspace-detail-row"><span>Ko'nikma</span><strong>${escapeHtml(task.requiredSkill)}${(data.members || []).some((m) => Array.isArray(m.user?.skills) && m.user.skills.includes(task.requiredSkill)) ? '' : ' ⚠ gap'}</strong></div>` : ''}
               ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
               ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="workspace-detail-row"><span>Bog'liq (T8)</span><strong>${task.dependsOn.map((id) => escapeHtml(((data.tasks || []).find((t) => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
             </div>
@@ -640,6 +641,10 @@
                       <label class="label">Deadline</label>
                       <input class="input" id="taskDeadline" type="datetime-local" value="${fmtDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000))}">
                     </div>
+                    <div>
+                      <label class="label">Kerakli ko'nikma (T25)</label>
+                      <input class="input" id="taskRequiredSkill" placeholder="Masalan: React">
+                    </div>
                     <div class="workspace-form-actions">
                       <button class="btn btn-primary" id="createTaskBtn">Topshiriq qo'shish</button>
                     </div>
@@ -672,6 +677,30 @@
                 <span class="badge" id="ideasCount">0 ta</span>
               </div>
               <div class="workspace-card-grid cols-2" id="ideasList"></div>
+            </div>
+
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Qo'shimcha (T21 / T24 / T28 / T30 / T36)</h2>
+                  <div class="workspace-surface-copy">Roadmap, qarorlar, meeting, activity, reputation.</div>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+                <button class="btn btn-secondary btn-sm" id="roadmapBtn">🗺 Roadmap</button>
+                <button class="btn btn-secondary btn-sm" id="decisionsBtn">📌 Qarorlar</button>
+                <button class="btn btn-secondary btn-sm" id="meetingBtn">📝 Meeting</button>
+                <button class="btn btn-secondary btn-sm" id="activityBtn">📡 Activity</button>
+                <button class="btn btn-secondary btn-sm" id="repBtn">🏅 Reputation</button>
+                <button class="btn btn-secondary btn-sm" id="financeBtn">💰 Moliyaviy (T23)</button>
+              </div>
+              <div id="extraTeamOut" style="padding-top:4px;"></div>
+              <div id="meetingForm" style="display:none;margin-top:12px;">
+                <input class="input mb-3" id="meetingTitle" placeholder="Meeting sarlavhasi">
+                <textarea class="textarea mb-3" id="meetingNotes" rows="2" placeholder="Qaydlar"></textarea>
+                <input class="input mb-3" id="meetingActions" placeholder="Action item'lar (vergul bilan)">
+                <button class="btn btn-primary btn-sm" id="meetingSaveBtn">Saqlash</button>
+              </div>
             </div>
 
             <div class="workspace-surface">
@@ -742,6 +771,57 @@
         });
       }
       renderChat(data.messages || [], currentUserId);
+
+      // T21 / T24 / T28 / T30 / T36 — qo'shimcha panel
+      (async () => {
+        const teamIdT = data.team.id;
+        const out = document.getElementById('extraTeamOut');
+        const renderList = (title, arr, fmt) => {
+          out.innerHTML = `<h3 style="margin:8px 0;">${title}</h3>` + (arr && arr.length ? `<div class="workspace-message-stack">${arr.map(fmt).join('')}</div>` : '<div class="muted">Ma\'lumot yo\'q</div>');
+        };
+        document.getElementById('roadmapBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.getRoadmap(teamIdT); renderList('🗺 Roadmap', r.tasks, (t) => `<div class="workspace-message-item"><strong>${escapeHtml(t.title)}</strong> — ${escapeHtml(t.status || 'open')} ${Array.isArray(t.dependsOn) && t.dependsOn.length ? '🔒' : ''}</div>`); }
+          catch (e) { out.textContent = e.message; }
+        });
+        document.getElementById('decisionsBtn')?.addEventListener('click', async () => {
+          try { const snap = await MllyCore.getCollection('decisions'); const list = snap.filter((d) => d.teamId === teamIdT); renderList('📌 Qarorlar', list, (d) => `<div class="workspace-message-item"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.decision || '')}</span></div>`); }
+          catch (e) { out.textContent = e.message; }
+        });
+        document.getElementById('repBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.getReputation(teamIdT); renderList('🏅 Reputation', r.members, (m) => `<div class="workspace-message-item"><strong>${escapeHtml(m.name)}</strong> — ${m.reputation || 0} ball (${escapeHtml(m.role)})</div>`); }
+          catch (e) { out.textContent = e.message; }
+        });
+        document.getElementById('activityBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.getActivityFeed(teamIdT); renderList('📡 Activity', r.feed, (f) => `<div class="workspace-message-item"><span>${escapeHtml(f.kind || '')}</span> <span>${escapeHtml(f.action || f.type || f.text || '')}</span></div>`); }
+          catch (e) { out.textContent = e.message; }
+        });
+        document.getElementById('meetingBtn')?.addEventListener('click', () => {
+          const f = document.getElementById('meetingForm');
+          f.style.display = f.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('meetingSaveBtn')?.addEventListener('click', async () => {
+          try {
+            await MllyCore.saveMeetingNotes({
+              teamId: teamIdT,
+              title: document.getElementById('meetingTitle').value,
+              notes: document.getElementById('meetingNotes').value,
+              actionItems: document.getElementById('meetingActions').value.split(',').map((s) => s.trim()).filter(Boolean)
+            });
+            UTIL.toast('Meeting saqlandi');
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('financeBtn')?.addEventListener('click', async () => {
+          try {
+            const budget = window.prompt('Oylik byudjet (USD):', '5000');
+            if (budget === null) return;
+            const burn = window.prompt('Oylik burn-rate (USD):', '2000');
+            if (burn === null) return;
+            await MllyCore.saveFinances({ teamId: teamIdT, monthlyBudget: Number(budget) || 0, burnRate: Number(burn) || 0, currency: 'USD' });
+            const r = await MllyCore.getRunway(teamIdT);
+            out.innerHTML = `<h3 style="margin:8px 0;">💰 Runway</h3><div class="workspace-message-stack"><div class="workspace-message-item"><strong>Qolgan oy:</strong> ${r.runwayMonths === null ? '∞ (burn=0)' : r.runwayMonths + ' oy'}</div></div>`;
+          } catch (e) { UTIL.toast(e.message); }
+        });
+      })();
       scheduleChatSeen(data.messages || [], currentUserId, data.team.id);
 
       if (focusType === 'tasks') {
@@ -868,7 +948,8 @@
             assignmentMode: document.getElementById('taskAssignmentMode').value,
             assignedUserId: document.getElementById('taskAssignedUserId')?.value || '',
             deadline: document.getElementById('taskDeadline').value,
-            dependsOn
+            dependsOn,
+            requiredSkill: document.getElementById('taskRequiredSkill')?.value || ''
           });
           setFeedback('taskCreateFeedback', "Topshiriq qo'shildi.", 'success');
           document.getElementById('taskTitle').value = '';

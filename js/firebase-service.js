@@ -1114,6 +1114,125 @@ window.MllyCore = {
     return apiPost('/api/weekly-digest', authUser, {});
   },
 
+  // ===== T18 Idea Scoring =====
+  async scoreIdea(ideaId, { impact = 0, confidence = 0, ease = 0 } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/score-idea', authUser, { ideaId, impact, confidence, ease });
+  },
+  // ===== T19 Pitch One-Pager =====
+  async generatePitch(ideaId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/generate-pitch', authUser, { ideaId });
+  },
+  // ===== T20 Public Showcase =====
+  async setPublic(ideaId, isPublic) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/set-public', authUser, { ideaId, isPublic });
+    invalidateTeamCache(ideaId ? '' : '');
+    return r;
+  },
+  async getPublicIdea(token) {
+    const res = await fetch(`/api/public-idea?token=${encodeURIComponent(token)}`);
+    return res.json();
+  },
+  // ===== T21 Roadmap =====
+  async getRoadmap(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/roadmap', authUser, { teamId });
+  },
+  // ===== T22 Telegram =====
+  async linkTelegram(chatId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/link-telegram', authUser, { chatId });
+  },
+  // ===== T23 Finances =====
+  async saveFinances({ teamId, monthlyBudget, burnRate, currency }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/finances', authUser, { teamId, monthlyBudget, burnRate, currency });
+  },
+  async getRunway(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/runway', authUser, { teamId });
+  },
+  // ===== T24 Decision Log =====
+  async addDecision({ teamId, title, rationale, decision }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/decision-log', authUser, { teamId, title, rationale, decision });
+  },
+  // ===== T25 Skills =====
+  async updateSkills(skills) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/update-skills', authUser, { skills });
+  },
+  // ===== T26 Stale Ideas =====
+  async getStaleIdeas(days = 14) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/stale-ideas', authUser, { days });
+  },
+  // ===== T27 Comment + @mention =====
+  async addComment({ ideaId, text, mentions }) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/comment', authUser, { ideaId, text, mentions });
+    invalidateTeamCache('');
+    return r;
+  },
+  // ===== T28 Reputation =====
+  async getReputation(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/reputation', authUser, { teamId });
+  },
+  // ===== T29 Idea Stage =====
+  async setStage(ideaId, stage) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/set-stage', authUser, { ideaId, stage });
+  },
+  // ===== T30 Meeting Notes =====
+  async saveMeetingNotes({ teamId, title, notes, actionItems, decisions }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/meeting-notes', authUser, { teamId, title, notes, actionItems, decisions });
+  },
+  // ===== T31 GitHub Sync =====
+  async syncGithubIssue({ taskId, repo, token }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/sync-github', authUser, { taskId, repo, token });
+  },
+  // ===== T32 Onboarding =====
+  async getOnboardingStatus(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/onboarding-status', authUser, { teamId });
+  },
+  // ===== T33 Locale =====
+  async updateLocale(locale) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/update-preferences', authUser, { locale });
+    return r;
+  },
+  // ===== T34 Voting =====
+  async voteIdea(ideaId) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/vote-idea', authUser, { ideaId });
+    invalidateTeamCache('');
+    return r;
+  },
+  // ===== T35 Risk Register =====
+  async addRisk({ teamId, ideaId, title, likelihood, impact, mitigation }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/risk', authUser, { teamId, ideaId, title, likelihood, impact, mitigation });
+  },
+  // ===== T36 Activity Feed =====
+  async getActivityFeed(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/activity-feed', authUser, { teamId });
+  },
+  // ===== T37 Clone Workspace =====
+  async cloneWorkspace({ teamId, name, leadEmail }) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/clone-workspace', authUser, { teamId, name, leadEmail });
+    invalidateDashboardCache(authUser.uid);
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return r;
+  },
+
   async requireAuth() {
     const state = await this.init();
     if (!state) {

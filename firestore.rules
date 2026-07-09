@@ -179,5 +179,39 @@ service cloud.firestore {
       allow read: if signedIn();
       allow write: if isAdmin();
     }
+
+    // --- T23 Financial Runway ---
+    match /finances/{financeId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow write: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T24 Decision Log ---
+    match /decisions/{decisionId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T30 Meeting Notes ---
+    match /meetingNotes/{noteId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T35 Risk Register ---
+    match /risks/{riskId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T27 Idea Comments ---
+    match /ideaComments/{commentId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow update, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
+    }
   }
 }
