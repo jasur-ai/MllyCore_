@@ -517,7 +517,7 @@ window.MllyCore = {
     );
   },
 
-  async createWorkspace({ name, description, leadEmail }) {
+  async createWorkspace({ name, description, leadEmail, templateId = '' } = {}) {
     const profile = window.MLLYCORE_PROFILE;
     const authUser = await this.ensureAuthed();
     if (profile?.role !== 'admin') throw new Error('Workspace yaratish faqat admin uchun.');
@@ -526,10 +526,90 @@ window.MllyCore = {
     const result = await apiPost('/api/create-workspace', authUser, {
       name: name.trim(),
       description: description?.trim() || '',
-      leadEmail: leadEmail.trim()
+      leadEmail: leadEmail.trim(),
+      templateId
     });
     invalidateDashboardCache(authUser.uid);
     invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
+  },
+
+  // ===== T6 Feature Flags =====
+  async getFeatureFlags({ teamId = '' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/feature-flags', authUser, { teamId });
+  },
+  async setFeatureFlags({ flags = {}, target = 'global' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/set-feature-flags', authUser, { flags, target });
+  },
+
+  // ===== T1 Archive / Restore (soft delete) =====
+  async archiveWorkspace(teamId, restore = false) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/archive-workspace', authUser, { teamId, restore });
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser.uid);
+    return result;
+  },
+
+  // ===== T11 Member permission override =====
+  async updateMemberPermissions({ teamId, userId, permissionsOverride }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/member-permissions', authUser, { teamId, userId, permissionsOverride });
+  },
+
+  // ===== T12 Rollback (audit previousState) =====
+  async rollbackAction(auditId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/rollback', authUser, { auditId });
+  },
+
+  // ===== T15 Cross-workspace overview =====
+  async getMyOverview() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/my-overview', authUser, {});
+  },
+
+  // ===== T4 Time logging =====
+  async logTime({ teamId, taskId, durationMs }) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/log-time', authUser, { teamId, taskId, durationMs });
+    invalidateTeamCache(teamId);
+    return result;
+  },
+
+  // ===== T7 Export my data =====
+  async exportMyData() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/export-my-data', authUser, {});
+  },
+
+  // ===== T9 Presence (client-side Firestore) =====
+  async updatePresence(status = 'online') {
+    const state = await this.init();
+    if (!state) return;
+    const authUser = await this.ensureAuthed();
+    const { doc, setDoc, serverTimestamp } = state.modules.dbMod;
+    const ref = doc(state.db, 'presence', authUser.uid);
+    const write = (s) => setDoc(ref, { status: s, lastSeen: serverTimestamp(), updatedAt: Date.now() }, { merge: true });
+    await write(status);
+    try {
+      window.addEventListener('beforeunload', () => write('offline'));
+    } catch (_) {}
+  },
+  subscribePresence(uid, onChange) {
+    const state = this.init();
+    if (!state || !state.modules) return () => {};
+    const { doc, onSnapshot } = state.modules.dbMod;
+    return onSnapshot(doc(state.db, 'presence', uid), (snap) => onChange(snap.exists() ? snap.data() : null));
+  },
+
+  // ===== T16 Encrypted attachment metadata =====
+  async createAttachmentMeta({ teamId, taskId = '', ideaId = '', fileName, size = 0, iv = null }) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/create-attachment', authUser, { teamId, taskId, ideaId, fileName, size, iv });
+    invalidateTeamCache(teamId);
     return result;
   },
 
