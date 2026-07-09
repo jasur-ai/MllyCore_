@@ -2,6 +2,26 @@ const admin = require('firebase-admin');
 const fs = require('fs');
 const path = require('path');
 
+// --- Kalitni to'g'rilash (asosiy tuzatish) ---
+// PEM private_key ichidagi literal "\n" (teskari chiziq + n) larni
+// haqiqiy new-line ga aylantiradi. Aks holda Node 17+ / OpenSSL 3.0
+// "error:1E08010C:DECODER routines::unsupported" xatosini beradi.
+function normalizePrivateKey(sa) {
+  if (!sa) return sa;
+  const raw = sa.private_key || sa.privateKey;
+  if (typeof raw !== 'string') return sa;
+  let key = raw.trim();
+  // Ba'zan butun qiymat qo'sh tirnoq ichida bo'ladi
+  if (key.startsWith('"') && key.endsWith('"')) key = key.slice(1, -1);
+  // literal \n (2 ta belgi: \ va n) -> haqiqiy new-line
+  key = key.replace(/\\n/g, '\n');
+  // ortiqcha \r larni olib tashlaymiz (Windows/CRLF holatlari uchun)
+  key = key.replace(/\r/g, '');
+  sa.private_key = key;
+  delete sa.privateKey;
+  return sa;
+}
+
 function initAdmin() {
   if (admin.apps.length) return admin.app();
 
@@ -11,17 +31,30 @@ function initAdmin() {
     throw new Error('Vercel env FIREBASE_SERVICE_ACCOUNT_JSON sozlanmagan.');
   }
 
-  const serviceAccount = raw ? parseServiceAccount(raw) : require(localPath);
-  return admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    projectId: serviceAccount.project_id || 'mllycore'
-  });
-}
+  let serviceAccount;
+  if (raw) {
+    const trimmed = raw.trim();
+    serviceAccount = trimmed.startsWith('{')
+      ? JSON.parse(trimmed)
+      : JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+  } else {
+    serviceAccount = require(localPath);
+  }
 
-function parseServiceAccount(value) {
-  const trimmed = value.trim();
-  if (trimmed.startsWith('{')) return JSON.parse(trimmed);
-  return JSON.parse(Buffer.from(trimmed, 'base64').toString('utf8'));
+  serviceAccount = normalizePrivateKey(serviceAccount);
+
+  if (!serviceAccount.private_key || !serviceAccount.client_email || !serviceAccount.project_id) {
+    throw new Error('Firebase Config: Zaruriy maydonlar yetishmayapti.');
+  }
+
+  return admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: serviceAccount.project_id,
+      clientEmail: serviceAccount.client_email,
+      privateKey: serviceAccount.private_key,
+    }),
+    projectId: serviceAccount.project_id || 'mllycore',
+  });
 }
 
 async function requireUser(req, requiredRole = '') {
@@ -79,11 +112,8 @@ async function notifyUsers(db, users, payloadBuilder) {
 
 function mergeRecentItems(items = [], nextItem, limit = 8) {
   const base = Array.isArray(items) ? items.filter(Boolean) : [];
-  const merged = [
-    nextItem,
-    ...base.filter((item) => item && item.id !== nextItem.id)
-  ]
-    .sort((a, b) => Number(b.updatedAtMs || b.createdAtMs || 0) - Number(a.updatedAtMs || a.createdAtMs || 0))
+  const merged = [nextItem, ...base.filter((item) => item && item.id !== nextItem.id)]
+    .sort((a, b) => Number(b.updatedAtMs || b.createdAtMs || 0) - Number(a.updatedAtMs || a.updatedAtMs || 0))
     .slice(0, limit);
   return merged;
 }
@@ -114,5 +144,5 @@ module.exports = {
   randomSecretKey,
   notifyUsers,
   mergeRecentItems,
-  updateTeamSummary
+  updateTeamSummary,
 };
