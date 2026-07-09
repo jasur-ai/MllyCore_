@@ -121,6 +121,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
     createdBy: user.email || decoded.email,
     membersCount: 1,
     healthScore: 50,
+    status: 'active',
     createdAt: SV(),
   });
 
@@ -359,9 +360,15 @@ async function handleUpdateEntryOwner(req, res, db, decoded, user) {
     return { status: 403, error: 'Ruxsat yoq.' };
   }
 
+  const ideaDoc = await db.collection('ideas').doc(ideaId).get();
+  const oldOwner = ideaDoc.exists ? ideaDoc.data().ownerUserId : null;
   const userSnap = await db.collection('users').doc(ownerUserId).get();
   const name = userSnap.exists ? (userSnap.data().name || '') : '';
   await db.collection('ideas').doc(ideaId).update({ ownerUserId, ownerName: name, updatedAt: SV() });
+  await audit(db, 'entry_owner_changed', {
+    teamId, ideaId, fromUserId: oldOwner, toUserId: ownerUserId,
+    restoreCollection: 'ideas', restoreDocId: ideaId,
+  }, { ownerUserId: oldOwner });
   return { status: 200, success: true };
 }
 
@@ -743,6 +750,134 @@ async function handleExport(req, res, db, decoded, user) {
   return { status: 400, error: 'Action xato.' };
 }
 
+/* ----------------- T6/T1/T11/T12/T15/T4/T7 kengaytmalar ----------------- */
+
+// T1 - Workspace arxivlash (soft delete). Hard delete o'zgarishsiz qoladi (R3).
+async function handleArchiveWorkspace(req, res, db, decoded, user) {
+  const { teamId, restore } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  if (user.role !== 'admin') {
+    const m = await getMembership(db, teamId, decoded.uid);
+    if (!m || m.role !== 'team_lead') return { status: 403, error: 'Faqat admin yoki team_lead.' };
+  }
+  const status = restore ? 'active' : 'archived';
+  const upd = { status, updatedAt: SV() };
+  if (!restore) { upd.archivedAt = SV(); upd.archivedBy = decoded.uid; }
+  await db.collection('teams').doc(teamId).update(upd);
+  await audit(db, restore ? 'workspace_restored' : 'workspace_archived', { teamId, byUserId: decoded.uid });
+  invalidateTeamCache(); invalidateDashboardCache();
+  return { status: 200, success: true, status };
+}
+
+// T11 - A'zo uchun maxsus ruxsatlar (faqat admin).
+async function handleUpdateMemberPermissions(req, res, db, decoded, user) {
+  const { teamId, userId, permissionsOverride } = req.body || {};
+  if (!teamId || !userId) return { status: 400, error: 'teamId va userId kerak.' };
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  if (typeof permissionsOverride !== 'object' || permissionsOverride === null) {
+    return { status: 400, error: 'permissionsOverride obyekt bolishi kerak.' };
+  }
+  await db.collection('teamMembers').doc(teamId + '_' + userId).update({ permissionsOverride });
+  await audit(db, 'member_permissions_updated', { teamId, userId, permissionsOverride });
+  return { status: 200, success: true };
+}
+
+// T12 - Audit log'dan qaytarish (faqat admin, 24 soat ichida; parol re-auth client'da).
+async function handleRollbackAction(req, res, db, decoded, user) {
+  const { auditId } = req.body || {};
+  if (!auditId) return { status: 400, error: 'auditId kerak.' };
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const logRef = db.collection('auditLogs').doc(auditId);
+  const log = await logRef.get();
+  if (!log.exists) return { status: 404, error: 'Audit yozuvi topilmadi.' };
+  const data = log.data();
+  if (!data.restoreCollection || !data.restoreDocId || typeof data.previousState === 'undefined') {
+    return { status: 400, error: 'Bu amalni qaytarib bolmaydi.' };
+  }
+  const ts = data.timestamp && data.timestamp.toMillis ? data.timestamp.toMillis() : 0;
+  if (ts && Date.now() - ts > 24 * 60 * 60 * 1000) {
+    return { status: 400, error: "Qaytarish muddati (24 soat) o'tgan." };
+  }
+  await db.collection(data.restoreCollection).doc(data.restoreDocId).set(data.previousState, { merge: true });
+  await audit(db, 'rollback_performed', { auditId, restoreCollection: data.restoreCollection, restoreDocId: data.restoreDocId });
+  return { status: 200, success: true, message: 'Qaytarildi.' };
+}
+
+// T6 - Feature Flags o'qish/yozish. GET: flaglarni qaytaradi. POST: admin o'zgartiradi.
+async function handleFeatureFlags(req, res, db, decoded, user) {
+  const teamId = req.query.teamId || (req.body && req.body.teamId);
+  if (req.method === 'POST') {
+    if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+    const { flags, target } = req.body || {};
+    const docId = target || 'global';
+    if (typeof flags !== 'object' || flags === null) return { status: 400, error: 'flags obyekt bolishi kerak.' };
+    await db.collection('featureFlags').doc(docId).set(flags, { merge: true });
+    return { status: 200, success: true, target: docId };
+  }
+  const out = { global: {}, team: {} };
+  const g = await db.collection('featureFlags').doc('global').get();
+  if (g.exists) out.global = g.data();
+  if (teamId) {
+    if (user.role !== 'admin') {
+      const m = await getMembership(db, teamId, decoded.uid);
+      if (!m || m.role !== 'team_lead') return { status: 403, error: 'Ruxsat yoq.' };
+    }
+    const t = await db.collection('featureFlags').doc(teamId).get();
+    if (t.exists) out.team = t.data();
+  }
+  return { status: 200, flags: out };
+}
+
+// T15 - Foydalanuvchining barcha workspace'laridagi shaxsiy umumlashma.
+async function handleGetMyOverview(req, res, db, decoded) {
+  const mem = await db.collection('teamMembers').where('userId', '==', decoded.uid).get();
+  const teamIds = mem.docs.map((d) => d.data().teamId);
+  const results = [];
+  for (const tid of teamIds) {
+    const tasksSnap = await db.collection('tasks').where('teamId', '==', tid).where('assignedTo', '==', decoded.uid).get();
+    const tasks = tasksSnap.docs.map((d) => d.data());
+    const ideasSnap = await db.collection('ideas').where('teamId', '==', tid).where('createdByUserId', '==', decoded.uid).get();
+    const notifSnap = await db.collection('notifications').where('userId', '==', decoded.uid).where('read', '==', false).get();
+    results.push({
+      teamId: tid,
+      openTasks: tasks.filter((t) => t.status !== 'done').length,
+      completedTasks: tasks.filter((t) => t.status === 'done').length,
+      myIdeas: ideasSnap.size,
+      unreadNotifications: notifSnap.size,
+    });
+  }
+  return { status: 200, userId: decoded.uid, overview: results };
+}
+
+// T4 - Vazifa bo'yicha vaqt kuzatuvi (timeLogs).
+async function handleLogTime(req, res, db, decoded, user) {
+  const { teamId, taskId, durationMs } = req.body || {};
+  if (!teamId || !taskId || !durationMs) return { status: 400, error: 'teamId, taskId, durationMs kerak.' };
+  const ms = parseInt(durationMs, 10);
+  if (!(ms > 0)) return { status: 400, error: 'durationMs musbat bolishi kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  await db.collection('timeLogs').add({ teamId, taskId, userId: decoded.uid, durationMs: ms, loggedAt: SV() });
+  await audit(db, 'time_logged', { teamId, taskId, durationMs: ms });
+  return { status: 201, success: true };
+}
+
+// T7 - Foydalanuvchi o'z ma'lumotlarini eksport qiladi (faqat o'zi uchun).
+async function handleExportMyData(req, res, db, decoded) {
+  const profile = await db.collection('users').doc(decoded.uid).get();
+  const tasksSnap = await db.collection('tasks').where('assignedTo', '==', decoded.uid).get();
+  const ideasSnap = await db.collection('ideas').where('createdByUserId', '==', decoded.uid).get();
+  const personalSnap = await db.collection('personalIdeas').where('userId', '==', decoded.uid).get();
+  const data = {
+    profile: profile.exists ? profile.data() : null,
+    tasks: tasksSnap.docs.map((d) => d.data()),
+    ideas: ideasSnap.docs.map((d) => d.data()),
+    personalIdeas: personalSnap.docs.map((d) => d.data()),
+    exportedAt: new Date().toISOString(),
+  };
+  return { status: 200, fileName: `my-data-${decoded.uid}.json`, data: Buffer.from(JSON.stringify(data)).toString('base64') };
+}
+
 /* --------------------------- Router ------------------------------- */
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -784,6 +919,13 @@ module.exports = async (req, res) => {
     else if (action === 'health-score' || action === 'audit-logs' || action === 'search') result = await handleUtils(req, res, db, decoded, user);
     else if (action === 'convert-idea' || action === 'update-preferences' || action === 'overdue-tasks') result = await handleActions(req, res, db, decoded, user);
     else if (action === 'export-stats') result = await handleExport(req, res, db, decoded, user);
+    else if (action === 'feature-flags' || action === 'set-feature-flags') result = await handleFeatureFlags(req, res, db, decoded, user);
+    else if (pathname.includes('archive-workspace')) result = await handleArchiveWorkspace(req, res, db, decoded, user);
+    else if (action === 'member-permissions') result = await handleUpdateMemberPermissions(req, res, db, decoded, user);
+    else if (action === 'rollback') result = await handleRollbackAction(req, res, db, decoded, user);
+    else if (action === 'my-overview') result = await handleGetMyOverview(req, res, db, decoded, user);
+    else if (action === 'log-time') result = await handleLogTime(req, res, db, decoded, user);
+    else if (action === 'export-my-data') result = await handleExportMyData(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);
