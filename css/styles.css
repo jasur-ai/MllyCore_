@@ -1120,3 +1120,34 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
   0%, 100% { opacity: .55; }
   50% { opacity: 1; }
 }
+
+/* ===== Yuklanish skeleton (tezlik/flash uchun barqaror holat) ===== */
+.workspace-skeleton { display: grid; gap: 16px; }
+.workspace-skeleton-row { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, .9fr); gap: 16px; align-items: start; }
+@media (max-width: 1024px) { .workspace-skeleton-row { grid-template-columns: 1fr; } }
+.sk-surface { border: 1px solid var(--border); border-radius: 18px; background: rgba(21,27,44,0.96); overflow: hidden; }
+.sk-line { height: 14px; border-radius: 8px; margin: 14px 16px; background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.14) 37%, rgba(255,255,255,0.05) 63%); background-size: 400% 100%; animation: skShimmer 1.3s ease-in-out infinite; }
+.sk-line.short { width: 40%; }
+.sk-line.mid { width: 65%; }
+.sk-block { height: 120px; border-radius: 12px; margin: 0 16px 16px; background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.12) 37%, rgba(255,255,255,0.04) 63%); background-size: 400% 100%; animation: skShimmer 1.3s ease-in-out infinite; }
+@keyframes skShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+/* ===== Collapsible (ochiladigan) funksiya bo'limlari ===== */
+.ws-acc-group { display: grid; gap: 12px; }
+.ws-acc { border: 1px solid var(--border); border-radius: 14px; background: rgba(11,15,26,0.5); overflow: hidden; }
+.ws-acc-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 14px 16px; background: transparent; border: 0; color: var(--text);
+  font-size: 15px; font-weight: 600; cursor: pointer; text-align: left;
+}
+.ws-acc-head:hover { background: var(--panel-2); }
+.ws-acc-ico { transition: transform .18s ease; color: var(--muted); font-size: 13px; }
+.ws-acc.open .ws-acc-ico { transform: rotate(90deg); }
+.ws-acc-body { display: none; padding: 4px 16px 18px; border-top: 1px solid var(--border); }
+.ws-acc.open .ws-acc-body { display: block; animation: accIn .18s ease; }
+@keyframes accIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.ws-acc-hint { color: var(--muted); font-size: 13px; line-height: 1.6; margin: 12px 0 0; }
+.ws-mini-form { display: grid; gap: 10px; margin-top: 12px; }
+
+/* GitHub tugmasi (vazifa kartasida) */
+.github-synced { display: inline-flex; align-items: center; gap: 6px; color: #6ee7b7; font-size: 12px; font-weight: 600; }

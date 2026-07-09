@@ -49,6 +49,7 @@
     };
 
     let chatUnsubscribe = null;
+    let presenceUnsubs = [];
     let workspaceState = null;
     let chatSeenSyncPending = false;
     let chatSeenTimer = null;
@@ -336,6 +337,7 @@
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
               <button class="btn btn-ghost btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
               <button class="btn btn-ghost btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
+              <button class="btn btn-ghost btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
               <input type="file" id="file-${task.id}" style="display:none">
             </div>
             <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
@@ -439,6 +441,23 @@
         });
       });
 
+      // T31 - GitHub'ga yuborish (vazifani GitHub issue ga aylantirish)
+      document.querySelectorAll('[data-task-github]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const taskId = button.dataset.taskGithub;
+          const repo = window.prompt("GitHub repo (masalan: user/repo):", '');
+          if (!repo) return;
+          const token = window.prompt("GitHub token (ixtiyoriy — bo'sh qoldirsangiz serverdagi GITHUB_TOKEN env avtomatik ishlatiladi):", '');
+          button.disabled = true;
+          try {
+            const r = await MllyCore.syncGithubIssue({ taskId, repo: repo.trim(), token: (token || '').trim() });
+            UTIL.toast('GitHub issue yaratildi');
+            if (r.issueUrl) button.insertAdjacentHTML('afterend', ` <a class="github-synced" href="${escapeHtml(r.issueUrl)}" target="_blank" rel="noopener">✓ GitHub'da</a>`);
+          } catch (e) { UTIL.toast(e.message); }
+          finally { button.disabled = false; }
+        });
+      });
+
       if (isLead) {
         const assignmentMode = document.getElementById('taskAssignmentMode');
         const assigneeWrap = document.getElementById('taskAssigneeWrap');
@@ -449,6 +468,34 @@
         assignmentMode?.addEventListener('change', toggleAssignee);
         toggleAssignee();
       }
+    }
+
+    function renderWorkspaceSkeleton() {
+      const target = document.getElementById('content');
+      if (!target) return;
+      target.innerHTML = `
+        <section class="workspace-command"><div class="sk-line mid"></div><div class="sk-line short"></div></section>
+        <section class="workspace-overview">
+          <div class="sk-surface"><div class="sk-line"></div><div class="sk-line short"></div></div>
+          <div class="sk-surface"><div class="sk-line"></div><div class="sk-line short"></div></div>
+          <div class="sk-surface"><div class="sk-line"></div><div class="sk-line short"></div></div>
+          <div class="sk-surface"><div class="sk-line"></div><div class="sk-line short"></div></div>
+        </section>
+        <section class="workspace-skeleton">
+          <div class="workspace-skeleton-row">
+            <div class="sk-surface">
+              <div class="sk-line"></div>
+              <div class="sk-block"></div>
+              <div class="sk-block"></div>
+              <div class="sk-block"></div>
+            </div>
+            <div class="sk-surface">
+              <div class="sk-line"></div>
+              <div class="sk-block"></div>
+            </div>
+          </div>
+        </section>
+      `;
     }
 
     async function renderWorkspace(data, currentUserId) {
@@ -682,24 +729,66 @@
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>Qo'shimcha (T21 / T24 / T28 / T30 / T36)</h2>
-                  <div class="workspace-surface-copy">Roadmap, qarorlar, meeting, activity, reputation.</div>
+                  <h2>Qo'shimcha funksiyalar</h2>
+                  <div class="workspace-surface-copy">Har bir funksiyani ochib ko'ring — ma'lumot va amallar shu yerda (T21 / T23 / T24 / T28 / T30 / T36).</div>
                 </div>
               </div>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-                <button class="btn btn-secondary btn-sm" id="roadmapBtn">🗺 Roadmap</button>
-                <button class="btn btn-secondary btn-sm" id="decisionsBtn">📌 Qarorlar</button>
-                <button class="btn btn-secondary btn-sm" id="meetingBtn">📝 Meeting</button>
-                <button class="btn btn-secondary btn-sm" id="activityBtn">📡 Activity</button>
-                <button class="btn btn-secondary btn-sm" id="repBtn">🏅 Reputation</button>
-                <button class="btn btn-secondary btn-sm" id="financeBtn">💰 Moliyaviy (T23)</button>
-              </div>
-              <div id="extraTeamOut" style="padding-top:4px;"></div>
-              <div id="meetingForm" style="display:none;margin-top:12px;">
-                <input class="input mb-3" id="meetingTitle" placeholder="Meeting sarlavhasi">
-                <textarea class="textarea mb-3" id="meetingNotes" rows="2" placeholder="Qaydlar"></textarea>
-                <input class="input mb-3" id="meetingActions" placeholder="Action item'lar (vergul bilan)">
-                <button class="btn btn-primary btn-sm" id="meetingSaveBtn">Saqlash</button>
+              <div class="ws-acc-group">
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="roadmap">🗺 Roadmap (T21) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-roadmap"><p class="ws-acc-hint">Vazifalarning muddati va bog'liqligi bo'yicha vaqt chizig'i. Ochib ko'rish uchun bosing.</p></div>
+                </div>
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="decisions">📌 Qarorlar (T24) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-decisions"><p class="ws-acc-hint">Jamoa qabul qilgan qarorlar kundaligi. Ochib ko'rish uchun bosing.</p></div>
+                </div>
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="meeting">📝 Meeting (T30) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-meeting">
+                    <p class="ws-acc-hint">Meeting qaydlarini kiriting — action item'lar avtomatik vazifaga aylanadi.</p>
+                    <div class="ws-mini-form">
+                      <input class="input" id="meetingTitle" placeholder="Meeting sarlavhasi">
+                      <textarea class="textarea" id="meetingNotes" rows="2" placeholder="Qaydlar"></textarea>
+                      <input class="input" id="meetingActions" placeholder="Action item'lar (vergul bilan)">
+                      <button class="btn btn-primary btn-sm" id="meetingSaveBtn" style="justify-self:start">Saqlash</button>
+                    </div>
+                  </div>
+                </div>
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="activity">📡 Activity (T36) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-activity"><p class="ws-acc-hint">Jamoa activity va audit oqimi. Ochib ko'rish uchun bosing.</p></div>
+                </div>
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="reputation">🏅 Reputation (T28) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-reputation"><p class="ws-acc-hint">A'zolarning obro'si reytingi. Ochib ko'rish uchun bosing.</p></div>
+                </div>
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="finance">💰 Moliyaviy (T23) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-finance">
+                    <p class="ws-acc-hint">Oylik byudjet va burn-rate ni kiriting — qancha oy yetishin (runway) hisoblab ko'rsatamiz.</p>
+                    <div class="ws-mini-form">
+                      <div>
+                        <label class="label">Oylik byudjet (USD)</label>
+                        <input class="input" id="financeBudget" type="number" min="0" placeholder="5000">
+                      </div>
+                      <div>
+                        <label class="label">Oylik burn-rate (USD)</label>
+                        <input class="input" id="financeBurn" type="number" min="0" placeholder="2000">
+                      </div>
+                      <div>
+                        <label class="label">Valyuta</label>
+                        <select class="input" id="financeCurrency">
+                          <option value="USD">USD</option>
+                          <option value="UZS">UZS</option>
+                          <option value="EUR">EUR</option>
+                          <option value="RUB">RUB</option>
+                        </select>
+                      </div>
+                      <button class="btn btn-primary btn-sm" id="financeSaveBtn" style="justify-self:start">Saqlash va runway ko'rsatish</button>
+                    </div>
+                    <div id="financeRunway" style="margin-top:10px"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -757,7 +846,10 @@
       renderEntries(data, currentUserId, isLead);
       renderTasks(data, currentUserId, isLead);
       renderMembers(data, currentUserId);
-      // T9 - Presence: har bir a'zo holatini realtime obuna qilish
+      // T9 - Presence: har bir a'zo holatini realtime obuna qilish.
+      // Eski obunalarni tozalash (har refresh'da yangi obuna yaratilib, xotira sizib chiqmasin — tezlik uchun).
+      presenceUnsubs.forEach((unsub) => { try { unsub(); } catch (_) {} });
+      presenceUnsubs = [];
       if (data.members) {
         data.members.forEach((member) => {
           MllyCore.subscribePresence(member.userId, (p) => {
@@ -767,38 +859,53 @@
               dot.style.background = st === 'online' ? '#22c55e' : st === 'away' ? '#f59e0b' : '#64748b';
               dot.title = st;
             }
-          }).catch(() => {});
+          }).then((unsub) => { if (typeof unsub === 'function') presenceUnsubs.push(unsub); }).catch(() => {});
         });
       }
       renderChat(data.messages || [], currentUserId);
 
-      // T21 / T24 / T28 / T30 / T36 — qo'shimcha panel
+      // T21 / T23 / T24 / T28 / T30 / T36 — collapsible (ochiladigan) panel.
+      // Har bir funksiya alohida bo'lim; ustidan bosganda ochiladi, ma'lumot faqat bir marta yuklanadi (tezlik uchun).
       (async () => {
         const teamIdT = data.team.id;
-        const out = document.getElementById('extraTeamOut');
-        const renderList = (title, arr, fmt) => {
-          out.innerHTML = `<h3 style="margin:8px 0;">${title}</h3>` + (arr && arr.length ? `<div class="workspace-message-stack">${arr.map(fmt).join('')}</div>` : '<div class="muted">Ma\'lumot yo\'q</div>');
+        const loadedAcc = {};
+
+        const renderList = (container, title, arr, fmt) => {
+          container.innerHTML = `<h3 style="margin:8px 0 4px;">${title}</h3>` + (arr && arr.length ? `<div class="workspace-message-stack">${arr.map(fmt).join('')}</div>` : '<div class="muted">Ma’lumot yo’q</div>');
         };
-        document.getElementById('roadmapBtn')?.addEventListener('click', async () => {
-          try { const r = await MllyCore.getRoadmap(teamIdT); renderList('🗺 Roadmap', r.tasks, (t) => `<div class="workspace-message-item"><strong>${escapeHtml(t.title)}</strong> — ${escapeHtml(t.status || 'open')} ${Array.isArray(t.dependsOn) && t.dependsOn.length ? '🔒' : ''}</div>`); }
-          catch (e) { out.textContent = e.message; }
+
+        document.querySelectorAll('.ws-acc-head').forEach((head) => {
+          head.addEventListener('click', async () => {
+            const acc = head.closest('.ws-acc');
+            const key = head.dataset.acc;
+            const wasOpen = acc.classList.contains('open');
+            document.querySelectorAll('.ws-acc').forEach((a) => a.classList.remove('open'));
+            if (wasOpen) return;
+            acc.classList.add('open');
+
+            if (loadedAcc[key]) return;
+            const body = acc.querySelector('.ws-acc-body');
+            try {
+              if (key === 'roadmap' && body) {
+                const r = await MllyCore.getRoadmap(teamIdT); loadedAcc.roadmap = true;
+                renderList(body, '🗺 Roadmap', r.tasks, (t) => `<div class="workspace-message-item"><strong>${escapeHtml(t.title)}</strong> — ${escapeHtml(t.status || 'open')} ${Array.isArray(t.dependsOn) && t.dependsOn.length ? '🔒' : ''}</div>`);
+              } else if (key === 'decisions' && body) {
+                const list = await MllyCore.getDecisions(teamIdT); loadedAcc.decisions = true;
+                renderList(body, '📌 Qarorlar', list, (d) => `<div class="workspace-message-item"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.decision || '')}</span></div>`);
+              } else if (key === 'reputation' && body) {
+                const r = await MllyCore.getReputation(teamIdT); loadedAcc.reputation = true;
+                renderList(body, '🏅 Reputation', r.members, (m) => `<div class="workspace-message-item"><strong>${escapeHtml(m.name)}</strong> — ${m.reputation || 0} ball (${escapeHtml(m.role)})</div>`);
+              } else if (key === 'activity' && body) {
+                const r = await MllyCore.getActivityFeed(teamIdT); loadedAcc.activity = true;
+                renderList(body, '📡 Activity', r.feed, (f) => `<div class="workspace-message-item"><span>${escapeHtml(f.kind || '')}</span> <span>${escapeHtml(f.action || f.type || f.text || '')}</span></div>`);
+              }
+            } catch (e) {
+              if (body) body.textContent = e.message;
+            }
+          });
         });
-        document.getElementById('decisionsBtn')?.addEventListener('click', async () => {
-          try { const snap = await MllyCore.getCollection('decisions'); const list = snap.filter((d) => d.teamId === teamIdT); renderList('📌 Qarorlar', list, (d) => `<div class="workspace-message-item"><strong>${escapeHtml(d.title)}</strong><span>${escapeHtml(d.decision || '')}</span></div>`); }
-          catch (e) { out.textContent = e.message; }
-        });
-        document.getElementById('repBtn')?.addEventListener('click', async () => {
-          try { const r = await MllyCore.getReputation(teamIdT); renderList('🏅 Reputation', r.members, (m) => `<div class="workspace-message-item"><strong>${escapeHtml(m.name)}</strong> — ${m.reputation || 0} ball (${escapeHtml(m.role)})</div>`); }
-          catch (e) { out.textContent = e.message; }
-        });
-        document.getElementById('activityBtn')?.addEventListener('click', async () => {
-          try { const r = await MllyCore.getActivityFeed(teamIdT); renderList('📡 Activity', r.feed, (f) => `<div class="workspace-message-item"><span>${escapeHtml(f.kind || '')}</span> <span>${escapeHtml(f.action || f.type || f.text || '')}</span></div>`); }
-          catch (e) { out.textContent = e.message; }
-        });
-        document.getElementById('meetingBtn')?.addEventListener('click', () => {
-          const f = document.getElementById('meetingForm');
-          f.style.display = f.style.display === 'none' ? 'block' : 'none';
-        });
+
+        // T30 Meeting saqlash
         document.getElementById('meetingSaveBtn')?.addEventListener('click', async () => {
           try {
             await MllyCore.saveMeetingNotes({
@@ -810,16 +917,24 @@
             UTIL.toast('Meeting saqlandi');
           } catch (e) { UTIL.toast(e.message); }
         });
-        document.getElementById('financeBtn')?.addEventListener('click', async () => {
+
+        // T23 Moliyaviy — inline forma (prompt'siz), runway darhol ko'rsatiladi
+        document.getElementById('financeSaveBtn')?.addEventListener('click', async () => {
+          const fb = document.getElementById('financeRunway');
+          const btn = document.getElementById('financeSaveBtn');
+          btn.disabled = true;
           try {
-            const budget = window.prompt('Oylik byudjet (USD):', '5000');
-            if (budget === null) return;
-            const burn = window.prompt('Oylik burn-rate (USD):', '2000');
-            if (burn === null) return;
-            await MllyCore.saveFinances({ teamId: teamIdT, monthlyBudget: Number(budget) || 0, burnRate: Number(burn) || 0, currency: 'USD' });
+            await MllyCore.saveFinances({
+              teamId: teamIdT,
+              monthlyBudget: Number(document.getElementById('financeBudget').value) || 0,
+              burnRate: Number(document.getElementById('financeBurn').value) || 0,
+              currency: document.getElementById('financeCurrency').value || 'USD'
+            });
             const r = await MllyCore.getRunway(teamIdT);
-            out.innerHTML = `<h3 style="margin:8px 0;">💰 Runway</h3><div class="workspace-message-stack"><div class="workspace-message-item"><strong>Qolgan oy:</strong> ${r.runwayMonths === null ? '∞ (burn=0)' : r.runwayMonths + ' oy'}</div></div>`;
-          } catch (e) { UTIL.toast(e.message); }
+            fb.innerHTML = `<div class="workspace-message-item"><strong>Qolgan oy:</strong> ${r.runwayMonths === null ? '∞ (burn=0)' : r.runwayMonths + ' oy'}</div>`;
+            UTIL.toast('Moliyaviy saqlandi');
+          } catch (e) { if (fb) fb.textContent = e.message; }
+          finally { btn.disabled = false; }
         });
       })();
       scheduleChatSeen(data.messages || [], currentUserId, data.team.id);
@@ -1005,12 +1120,22 @@
       }
 
       const teamId = qs('id');
+      const profile = window.MLLYCORE_PROFILE;
+
+      // Tezlik: sidebar (layout) keshlangan dashboard bilan DARHOL chiqadi,
+      // keyin ma'lumotlar yuklanganda faqat header/sidebar almashtiriladi (to'liq qayta chizilmaydi).
+      // Shuningdek kontent o'rniga barqaror skeleton ko'rsatamiz — "sochilib yig'ilish" yo'q.
+      const cachedDash = await MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], notifications: [] }));
+      mountLayout('', { profile, teams: cachedDash.teams || [], notifications: cachedDash.notifications || [] });
+      renderWorkspaceSkeleton();
+
       MllyCore.syncTeamTasks(teamId).catch(() => {});
       const [dashboard, initialWorkspace] = await Promise.all([
-        MllyCore.getDashboardData(user.uid),
+        MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(() => cachedDash),
         teamId ? MllyCore.getTeamData(teamId) : Promise.resolve(null)
       ]);
-      mountLayout('', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
+      mountLayout('', { profile, teams: dashboard.teams || [], notifications: dashboard.notifications || [] });
+      window.APP_CONTEXT = { profile, teams: dashboard.teams, notifications: dashboard.notifications };
       workspaceState = initialWorkspace;
       if (!workspaceState) {
         document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
@@ -1022,6 +1147,7 @@
 
     window.addEventListener('beforeunload', () => {
       if (typeof chatUnsubscribe === 'function') chatUnsubscribe();
+      presenceUnsubs.forEach((unsub) => { try { unsub(); } catch (_) {} });
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
       MllyCore.updatePresence('offline').catch(() => {});
     });

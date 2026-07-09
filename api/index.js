@@ -951,16 +951,28 @@ async function handleGetMyOverview(req, res, db, decoded) {
   const teamIds = mem.docs.map((d) => d.data().teamId);
   const results = [];
   for (const tid of teamIds) {
-    const tasksSnap = await db.collection('tasks').where('teamId', '==', tid).where('assignedTo', '==', decoded.uid).get();
+    // T15 — har bir workspace uchun nom ham qaytaramiz (UI'da ID emas, nom ko'rinadi)
+    const [teamSnap, tasksSnap, ideasSnap, notifSnap] = await Promise.all([
+      db.collection('teams').doc(tid).get(),
+      db.collection('tasks').where('teamId', '==', tid).where('assignedTo', '==', decoded.uid).get(),
+      db.collection('ideas').where('teamId', '==', tid).where('createdByUserId', '==', decoded.uid).get(),
+      db.collection('notifications').where('userId', '==', decoded.uid).get(),
+    ]);
+    const team = teamSnap.exists ? teamSnap.data() : {};
     const tasks = tasksSnap.docs.map((d) => d.data());
-    const ideasSnap = await db.collection('ideas').where('teamId', '==', tid).where('createdByUserId', '==', decoded.uid).get();
-    const notifSnap = await db.collection('notifications').where('userId', '==', decoded.uid).where('read', '==', false).get();
+    // O'qilmaganlar: eski `read:false` yoki yangi `unread:true`/`isRead:false` belgilari
+    const unreadNotifications = notifSnap.docs.filter((d) => {
+      const n = d.data();
+      return n.unread === true || n.isRead === false || n.read === false;
+    }).length;
     results.push({
       teamId: tid,
+      teamName: team.name || tid,
+      role: (mem.docs.find((m) => m.data().teamId === tid)?.data() || {}).role || 'member',
       openTasks: tasks.filter((t) => t.status !== 'done').length,
       completedTasks: tasks.filter((t) => t.status === 'done').length,
       myIdeas: ideasSnap.size,
-      unreadNotifications: notifSnap.size,
+      unreadNotifications,
     });
   }
   return { status: 200, userId: decoded.uid, overview: results };
@@ -1019,7 +1031,7 @@ async function handleCreateAttachment(req, res, db, decoded, user) {
 
 /* ---------------- T3 Admin 2FA (enable / verify / disable) ---------------- */
 async function handleEnable2FA(req, res, db, decoded, user) {
-  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  // T3 — 2FA har rol uchun o'z shaxsiy hisobida yoqiladi (admin/lead/member/manager)
   const secret = generateTotpSecret();
   await db.collection('users').doc(decoded.uid).update({ twoFactorSecret: secret, twoFactorEnabled: false });
   const label = encodeURIComponent(user.email || decoded.uid);
@@ -1028,7 +1040,7 @@ async function handleEnable2FA(req, res, db, decoded, user) {
 }
 
 async function handleVerify2FA(req, res, db, decoded, user) {
-  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  // T3 — foydalanuvchi faqat o'zining 2FA kodini tasdiqlaydi
   const { code } = req.body || {};
   const docSnap = await db.collection('users').doc(decoded.uid).get();
   const data = docSnap.exists ? docSnap.data() : {};
@@ -1040,7 +1052,7 @@ async function handleVerify2FA(req, res, db, decoded, user) {
 }
 
 async function handleDisable2FA(req, res, db, decoded, user) {
-  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  // T3 — foydalanuvchi faqat o'zining 2FA ni o'chiradi
   const { code } = req.body || {};
   const docSnap = await db.collection('users').doc(decoded.uid).get();
   const data = docSnap.exists ? docSnap.data() : {};

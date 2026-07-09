@@ -1240,6 +1240,14 @@ window.MllyCore = {
     return apiPost('/api/risk', authUser, { teamId, ideaId, title, likelihood, impact, mitigation });
   },
   // ===== T36 Activity Feed =====
+  async getDecisions(teamId) {
+    const state = await this.init();
+    if (!state) return [];
+    const { collection, getDocs, query, where } = state.modules.dbMod;
+    const snap = await getDocs(query(collection(state.db, 'decisions'), where('teamId', '==', teamId)));
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  },
+
   async getActivityFeed(teamId) {
     const authUser = await this.ensureAuthed();
     return apiPost('/api/activity-feed', authUser, { teamId });

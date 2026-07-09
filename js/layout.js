@@ -23,11 +23,19 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Statistika</a>
       <a href="admin.html" class="nav-item ${active === 'admin' ? 'active' : ''}">Admin paneli</a>
       <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Barcha Hisobotlar</a>
+      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
+        Bildirishnomalar
+        ${unread ? `<span class="count">${unread}</span>` : ''}
+      </a>
       <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else if (isManager) {
     navItems = `
       <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Team Hisobotlari</a>
+      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
+        Bildirishnomalar
+        ${unread ? `<span class="count">${unread}</span>` : ''}
+      </a>
       <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else {

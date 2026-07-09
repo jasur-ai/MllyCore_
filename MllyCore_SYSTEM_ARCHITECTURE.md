@@ -331,3 +331,33 @@ node scripts/generate-weekly-digest.js  # T17 ni lokal tekshirish (FIREBASE_SERV
 ---
 
 *Bu hujjat — kelajakdagi barcha o'zgarishlar uchun yakuniy manba (single source of truth). **Barcha T1–T37 funksiyalari arxitekturaga kiritildi va to'liq kodlangan.** Holat: 2026-07-09, kod darajasida tekshirilgan; runtime sinov qilinmagan.*
+
+---
+
+## XV. Handoff — 2026-07-09 UI/UX batch (faktlar)
+
+Quyidagi o'zgarishlar bitta sessiyada, additive tarzda qilindi. Buzilgan narsa yo'q.
+
+### Qilingan ishlar
+1. **Notifications nav** — `js/layout.js` `renderLayout` ichida admin va manager branch'lariga ham "Bildirishnomalar" linki qo'shildi (oldin faqat member uchun edi). Unread count ko'rsatiladi.
+2. **`my-overview` (T15)** — `api/index.js handleGetMyOverview` endi har team uchun `teamName` va `role` qaytaradi, va o'qilmaganlar `unread===true || isRead===false || read===false` bo'yicha saniladi. `profile.html loadMyOverview` endi nomini + "Ochish" havolasini ko'rsatadi.
+3. **2FA per-role (T3)** — `handleEnable2FA/Verify/Disable` dan `if (user.role!=='admin')` gate olib tashlandi; endi har qanday authed user o'z 2FA sini boshqaradi. `profile.html twoFactorPanel` barcha rollarda ko'rinadi (display:none gate yo'q). Workspace delete-dagi 2FA re-auth (R3) faqat admin uchun qolgan.
+4. **Tezlik/layout** — `team.html`: (a) `renderWorkspaceSkeleton()` qo'shildi (barqaror skeleton, "scatter" yo'q); (b) init IIFE sidebar'ni keshdan darhol chiqaradi, keyin bir marta yangilaydi; (c) `presenceUnsubs` massivi orqali presence obunalari har `renderWorkspace` da tozalanadi (xotira sizib chiqishi oldini olindi, tezlik saqlandi).
+5. **Collapsible "Qo'shimcha" panel** — `team.html` dagi tugma-qator `ws-acc` accordion'ga almashtirildi (Roadmap/Qarorlar/Meeting/Activity/Reputation/Moliyaviy). Ma'lumot faqat ochilganda, bir marta yuklanadi (lazy).
+6. **Moliyaviy (T23)** — `prompt()` o'rniga inline forma (byudjet/burn-rate/valyuta) + runway darhol ko'rsatiladi.
+7. **GitHub (T31)** — har vazifa kartasiga **🐙 GitHub'ga** tugmasi qo'shildi (`MllyCore.syncGithubIssue`). `profile.html` ga GITHUB_TOKEN env tushuntirish kartasi qo'shildi.
+8. **Telegram/Til/Ko'nikma tushuntirishlari** — `profile.html` ga @userinfobot orqali Chat ID olish, ko'nikma/sayt-tili farqi haqida matn qo'shildi.
+
+### Xavfsizlik qoidalari (R1–R5) — buzilmagan
+- R1: `mountLayout` har sahifada bir marta (app class tekshiruvi orqali).
+- R2: `reports.html` faqat ruxsatlilar uchun (dashboard.html logic).
+- R3: workspace delete parol re-auth + admin 2FA (saqlangan).
+- R4: har yozuvda cache invalidate (firebase-service.js).
+- R5: Vercel env `FIREBASE_SERVICE_ACCOUNT_JSON` to'g'ri JSON bo'lishi shart.
+
+### Deploy eslatmasi (kelasi AI esidan chiqarmasin)
+`firestore.indexes.json` da Roadmap (`tasks.teamId+dueDate+__name__`) va Activity (`auditLogs.teamId+timestamp+__name__`) composite index'lari bor. Ularni Firebase'ga joylashtirmasdan Roadmap/Activity "index required" deb xato beradi. Deploy:
+`firebase deploy --only firestore:rules,firestore:indexes` keyin Vercel redeploy.
+
+### Tekshirilmagan (runtime emas)
+Firebase Emulator yoki Vercel orqali hech qanday endpoint ishga tushirilmagan. 2FA verify, GitHub sync (GITHUB_TOKEN kerak), T16 Storage enable bo'lishi tasdiqlanmagan.
