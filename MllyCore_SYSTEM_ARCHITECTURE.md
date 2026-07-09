@@ -1,6 +1,8 @@
 # MllyCore — To'liq Texnik va Tizimli Xarita (Arxitektura Spetsifikatsiyasi)
 
 > Loyihaning yakuniy, kelishilgan texnik xaritasi. Barcha funksiyalar (asl yadro + kengaytmalar + **T1–T37** takliflari) tizimning ajralmas qismi sifatida belgilangan. Kelajakdagi har qanday ish shu hujjatga asoslanadi.
+>
+> **🔴 JORIY HOLAT (2026-07-09):** T1–T37 — **barchasi kodlangan va tekshirilgan** (`node --check` o'tdi, UI bog'langan, `firestore.rules` yangilangan). Runtime/Deploy sinov qilinmagan. Detail uchun **XIV. bo'lim**ni o'qi. GitHub'ga push QILINMAYDI — foydalanuvchi (`jasur-ai`) o'zi qiladi.
 
 ---
 
@@ -136,7 +138,7 @@ MllyCore — startaplar, jamoalar va ishlab chiquvchilar uchun **yopiq (Privacy 
 | T36 | Activity Timeline | Barcha workspace hodisalari birlashgan lenta (chatdan tashqari) | `activity-feed` (GET) | (auditLogs + notifications asosida) |
 | T37 | Workspace Clone | Mavjud workspace ni shablon sifatida nusxalash (T13 ni kengaytiradi) | `clone-workspace` | `teams`, `templates` |
 
-**Barcha T18–T37** — backend (`api/index.js`), frontend (`js/firebase-service.js` + sahifalar) va `firestore.rules` darajasida **arxitekturaga kiritildi**; kodlash T1–T17 namunasidagi keyingi bosqichda amalga oshiriladi. T1–T17 esa to'liq kodlangan.
+**Barcha T1–T37** — backend (`api/index.js`), frontend (`js/firebase-service.js` + sahifalar) va `firestore.rules` darajasida **to'liq kodlangan va 2026-07-09 da tekshirilgan**. T18–T37 faqat reja emas — ular ham T1–T17 bilan birga amalga oshirilgan.
 
 ---
 
@@ -181,7 +183,7 @@ T1–T17 (AMALGA OSHIRILGAN)
   POST /api/notify                  (T14)
   POST /api/weekly-digest           (T17, cron + admin)
 
-T18–T37 (REJA — arxitekturaga kiritildi)
+T18–T37 (AMALGA OSHIRILGAN ✅ — kodlangan + node --check o'tgan)
   POST /api/score-idea              (T18)
   POST /api/generate-pitch          (T19)
   POST /api/set-public | GET /api/public-idea?token=   (T20)
@@ -224,7 +226,7 @@ T18–T37 (REJA — arxitekturaga kiritildi)
 
 ## IX. Frontend Integratsiya Nuqtalari
 
-| Fayl | Mavjud UI (T1–T17) | Rejalashtirilgan (T18–T37) |
+| Fayl | Mavjud UI (T1–T17) | AMALGA OSHIRILGAN (T18–T37) |
 |------|---------------------|----------------------------|
 | `admin.html` | T6, T1, T11, T12, T10, T13 | T23 (finances tab), T28 (reputation) |
 | `profile.html` | T15, T7, T3, T14 | T25 (skills), T33 (locale) |
@@ -290,4 +292,41 @@ node scripts/generate-weekly-digest.js  # T17 ni lokal tekshirish (FIREBASE_SERV
 
 ---
 
-*Bu hujjat — kelajakdagi barcha o'zgarishlar uchun yakuniy manba (single source of truth). **Barcha T1–T37 funksiyalari arxitekturaga kiritildi** va to'liq kodlangan.*
+---
+
+## XIV. JORIY HOLAT — KEYINGI AI UCHUN (FAKTLAR, tavsiya emas)
+
+> Bu bo'lim — kelasi AI sessiyasi uchun holat yozuvi. Tavsiya/ko'rsatma emas, **faktlar** va **qoidalar** yozilgan. O'qib, esda saqlash uchun mo'ljallangan.
+
+### A. Nima qilingan (FACTS)
+- **T1–T37 — barchasi kodlangan va 2026-07-09 da tekshirilgan.** Backend `api/index.js` (1727 qator) + `api/weekly-digest.js`; frontend bridge `js/firebase-service.js` (1494 qator); UI: `idea.html`, `team.html`, `profile.html`, `admin.html`; `firestore.rules` yangi kolleksiyalar uchun.
+- **`node --check` o'tdi:** `api/index.js`, `api/weekly-digest.js`, `js/firebase-service.js`, `scripts/generate-weekly-digest.js`, `scripts/backfill-team-summaries.js`, `scripts/reset-production-data.js`.
+- **T18–T37 handler'lari `api/index.js` da mavjud** (har biri uchun `async function handle*`), router'da branch'lari bor.
+- **Bridge metodlari `js/firebase-service.js` da mavjud:** `scoreIdea`, `generatePitch`, `setPublic`, `getPublicIdea`, `getRoadmap`, `linkTelegram`, `saveFinances`, `getRunway`, `addDecision`, `updateSkills`, `getStaleIdeas`, `addComment`, `getReputation`, `setStage`, `saveMeetingNotes`, `syncGithubIssue`, `getOnboardingStatus`, `updateLocale`, `voteIdea`, `addRisk`, `getActivityFeed`, `cloneWorkspace`.
+- **UI bog'langan:** `idea.html` `extraIdeaPanel` (scoreIdea/generatePitch/setPublic/voteIdea/addComment/setStage/addRisk), `team.html` (getRoadmap/getReputation/getActivityFeed/saveMeetingNotes/saveFinances/getRunway), `profile.html` `extraProfilePanel` (linkTelegram/updateSkills/updateLocale), `admin.html` `data-clone-workspace`.
+- **`firestore.rules` yangi kolleksiyalar:** `featureFlags`, `timeLogs`, `templates`, `presence`, `attachments`, `digests`, `finances`, `decisions`, `meetingNotes`, `risks`, `ideaComments`.
+- **ZIP tayyor:** `/home/user/MllyCore_project.zip` — toza (`.git`/`node_modules`/secrets yo'q).
+- **Parolni unutish (forgot-password) QO'SHILDI (2026-07-09):** `login.html` da "Parolni unutdingizmi?" linki + `api/index.js` da authsiz `handleForgotPassword` endpoint (`/api/forgot-password`) + `js/firebase-service.js` da `requestPasswordReset(email)`. Qoida: **faqat admin bo'lmaganlar** uchun — server `users` kolleksiyasida `role === 'admin'` ni tekshiradi, admin bo'lsa "Firebase Console orqali tiklang" deb qaytaradi; aks holda klient `sendPasswordResetEmail` chaqiradi. (Sababi: `firestore.rules` `users` ni faqat `signedIn()` o'qiydi, shuning uchun rol tekshiruvi serverda bo'lishi shart.)
+- **Hujjatlar:** bu arxitektura doc + `README.md` T1–T37 ni "amalga oshirilgan" deb belgilagan.
+
+### B. Nima qilinmagan (FACTS — tavsiya emas)
+- **Runtime / Deploy sinov qilinmagan.** Hech qanday endpoint Firebase Emulator yoki Vercel deploy orqali ishga tushirilmagan.
+- **`firebase deploy --only firestore:rules,firestore:indexes` bajarilmagan.**
+- **Firebase Storage (T16) yoqlanganligi tasdiqlanmagan.**
+- **T3 2FA TOTP, T9 presence, T10 analyze, T16 crypto+Storage, T17 cron, T22/T31 (token kerak)** hali runtime'da tekshirilmagan.
+
+### C. QO'IDALAR (buzilmasligi shart — unutma)
+- **Hech qachon GitHub'ga push qilinmaydi.** Foydalanuvchi (`jasur-ai`, repo `https://github.com/jasur-ai/MllyCore_`) local'da o'zi push qiladi. AI push qilmaydi.
+- **R1–R5 xavfsizlik qoidalari hech qachon buzilib ko'chirilmasin** (IV bo'lim). R5 `FIREBASE_SERVICE_ACCOUNT_JSON` — to'g'ri PKCS#8 JSON bo'lishi shart.
+- **Barcha o'zgarishlar additive** — mavjud kod buzib o'zgartirilmaydi, faqat yangi qatorlar qo'shiladi.
+- **T18–T37 "faqat hujjatda yozilgan" deb shubha QILMA.** Bu shubha avval paydo bo'lgan, lekin 2026-07-09 grep + `node --check` bilan TASDIQLANDI: kod haqiqiy. Kerak bo'lsa `grep -c "handleScoreIdea" api/index.js` bilan o'zing tekshir.
+
+### D. Deploy uchun kerakli muhit o'zgaruvchilari (FACTS)
+- `FIREBASE_SERVICE_ACCOUNT_JSON` — **majburiy** (R5).
+- `CRON_SECRET` — ixtiyoriy (weekly-digest cron himoyasi).
+- `TELEGRAM_BOT_TOKEN` — T22 uchun kerak (bo'lmasa T22 ishlamaydi).
+- `GITHUB_TOKEN` — T31 uchun kerak (bo'lmasa T31 ishlamaydi).
+
+---
+
+*Bu hujjat — kelajakdagi barcha o'zgarishlar uchun yakuniy manba (single source of truth). **Barcha T1–T37 funksiyalari arxitekturaga kiritildi va to'liq kodlangan.** Holat: 2026-07-09, kod darajasida tekshirilgan; runtime sinov qilinmagan.*

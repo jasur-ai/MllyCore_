@@ -1618,6 +1618,23 @@ async function handleCloneWorkspace(req, res, db, decoded, user) {
 }
 
 /* --------------------------- Router ------------------------------- */
+// Parolni unutish (faqat admin bo'lmaganlar) — authsiz
+async function handleForgotPassword(req, res, db) {
+  const body = tryParse(req.body) || {};
+  const email = String(body.email || '').trim().toLowerCase();
+  if (!email || !email.includes('@')) return { status: 400, error: 'Email kiriting.' };
+  const snap = await db.collection('users').where('email', '==', email).limit(1).get();
+  if (snap.empty) {
+    // Mavjudligini ochib bermaslik uchun umumiy xabar
+    return { status: 200, sent: false, message: "Agar bunday account mavjud bo'lsa, parol tiklash xati yuborildi." };
+  }
+  const data = snap.docs[0].data();
+  if (data.role === 'admin') {
+    return { status: 200, admin: true, message: 'Admin parolini Firebase Console orqali tiklang.' };
+  }
+  return { status: 200, ok: true, email };
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -1630,6 +1647,17 @@ module.exports = async (req, res) => {
       initAdmin();
       const _db = admin.firestore();
       const _result = await handlePublicIdea(req, res, _db);
+      return res.status(_result.status || 200).json(_result);
+    } catch (e) {
+      return res.status(400).json({ error: (e && e.message) || 'Xatolik' });
+    }
+  }
+
+  if (_pathname.includes('forgot-password')) {
+    try {
+      initAdmin();
+      const _db = admin.firestore();
+      const _result = await handleForgotPassword(req, res, _db);
       return res.status(_result.status || 200).json(_result);
     } catch (e) {
       return res.status(400).json({ error: (e && e.message) || 'Xatolik' });

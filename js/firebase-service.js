@@ -689,6 +689,26 @@ window.MllyCore = {
     await sendPasswordResetEmail(state.auth, user.email);
   },
 
+  // Parolni unutish (faqat admin bo'lmaganlar) — login sahifasidagi "Parolni unutdim"
+  async requestPasswordReset(rawEmail) {
+    const email = String(rawEmail || '').trim().toLowerCase();
+    if (!email.includes('@')) throw new Error('Email kiriting.');
+    const resp = await fetch('/api/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || 'So\'rov bajarilmadi.');
+    if (data.admin) throw new Error(data.message || 'Admin parolini Firebase Console orqali tiklang.');
+    if (!data.ok) return { message: data.message || "Agar account mavjud bo'lsa, parol tiklash xati yuborildi." };
+    const state = await this.init();
+    if (!state) throw new Error('Firebase sozlanmagan.');
+    const { sendPasswordResetEmail } = state.modules.authMod;
+    await sendPasswordResetEmail(state.auth, email);
+    return { message: 'Parol tiklash xati yuborildi. Emailingizni tekshiring.' };
+  },
+
   async sendEmailVerificationLink() {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');

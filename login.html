@@ -64,10 +64,17 @@
           <div class="workspace-form-inline">
             <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" checked> Eslab qolish</label>
             <a href="verify-email.html" class="text-sm" style="color:#7dd3fc">Email tasdiqlash</a>
+            <a href="#" id="forgotLink" class="text-sm" style="color:#7dd3fc; display:block; margin-top:6px;">Parolni unutdingizmi?</a>
           </div>
           <button class="btn btn-primary w-full" type="submit">Kirish</button>
           <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0"></p>
         </form>
+        <div id="forgotBox" style="display:none; margin-top:14px;">
+          <p class="text-sm muted">Parol tiklash uchun emailingizni kiriting (faqat admin bo'lmagan foydalanuvchilar):</p>
+          <input class="input" id="forgotEmail" type="email" placeholder="Email" autocomplete="email" style="margin-top:6px;">
+          <button type="button" class="btn btn-secondary btn-sm w-full" id="forgotSend" style="margin-top:8px;">Tiklash xatini yuborish</button>
+          <p class="text-sm muted" id="forgotMessage" style="min-height:18px;margin:6px 0 0;"></p>
+        </div>
         <div class="auth-helper">
           Akkauntingiz yo'qmi? <a href="register.html">Ro'yxatdan o'ting</a>
         </div>
@@ -125,6 +132,31 @@
         input.type = show ? 'text' : 'password';
         button.textContent = show ? 'Yashir' : "Ko'rsat";
       });
+    });
+
+    const forgotLink = document.getElementById('forgotLink');
+    const forgotBox = document.getElementById('forgotBox');
+    const forgotEmail = document.getElementById('forgotEmail');
+    const forgotSend = document.getElementById('forgotSend');
+    const forgotMessage = document.getElementById('forgotMessage');
+
+    forgotLink?.addEventListener('click', (e) => {
+      e.preventDefault();
+      forgotBox.style.display = forgotBox.style.display === 'none' ? 'block' : 'none';
+    });
+
+    forgotSend?.addEventListener('click', async () => {
+      const email = (forgotEmail?.value || '').trim();
+      forgotMessage.className = 'text-sm muted feedback-info';
+      forgotMessage.textContent = 'Yuborilmoqda...';
+      try {
+        const r = await window.MllyCore.requestPasswordReset(email);
+        forgotMessage.className = 'text-sm muted feedback-info';
+        forgotMessage.textContent = r.message || 'Tayyor.';
+      } catch (err) {
+        forgotMessage.className = 'text-sm muted feedback-error';
+        forgotMessage.textContent = err.message || 'Xatolik yuz berdi.';
+      }
     });
   </script>
 </body>
