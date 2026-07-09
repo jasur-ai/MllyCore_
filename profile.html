@@ -29,6 +29,18 @@
             <div id="personalStatsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
           </div>
 
+          <div class="workspace-surface" style="margin-top:20px;">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>🌐 Barcha Workspace'larim (T15)</h2>
+                <div class="workspace-surface-copy">Siz a'zo bo'lgan barcha workspace'lardagi shaxsiy umumlashma.</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="loadMyOverview()">Yuklash</button>
+            </div>
+            <div id="myOverviewContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+            <button class="btn btn-primary btn-sm" style="margin:12px 16px;" onclick="exportMyData()">📥 Ma'lumotlarimni eksport qilish (T7)</button>
+          </div>
+
           <div class="workspace-surface pad" style="margin-top:20px;">
             <div class="section-head"><h2>⏰ Ish vaqti va Sozlamalar</h2></div>
             <div class="workspace-form-grid">
@@ -153,6 +165,44 @@
         }
       })();
 
+      // ===== T15 Cross-Workspace Overview + T7 Export My Data =====
+      window.loadMyOverview = async () => {
+        try {
+          const data = await MllyCore.getMyOverview();
+          const container = document.getElementById('myOverviewContainer');
+          if (!data.overview || !data.overview.length) {
+            container.innerHTML = '<div class="muted text-sm">Hozircha workspace\'lar yoq.</div>';
+            return;
+          }
+          container.innerHTML = data.overview.map(o => `
+            <div style="background:var(--surface-sub);border:1px solid var(--line);border-radius:12px;padding:14px;">
+              <div style="font-weight:600;margin-bottom:8px;word-break:break-all;">Workspace: ${o.teamId}</div>
+              <div class="text-sm">🟢 Ochiq vazifalar: <b>${o.openTasks}</b></div>
+              <div class="text-sm">✅ Bajarilgan: <b>${o.completedTasks}</b></div>
+              <div class="text-sm">💡 Mening g'oyalarim: <b>${o.myIdeas}</b></div>
+              <div class="text-sm">🔔 O'qilmagan: <b>${o.unreadNotifications}</b></div>
+            </div>
+          `).join('');
+        } catch (e) { console.error('Overview', e); }
+      };
+      window.exportMyData = async () => {
+        try {
+          const data = await MllyCore.exportMyData();
+          if (data.data) {
+            const bin = atob(data.data);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+            const text = new TextDecoder('utf-8').decode(bytes);
+            const blob = new Blob([text], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = data.fileName || 'my-data.json';
+            a.click();
+          }
+        } catch (e) { UTIL.toast(e.message); }
+      };
+      window.loadMyOverview();
+
       // Load User Preferences
       (async () => {
         try {
@@ -242,5 +292,5 @@
       });
     })();
   </script>
-</body>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a1874dbe3fb38fc8',t:'MTc4MzU5OTg0Ng=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
 </html>
