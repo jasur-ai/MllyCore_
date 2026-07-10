@@ -904,25 +904,24 @@
               </div>
             </div>
 
-            <div class="workspace-surface">
-              <div class="workspace-surface-head">
-                <div>
-          </div>
-          <div class="ws-tab-panel" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
-                  <h2>Chat stream</h2>
-                  <div class="workspace-surface-copy">Realtime muhokama va jamoa activity.</div>
+            <div class="ws-tab-panel" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
+              <div class="workspace-surface">
+                <div class="workspace-surface-head">
+                  <div>
+                    <h2>Chat stream</h2>
+                    <div class="workspace-surface-copy">Realtime muhokama va jamoa activity.</div>
+                  </div>
+                  <span class="badge" id="chatCount">${data.messages.length}</span>
                 </div>
-                <span class="badge" id="chatCount">${data.messages.length}</span>
-              </div>
-              <div class="chat">
-                <div class="chat-messages" id="chatMessages"></div>
-                <div class="chat-input">
-                  <input class="input" id="chatText" placeholder="Xabar yozing..." aria-label="Chat xabari">
-                  <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
+                <div class="chat">
+                  <div class="chat-messages" id="chatMessages"></div>
+                  <div class="chat-input">
+                    <input class="input" id="chatText" placeholder="Xabar yozing..." aria-label="Chat xabari">
+                    <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           <div class="ws-tab-panel" data-panel="members" role="tabpanel" aria-labelledby="tab-members" hidden>
           <aside class="workspace-side-stack" role="complementary" aria-label="A'zolar va workspace eslatmalari">
             <div class="workspace-surface">

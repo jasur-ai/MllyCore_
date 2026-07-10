@@ -95,14 +95,14 @@
             <div class="workspace-surface" style="margin-top:20px;">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>🧠 G'oyalar tahlili (T10)</h2>
+                  <h2>🧠 G'oyalar tahlili</h2>
                   <div class="workspace-surface-copy">AI-klasterlash va dublikatlarni aniqlash.</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="analyzeIdeas()">Tahlil qilish</button>
               </div>
               <div class="workspace-form-stack" style="padding:16px;">
                 <label class="label">Workspace tanlang</label>
-                <select class="select" id="analyzeTeamId">${teams.length ? teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join('') : '<option value="">Workspace yo\'q</option>'}</select>
+                <select class="select" id="analyzeTeamId"><option value="">Workspace tanlang...</option></select>
               </div>
               <div id="analyzeResult" style="padding:0 16px 16px;"></div>
             </div>
@@ -123,7 +123,7 @@
             <div class="workspace-surface" style="margin-top:16px;">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>🩺 System Health (T57)</h2>
+                  <h2>🩺 System Health</h2>
                   <div class="workspace-surface-copy">API holati, Firebase ulanishi va xatolik kuzatuvi.</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="healthCheckBtn" aria-label="System health ni tekshirish">Tekshirish</button>
@@ -134,7 +134,7 @@
             <div class="workspace-surface" style="margin-top:16px;">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>🐞 Xatolik loglari (T57)</h2>
+                  <h2>🐞 Xatolik loglari</h2>
                   <div class="workspace-surface-copy">Klient va server xatoliklari (so'nggi 50 ta).</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" id="errorLogsRefreshBtn" aria-label="Xatolik loglarini yangilash">Yangilash</button>
@@ -147,7 +147,7 @@
             <div class="workspace-surface" style="margin-top:20px;">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>🎚️ Feature Flags (T6)</h2>
+                  <h2>🎚️ Feature Flags</h2>
                   <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="saveFeatureFlags()">Saqlash</button>
@@ -158,7 +158,7 @@
             <div class="workspace-surface" style="margin-top:20px;">
               <div class="workspace-surface-head">
                 <div>
-                  <h2>📋 Shablonlar (T13)</h2>
+                  <h2>📋 Shablonlar</h2>
                   <div class="workspace-surface-copy">Workspace yaratishda ishlatiladigan tayyor shablonlar (urug' vazifalari).</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="loadTemplates()">Yangilash</button>
@@ -247,7 +247,7 @@
   <div class="modal-backdrop" id="permissionsModal" onclick="if(event.target===this)UTIL.closeModal('permissionsModal')">
     <div class="modal" style="max-width:480px;">
       <h3 id="permissionsModalTitle">A'zo ruxsatlari</h3>
-      <p class="modal-sub">Har bir a'zo uchun maxsus ruxsatlarni belgilang (T11). Belgilanmagan ruxsat standart rolga bo'ysunadi.</p>
+      <p class="modal-sub">Har bir a'zo uchun maxsus ruxsatlarni belgilang. Belgilanmagan ruxsat standart rolga bo'ysunadi.</p>
       <div id="permissionsModalBody" style="max-height:50vh;overflow:auto;"></div>
       <div class="modal-actions">
         <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('permissionsModal')">Bekor qilish</button>
@@ -279,6 +279,25 @@
 
       // Faqat bir marta, barcha ma'lumotlar kelgandan keyin layout render qilinadi (Sidebar endi buzilmaydi!)
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
+
+      // 1.1 — Analyze select ni xom template o'rniga JS orqali to'ldiramiz (xavfsizlik + to'g'ri render).
+      (() => {
+        const sel = document.getElementById('analyzeTeamId');
+        if (!sel) return;
+        sel.innerHTML = '';
+        if (!teams.length) {
+          const o = document.createElement('option');
+          o.value = ''; o.textContent = 'Workspace yo\'q';
+          sel.appendChild(o);
+          return;
+        }
+        teams.forEach((t) => {
+          const o = document.createElement('option');
+          o.value = t.id;
+          o.textContent = t.name || t.id;
+          sel.appendChild(o);
+        });
+      })();
 
       const updateAdminStats = () => {
         const managers = users.filter(u => u.role === 'manager');
@@ -370,16 +389,16 @@
       };
       window.refreshAuditLogs();
 
-      // ===== T6 Feature Flags =====
+      // ===== Feature Flags =====
       const FLAG_DEFS = [
-        { key: 'timeTracking', label: 'Vaqt kuzatuvi (T4)' },
-        { key: 'guestRole', label: 'Mehmon/Viewer roli (T2)' },
-        { key: 'twoFactor', label: 'Admin uchun 2FA (T3)' },
-        { key: 'dependencies', label: 'Vazifa bog\'liqligi (T8)' },
-        { key: 'templates', label: 'Shablonlar (T13)' },
-        { key: 'quietHours', label: 'Quiet Hours (T14)' },
-        { key: 'encryptedFiles', label: 'Shifrlangan fayllar (T16)' },
-        { key: 'weeklyDigest', label: 'Haftalik Digest (T17)' }
+        { key: 'timeTracking', label: 'Vaqt kuzatuvi' },
+        { key: 'guestRole', label: 'Mehmon/Viewer roli' },
+        { key: 'twoFactor', label: 'Admin uchun 2FA' },
+        { key: 'dependencies', label: 'Vazifa bog\'liqligi' },
+        { key: 'templates', label: 'Shablonlar' },
+        { key: 'quietHours', label: 'Quiet Hours' },
+        { key: 'encryptedFiles', label: 'Shifrlangan fayllar' },
+        { key: 'weeklyDigest', label: 'Haftalik Digest' }
       ];
       const loadFeatureFlags = async () => {
         try {
@@ -815,7 +834,7 @@
               <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}">Ruxsatlar</button>
               <button class="btn btn-sm" style="background:#475569;color:#fff;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
                 <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
-                <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash (T37)</button>
+                <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash</button>
             </div>
           </div>
           <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
