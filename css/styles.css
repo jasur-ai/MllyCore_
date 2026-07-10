@@ -1443,3 +1443,44 @@ html.role-viewer [data-roles-exclude~="viewer"] { display: none !important; }
 @media (max-width: 860px) {
   .admin-layout > .subnav { flex: 1 1 100%; position: static; }
 }
+
+/* ===== Landing hero — ClickUp-grade elevation (additive) ===== */
+.landing-copy h1 {
+  font-size: clamp(48px, 6.2vw, 78px);
+  line-height: 0.99;
+  letter-spacing: -0.02em;
+  max-width: 13ch;
+  background: linear-gradient(120deg, #ffffff 0%, #c7d2fe 45%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+body.theme-light .landing-copy h1 {
+  background: none;
+  -webkit-background-clip: initial;
+  background-clip: initial;
+  -webkit-text-fill-color: #182132;
+  color: #182132;
+}
+.landing-showcase::before {
+  content: "";
+  position: absolute;
+  inset: -10% -12% auto auto;
+  width: 62%;
+  height: 62%;
+  background: radial-gradient(circle at 50% 50%, rgba(99,102,241,0.38), transparent 70%);
+  filter: blur(64px);
+  z-index: 0;
+  pointer-events: none;
+}
+.landing-showcase .landing-window { position: relative; z-index: 1; }
+.landing-window {
+  box-shadow: 0 40px 120px rgba(2,6,23,0.55), 0 0 0 1px rgba(99,102,241,0.18);
+  border-color: rgba(148,163,184,0.22);
+}
+.landing-showcase { animation: landingFloat 6s ease-in-out infinite; }
+@keyframes landingFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@media (prefers-reduced-motion: reduce) {
+  .landing-showcase { animation: none; }
+}
