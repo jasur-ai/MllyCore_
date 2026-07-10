@@ -129,6 +129,19 @@
     </div>
   </div>
 
+  <!-- Bir martalik sezgir ma'lumot (parol / secret key) — faqat shu modalda (9-bo'lim qoidasi) -->
+  <div class="modal-backdrop" id="secretModal" onclick="if(event.target===this){document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')}">
+    <div class="modal">
+      <h3>Workspace yaratildi ✅</h3>
+      <p class="modal-sub">Quyidagi ma'lumot faqat <b>bir marta</b> ko'rsatiladi — keyinroq qayta ko'ra olmaysiz.</p>
+      <div class="modal-secret-warn">⚠️ Bu ma'lumotni hech kimga bermang va skrinshot olmang. Team lead aynan shu parol bilan kiradi.</div>
+      <div id="secretModalBody"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" onclick="document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')">Yopish</button>
+      </div>
+    </div>
+  </div>
+
   <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-service.js"></script>
@@ -152,6 +165,30 @@
       if (value.toDate) return value.toDate().toLocaleDateString('uz-UZ');
       return '-';
     };
+
+    // 9-bo'lim: sezgir ma'lumotni maxsus modalda, copy tugmasi bilan ko'rsatish.
+    // Modal yopilganda qiymat DOM'dan tozalanadi.
+    function showSecretModal(created) {
+      const body = document.getElementById('secretModalBody');
+      if (body) body.innerHTML = '';
+      const makeRow = (label, value) => {
+        const wrap = document.createElement('div');
+        const lab = document.createElement('label'); lab.className = 'label'; lab.textContent = label;
+        const row = document.createElement('div'); row.className = 'modal-secret-value';
+        const code = document.createElement('code'); code.textContent = value;
+        const copy = document.createElement('button');
+        copy.type = 'button'; copy.className = 'btn btn-tertiary btn-sm'; copy.textContent = '📋 Copy';
+        copy.addEventListener('click', () => {
+          navigator.clipboard?.writeText(value).then(() => { copy.textContent = '✅ Copy'; }).catch(() => {});
+        });
+        row.append(code, copy);
+        wrap.append(lab, row);
+        return wrap;
+      };
+      if (body && created.temporaryPassword) body.appendChild(makeRow('Team lead paroli', created.temporaryPassword));
+      if (body && created.secretKey) body.appendChild(makeRow('Secret key', created.secretKey));
+      UTIL.openModal('secretModal');
+    }
 
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
@@ -433,10 +470,8 @@
             description: document.getElementById('workspaceDescription').value,
             templateId: document.getElementById('workspaceTemplate')?.value || ''
           });
-          message.textContent = created.temporaryPassword
-            ? `Workspace yaratildi. Team lead paroli: ${created.temporaryPassword}. Secret key: ${created.secretKey}`
-            : `Workspace yaratildi. Secret key: ${created.secretKey}`;
-          setTimeout(() => location.href = `team.html?id=${created.id}`, 1600);
+          showSecretModal(created);
+          setTimeout(() => { location.href = `team.html?id=${created.id}`; }, 3000);
         } catch (error) {
           message.textContent = error.message || 'Workspace yaratishda xatolik yuz berdi.';
           button.disabled = false;

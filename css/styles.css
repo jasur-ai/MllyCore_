@@ -1390,6 +1390,33 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .empty-state .empty-title { font-weight: 700; color: var(--text); display: block; margin-bottom: 4px; }
 .empty-state .empty-copy { font-size: 13px; line-height: 1.6; }
 
+/* ===== Loading / Error / Secret holatlari (holatlar qoidasi — 7-bo'lim) ===== */
+.skeleton-loader { display: grid; gap: 12px; padding: 18px; }
+.skeleton-card { border: 1px solid var(--border); border-radius: 16px; background: rgba(21,27,44,0.6); padding: 16px; }
+.skeleton-line { height: 14px; border-radius: 8px; margin-bottom: 10px; background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.14) 37%, rgba(255,255,255,0.05) 63%); background-size: 400% 100%; animation: skShimmer 1.3s ease-in-out infinite; }
+.skeleton-line.short { width: 40%; }
+.skeleton-line.mid { width: 65%; }
+body.theme-light .skeleton-line { background: linear-gradient(90deg, rgba(148,163,184,0.12) 25%, rgba(148,163,184,0.24) 37%, rgba(148,163,184,0.12) 63%); }
+body.theme-light .skeleton-card { background: rgba(241,245,249,0.85); }
+
+.error-banner { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); margin-bottom: 16px; }
+.error-banner-icon { font-size: 22px; line-height: 1; }
+.error-banner-body { display: grid; gap: 6px; align-content: start; }
+.error-banner-body strong { color: #fca5a5; }
+.error-banner-body .muted { color: var(--muted); }
+
+/* Bir martalik sezgir ma'lumot (parol/secret key/2FA backup) — 9-bo'lim qoidasi */
+.modal-secret-value { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.modal-secret-value code { flex: 1; padding: 10px 12px; border-radius: 8px; background: var(--bg-2); border: 1px dashed var(--border); font-family: 'JetBrains Mono', monospace; font-size: 13px; word-break: break-all; color: var(--text); }
+.modal-secret-warn { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.35); color: #fcd34d; font-size: 13px; margin: 12px 0; line-height: 1.5; }
+
+/* team.html "Boshqaruv" tab — akkordeonlarni 3 guruhga filtrlash (6.2-bo'lim) */
+.ws-boshqaruv-nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.ws-boshqaruv-nav .subnav-item { width: auto; flex: 0 0 auto; }
+.ws-tab-panel[data-bq="moliya"] .ws-acc:not([data-group="moliya"]),
+.ws-tab-panel[data-bq="jamoa"] .ws-acc:not([data-group="jamoa"]),
+.ws-tab-panel[data-bq="integratsiya"] .ws-acc:not([data-group="integratsiya"]) { display: none; }
+
 /* ===================== Faza 5: Rol asosida UI yashirish =====================
    .role-<role> sinfi <html> ga qo'shiladi (layout.js tomonidan, authdan keyin).
    Elementlar `data-roles="admin,team_lead"` bilan belgilansa, faqat

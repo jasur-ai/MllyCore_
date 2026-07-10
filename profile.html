@@ -52,7 +52,11 @@
               <div id="twoFactorStatus" class="text-sm muted" style="margin:8px 0;"></div>
               <div id="twoFactorSetup" style="display:none;margin-bottom:12px;">
                 <div class="text-sm">1. Secret ni autentifikatorga kiriting yoki QR ochang:</div>
-                <code id="twoFactorSecret" style="display:block;word-break:break-all;background:var(--surface-sub);padding:8px;border-radius:8px;margin:6px 0;"></code>
+                <div class="modal-secret-warn">⚠️ Bu secret faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang. Tasdiqlangandan keyin o'chib ketadi.</div>
+                <div class="modal-secret-value">
+                  <code id="twoFactorSecret" style="word-break:break-all;background:var(--surface-sub);padding:8px;border-radius:8px;"></code>
+                  <button type="button" class="btn btn-secondary btn-sm" id="copyTwoFactorSecret">Copy</button>
+                </div>
                 <a id="twoFactorOtpauth" class="btn btn-tertiary btn-sm" target="_blank" rel="noopener">QR ochish</a>
                 <div class="workspace-form-grid" style="margin-top:10px;">
                   <input class="input" id="twoFactorCode" placeholder="6 xonali kod">
@@ -313,6 +317,11 @@
           if (enabled) {
             statusEl.textContent = "✅ 2FA yoqilgan. Workspace o'chirishda kod talab qilinadi.";
             setupEl.style.display = 'none';
+            // 9-bo'lim: sezgir secret sahifa xotirasidan tozalanadi (setup yopilganda).
+            const sec = document.getElementById('twoFactorSecret');
+            if (sec) sec.textContent = '';
+            const otp = document.getElementById('twoFactorOtpauth');
+            if (otp) otp.removeAttribute('href');
             enableBtn.style.display = 'none';
             disableBtn.style.display = '';
           } else {
@@ -347,6 +356,13 @@
             enabled = false; render();
             UTIL.toast("2FA o'chirildi.");
           } catch (e) { UTIL.toast(e.message); }
+        });
+        // 9-bo'lim: secret ni nusxalash (clipboard) — modal-secret qoidasiga muvofiq.
+        document.getElementById('copyTwoFactorSecret')?.addEventListener('click', async () => {
+          const sec = document.getElementById('twoFactorSecret');
+          if (!sec || !sec.textContent) return;
+          try { await navigator.clipboard.writeText(sec.textContent); UTIL.toast('Secret nusxalandi'); }
+          catch (_) { UTIL.toast('Nusxalab bo‘lmadi'); }
         });
       })();
 

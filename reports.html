@@ -40,8 +40,10 @@
 
       <section class="workspace-layout">
         <div class="workspace-main-stack" id="reportsRoot">
-          <div class="workspace-surface pad" style="text-align:center;padding:40px;">
-            <p class="muted">Hisobotlar yuklanmoqda...</p>
+          <div class="skeleton-loader" aria-busy="true" aria-label="Hisobotlar yuklanmoqda">
+            <div class="skeleton-card"><div class="skeleton-line mid"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line mid"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+            <div class="skeleton-card"><div class="skeleton-line mid"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
           </div>
         </div>
 
@@ -108,6 +110,26 @@
       return '<span class="report-badge pending">Kutilmoqda</span>';
     }
 
+    // P0-1: yuklash xatosi uchun bir xil holat (holatlar qoidasi — 7-bo'lim).
+    // Hech qachon jim (silent) xato bo'lmaydi; foydalanuvchi "Qayta urinish" ni bosadi.
+    function showReportsError(err) {
+      const root = document.getElementById('reportsRoot');
+      if (!root) return;
+      const msg = (err && err.message) ? err.message : 'Noma’lum xato';
+      root.innerHTML = `
+        <div class="error-banner" role="alert">
+          <div class="error-banner-icon">⚠️</div>
+          <div class="error-banner-body">
+            <strong>Hisobotlarni yuklab bo'lmadi</strong>
+            <p class="muted text-sm">${escapeHtml(msg)}</p>
+            <button type="button" class="btn btn-secondary btn-sm" id="reportsRetryBtn">🔄 Qayta urinish</button>
+          </div>
+        </div>`;
+      document.getElementById('reportsRetryBtn')?.addEventListener('click', async () => {
+        try { await loadAllReports(); } catch (e) { showReportsError(e); }
+      });
+    }
+
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
@@ -162,8 +184,27 @@
       async function loadAllReports() {
         const urlParams = new URLSearchParams(window.location.search);
         const filterTeamId = urlParams.get('teamId') || '';
-        let allReportsRaw = await window.MllyCore.getReports({ teamId: filterTeamId });
+        let allReportsRaw;
+        try {
+          allReportsRaw = await window.MllyCore.getReports({ teamId: filterTeamId });
+        } catch (err) {
+          showReportsError(err);
+          return;
+        }
         renderSideStats(allReportsRaw);
+
+        // 7-bo'lim: Bo'sh holat (empty-state) — hisobotlar umuman bo'lmasa aniq xabar + CTA.
+        if (!allReportsRaw.length) {
+          const root = document.getElementById('reportsRoot');
+          if (root) root.innerHTML = `
+            <div class="empty-state">
+              <span class="empty-ico">📭</span>
+              <span class="empty-title">Hali hisobotlar yo'q</span>
+              <span class="empty-copy">Bu jamoa uchun hali hech qanday hisobot topshirilmagan. A'zolar kunlik/haftalik hisobotlarni yuborganidan so'ng ular shu yerda paydo bo'ladi.</span>
+              <div style="margin-top:14px;"><a href="dashboard.html" class="btn btn-primary btn-sm">Dashboardga Qaytish</a></div>
+            </div>`;
+          return;
+        }
 
         const reports = allReportsRaw.filter(r => (r.periodType || 'daily') === currentTabPeriod);
 
@@ -517,7 +558,11 @@
         loadAllReports();
       });
 
-      loadAllReports();
+      try {
+        await loadAllReports();
+      } catch (err) {
+        showReportsError(err);
+      }
     })();
   </script>
 </body>
