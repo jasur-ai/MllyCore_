@@ -225,7 +225,7 @@
                 <option value="">Mas'ul tanlang</option>
                 ${memberOptions(data.members, true)}
               </select>
-              <button class="btn btn-ghost" data-owner-save="${item.id}">Mas'ulni saqlash</button>
+              <button class="btn btn-secondary" data-owner-save="${item.id}">Mas'ulni saqlash</button>
             </div>
             <div class="text-sm muted" data-owner-feedback="${item.id}"></div>
           ` : ''}
@@ -326,7 +326,7 @@
               </div>
             ` : ''}
             <div class="workspace-task-footer">
-              ${canClaim ? `<button class="btn btn-ghost" data-task-claim="${task.id}">Topshiriqni olish</button>` : '<span class="workspace-helper">Topshiriq oqimi faol</span>'}
+              ${canClaim ? `<button class="btn btn-secondary" data-task-claim="${task.id}">Topshiriqni olish</button>` : '<span class="workspace-helper">Topshiriq oqimi faol</span>'}
               ${canSubmit ? `
                 <div class="workspace-task-submit-grid" style="flex:1">
                   <input class="input" data-task-result="${task.id}" placeholder="Natijani yozing">
@@ -336,9 +336,9 @@
               ` : ''}
             </div>
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-              <button class="btn btn-ghost btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
-              <button class="btn btn-ghost btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
-              <button class="btn btn-ghost btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
+              <button class="btn btn-secondary btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
+              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
+              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
               <input type="file" id="file-${task.id}" style="display:none">
             </div>
             <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
@@ -553,8 +553,8 @@
           </div>
           <div class="workspace-action-stack">
             ${isLead ? `
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Lead actions</h3>
+            <div class="workspace-surface pad" data-roles="team_lead,admin">
+              <h3 style="margin:0 0 12px">Lead actions</h3>
                 <div class="workspace-form-stack">
                   <div>
                     <label class="label">Yangi a'zo emaili</label>
@@ -568,7 +568,7 @@
                     </div>
                       <div class="text-sm muted" id="memberInviteFeedback" aria-live="polite"></div>
                   </div>
-                  <button class="btn btn-ghost" id="resetSecretBtn">Secret key reset</button>
+                  <button class="btn btn-secondary" id="resetSecretBtn">Secret key reset</button>
                 </div>
               </div>
             ` : `
@@ -581,6 +581,14 @@
         </section>
 
         <section class="workspace-layout">
+          <div class="ws-tabs" role="tablist" aria-label="Workspace bo'limlari">
+            <button type="button" class="ws-tab" role="tab" data-tab="kanban" aria-selected="true" id="tab-kanban">📋 Ish doskasi</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="activity" aria-selected="false" id="tab-activity">🧩 Faoliyat</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="chat" aria-selected="false" id="tab-chat">💬 Chat</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="members" aria-selected="false" id="tab-members">👥 A'zolar</button>
+          </div>
+          <div class="ws-tab-panels">
+          <div class="ws-tab-panel" data-panel="kanban" role="tabpanel" aria-labelledby="tab-kanban">
           <div class="workspace-main-stack">
             ${isLead ? `
               <div class="workspace-surface">
@@ -726,7 +734,9 @@
               </div>
               <div class="workspace-card-grid cols-2" id="ideasList"></div>
             </div>
-
+          </div>
+          </div>
+          <div class="ws-tab-panel" data-panel="activity" role="tabpanel" aria-labelledby="tab-activity" hidden>
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -797,7 +807,7 @@
                     <p class="ws-acc-hint">Butun workspace (g'oyalar, vazifalar, a'zolar, chat) export/import — migratsiya yoki halokatdan tiklash uchun.</p>
                     <div class="ws-mini-form">
                       <button class="btn btn-primary btn-sm" id="exportBackupBtn" style="justify-self:start">⬇ Export (JSON)</button>
-                      <button class="btn btn-sm" id="importBackupBtn" style="justify-self:start">⬆ Import (JSON)</button>
+                      <button class="btn btn-secondary btn-sm" id="importBackupBtn" style="justify-self:start">⬆ Import (JSON)</button>
                       <input type="file" id="importBackupFile" accept="application/json" style="display:none;">
                     </div>
                     <div id="backupStatus" style="margin-top:10px"></div>
@@ -892,6 +902,8 @@
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
+          </div>
+          <div class="ws-tab-panel" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
                   <h2>Chat stream</h2>
                   <div class="workspace-surface-copy">Realtime muhokama va jamoa activity.</div>
                 </div>
@@ -906,7 +918,7 @@
               </div>
             </div>
           </div>
-
+          <div class="ws-tab-panel" data-panel="members" role="tabpanel" aria-labelledby="tab-members" hidden>
           <aside class="workspace-side-stack" role="complementary" aria-label="A'zolar va workspace eslatmalari">
             <div class="workspace-surface">
               <div class="workspace-surface-head">
@@ -937,6 +949,8 @@
               </div>
             </div>
           </aside>
+          </div>
+          </div>
         </section>
       `;
 
@@ -961,6 +975,33 @@
       }
       renderChat(data.messages || [], currentUserId);
 
+      // T-UI — Tab (bo'lim) almashtirish: workspace-layout ichidagi tablarni boshqarish.
+      (() => {
+        const tabs = Array.from(document.querySelectorAll('.ws-tab'));
+        const panels = Array.from(document.querySelectorAll('.ws-tab-panel'));
+        if (!tabs.length) return;
+        const teamKey = 'mlly_tab_' + (data.team && data.team.id || '');
+        const activate = (name) => {
+          tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+          panels.forEach((p) => { p.hidden = (p.dataset.panel !== name); });
+          try { localStorage.setItem(teamKey, name); } catch (_) {}
+        };
+        tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab)));
+        const tablist = document.querySelector('.ws-tabs');
+        tablist?.addEventListener('keydown', (e) => {
+          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+          const i = tabs.indexOf(document.activeElement);
+          if (i < 0) return;
+          const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
+          tabs[next].focus(); tabs[next].click();
+          e.preventDefault();
+        });
+        try {
+          const saved = localStorage.getItem(teamKey);
+          if (tabs.some((t) => t.dataset.tab === saved)) activate(saved);
+        } catch (_) {}
+      })();
+
       // T21 / T23 / T24 / T28 / T30 / T36 — collapsible (ochiladigan) panel.
       // Har bir funksiya alohida bo'lim; ustidan bosganda ochiladi, ma'lumot faqat bir marta yuklanadi (tezlik uchun).
       (async () => {
@@ -984,8 +1025,8 @@
                   <span>${(h.events || []).join(', ')}</span>
                 </div>
                 <div class=\"workspace-subgrid cols-2\" style=\"gap:6px;margin-top:6px\">
-                  <button class=\"btn btn-ghost btn-sm\" data-webhook-test=\"${h.id}\">Test</button>
-                  <button class=\"btn btn-ghost btn-sm\" data-webhook-del=\"${h.id}\">O'chirish</button>
+                  <button class=\"btn btn-secondary btn-sm\" data-webhook-test=\"${h.id}\">Test</button>
+                  <button class=\"btn btn-danger btn-sm\" data-webhook-del=\"${h.id}\">O'chirish</button>
                 </div>
               </div>`).join('') : '<div class=\"muted\">Hozircha webhook yo‘q</div>';
 

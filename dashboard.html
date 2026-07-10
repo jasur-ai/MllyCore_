@@ -104,7 +104,7 @@
       <select class="input mb-3" id="workspaceTemplate"><option value="">Shablonsiz</option></select>
       <p class="text-sm muted" id="workspaceMessage" style="min-height:20px;margin:12px 0 0"></p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
         <button class="btn btn-primary" id="createWorkspaceBtn">Yaratish</button>
       </div>
     </div>
@@ -123,7 +123,7 @@
       </div>
       <div class="workspace-modal-error" id="deleteWorkspaceError"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
         <button class="btn btn-danger" type="button" id="confirmDeleteWorkspaceBtn">O'chirish</button>
       </div>
     </div>
@@ -201,7 +201,7 @@
         document.getElementById('securityReminder').innerHTML = `
           <div class="workspace-note-bar">
             Xavfsizlik uchun boshlang'ich parolni yangilang. Profil sahifasida joriy parol va yangi parol bilan darhol almashtirish mumkin.
-            <a class="btn btn-ghost btn-sm" href="profile.html" style="margin-left:10px">Parolni almashtirish</a>
+            <a class="btn btn-tertiary btn-sm" href="profile.html" style="margin-left:10px">Parolni almashtirish</a>
           </div>
         `;
       }
@@ -389,9 +389,9 @@
         const role = profile?.role || 'member';
         const qa = {
           admin: "<a class=\"btn btn-primary btn-sm\" href=\"#\" onclick=\"UTIL.openModal('newTeamModal');return false;\">+ Workspace yaratish</a>",
-          team_lead: "<a class=\"btn btn-ghost btn-sm\" href=\"dashboard.html\">Workspace'larim</a> <a class=\"btn btn-ghost btn-sm\" href=\"notifications.html\">Takliflar</a>",
-          manager: "<a class=\"btn btn-ghost btn-sm\" href=\"reports.html\">Hisobotlar</a>",
-          member: "<a class=\"btn btn-ghost btn-sm\" href=\"my-ideas.html\">Mening g'oyalarim</a> <a class=\"btn btn-ghost btn-sm\" href=\"dashboard.html\">Workspace'larim</a>"
+          team_lead: "<a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"notifications.html\">Takliflar</a>",
+          manager: "<a class=\"btn btn-tertiary btn-sm\" href=\"reports.html\">Hisobotlar</a>",
+          member: "<a class=\"btn btn-tertiary btn-sm\" href=\"my-ideas.html\">Mening g'oyalarim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a>"
         };
         roleQuick.innerHTML = 'Rolingiz: <strong>' + role + '</strong> — ' + (qa[role] || qa.member);
       }

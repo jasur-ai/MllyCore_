@@ -113,7 +113,7 @@
               <option value="">Workspace tanlang</option>
               ${teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join('')}
             </select>
-            <button class="btn btn-ghost" data-import-idea="${idea.id}">Teamga import</button>
+            <button class="btn btn-secondary" data-import-idea="${idea.id}">Teamga import</button>
           </div>
         </div>
       `).join('') : "<div class=\"workspace-empty\"><h3>Shaxsiy g'oya yo'q</h3><p>Birinchi shaxsiy g'oyangizni yarating.</p></div>";

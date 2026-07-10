@@ -28,6 +28,37 @@
   });
 })();
 
+// ===================== Faza 5: Rol asosida UI yashirish =====================
+// .role-<role> sinfi <html> ga qo'shiladi va [data-roles]/[data-roles-exclude]
+// belgilangan elementlar ko'rsatilgan rolga qarab ko'rinadi/yashiriladi.
+// Bu — defense-in-depth; asosiy tekshiruv serverda (R2) va data-required-role (admin).
+window.applyRoleVisibility = function applyRoleVisibility() {
+  const profile = window.MLLYCORE_PROFILE || (window.APP_CONTEXT && window.APP_CONTEXT.profile) || {};
+  const KNOWN = ['admin', 'team_lead', 'manager', 'member', 'viewer'];
+  const known = KNOWN.includes(profile.role);
+  // Roli hali aniqlanmagan bo'lsa (auth boshlanishi), HECH NARSANI yashirmaymiz —
+  // shu bilan sahifa bo'sh ko'rinishining oldini olamiz. Faqat aniq rol ma'lum bo'lganda gated qilamiz.
+  const role = known ? profile.role : '';
+  const html = document.documentElement;
+  html.setAttribute('data-role', role || 'member');
+  html.classList.remove('role-admin', 'role-team_lead', 'role-manager', 'role-member', 'role-viewer');
+  if (role) html.classList.add('role-' + role);
+  document.querySelectorAll('[data-roles], [data-roles-exclude]').forEach((el) => {
+    const allowed = (el.getAttribute('data-roles') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const excluded = (el.getAttribute('data-roles-exclude') || '').split(',').map((s) => s.trim()).filter(Boolean);
+    const show = !known || ((allowed.length === 0 || allowed.includes(role)) && !excluded.includes(role));
+    el.toggleAttribute('data-roles-on', show);
+  });
+};
+(function setupRoleVisibility() {
+  if (window.__mllyRoleObserver) return;
+  // Dinamik render qilingan elementlar (masalan team.html Lead panel) ham
+  // avtomatik gated bo'lsin deb kuzatamiz.
+  window.__mllyRoleObserver = new MutationObserver(() => { try { window.applyRoleVisibility(); } catch (_) {} });
+  window.__mllyRoleObserver.observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', () => { try { window.applyRoleVisibility(); } catch (_) {} });
+})();
+
 window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   const profile = context.profile || window.MLLYCORE_PROFILE || {
     name: 'Foydalanuvchi',
@@ -99,7 +130,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       </div>
     </a>
     <div class="flex items-center gap-2">
-      <button class="btn btn-ghost btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
+      <button class="btn btn-secondary btn-sm" onclick="document.body.classList.toggle('nav-open')" aria-label="Menyuni ochish">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       </button>
     </div>
@@ -124,7 +155,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${profile.name || profile.email}</div>
         <div class="text-xs muted">@${profile.username || 'user'}</div>
       </div>
-      <a href="login.html" title="Chiqish" class="btn btn-ghost btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
+      <a href="login.html" title="Chiqish" class="btn btn-tertiary btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
         Chiqish
       </a>
     </div>
@@ -199,4 +230,7 @@ window.mountLayout = function(active, context) {
     link.addEventListener('focus', prefetch, { once: true });
     link.addEventListener('touchstart', prefetch, { once: true, passive: true });
   });
+
+  // Faza 5 — rolga qarab UI ni yangilash (dinamik renderdan keyin ham).
+  try { window.applyRoleVisibility(); } catch (_) {}
 };

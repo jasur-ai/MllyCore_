@@ -1272,3 +1272,147 @@ body.theme-light .muted, body.theme-light .text-muted { color: #475569; }
 
 /* Kattaroq bosish maydoni: teglar/formalar ekran o'qiydiychilar uchun aniq */
 label, .label { cursor: pointer; }
+
+/* ===================== Design System (UI/UX rekonstruktsiya) ===================== */
+/* Tugma ierarxiyasi: faqat 3 daraja (Primary / Secondary / Tertiary).
+   .btn-primary -> asosiy CTA (rangli to'ldirilgan)
+   .btn-secondary -> muqobil amal (kontur)
+   .btn-tertiary -> yordamchi/amal (matn/icon, shaffof) */
+.btn-tertiary {
+  background: transparent;
+  color: var(--text-muted, var(--muted));
+  border-color: transparent;
+  padding: 6px 10px;
+}
+.btn-tertiary:hover { background: var(--panel-2); color: var(--text); }
+
+/* .btn-secondary -> muqobil amal (kontur/outline).
+   Eslatma: .btn-secondary avval CSS'da ta'riflanmagan edi, shuning uchun
+   u asosiy .btn (shaffof, chegarasiz) sifatida noto'g'ri ko'rinar edi.
+   Endi u aniq ikkinchi darajali (outline) tugma. */
+.btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
+.btn-secondary:hover { background: var(--panel-2); }
+body.theme-light .btn-secondary { border-color: rgba(148,163,184,0.35); }
+body.theme-light .btn-secondary:hover { background: rgba(20,32,51,0.05); }
+
+/* Rang semantikasi — ma'no bilan bog'langan */
+.is-success, .accent-success { color: var(--success); }
+.is-danger, .accent-danger { color: var(--danger); }
+.is-neutral, .accent-neutral { color: var(--muted); }
+.btn-ghost.is-danger:hover { background: rgba(239,68,68,0.16); color: #fca5a5; }
+
+/* Tab tizimi (progressive disclosure) */
+.ws-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(11,15,26,0.6);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  backdrop-filter: blur(6px);
+}
+body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
+.ws-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.ws-tab:hover { background: var(--panel-2); color: var(--text); }
+.ws-tab[aria-selected="true"] {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(99,102,241,0.3);
+}
+.ws-tab:focus-visible { outline: 3px solid var(--info, #38bdf8); outline-offset: 2px; }
+.ws-tab-panel { display: block; }
+.ws-tab-panel[hidden] { display: none; }
+
+/* Admin sub-nav (vertikal kichik-menyu) */
+.subnav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.subnav-group-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 10px 10px 4px;
+  font-weight: 700;
+}
+.subnav-item {
+  appearance: none;
+  text-align: left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 13px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+.subnav-item:hover { background: var(--panel-2); }
+.subnav-item[aria-current="true"] {
+  background: rgba(99,102,241,0.16);
+  border-color: rgba(99,102,241,0.5);
+  color: var(--text);
+}
+
+/* Bo'sh holat (empty state) — yangi panel/jadval uchun standart ko'rinish */
+.empty-state {
+  text-align: center;
+  padding: 32px 18px;
+  color: var(--muted);
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: rgba(11,15,26,0.35);
+}
+.empty-state .empty-ico { font-size: 28px; display: block; margin-bottom: 8px; opacity: 0.8; }
+.empty-state .empty-title { font-weight: 700; color: var(--text); display: block; margin-bottom: 4px; }
+.empty-state .empty-copy { font-size: 13px; line-height: 1.6; }
+
+/* ===================== Faza 5: Rol asosida UI yashirish =====================
+   .role-<role> sinfi <html> ga qo'shiladi (layout.js tomonidan, authdan keyin).
+   Elementlar `data-roles="admin,team_lead"` bilan belgilansa, faqat
+   ko'rsatilgan rollar uchun ko'rinadi (defense-in-depth; asosiy tekshiruv serverda).
+   `data-roles-exclude="viewer"` esa ko'rsatilgan rollar uchun YASHIRILADI. */
+[data-roles]:not([data-roles-on]),
+[data-roles-exclude]:not([data-roles-on]) { display: none !important; }
+html.role-admin [data-roles-exclude~="admin"],
+html.role-team_lead [data-roles-exclude~="team_lead"],
+html.role-member [data-roles-exclude~="member"],
+html.role-viewer [data-roles-exclude~="viewer"] { display: none !important; }
+
+/* Kichik ekranlarda tab panel qulayligi */
+@media (max-width: 720px) {
+  .ws-tabs { position: static; }
+  .ws-tab { flex: 1 1 auto; text-align: center; }
+}
+
+/* Admin layout: sub-nav + content (UI/UX rekonstruktsiya) */
+.admin-layout { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.admin-layout > .subnav { flex: 0 0 230px; position: sticky; top: 8px; }
+.admin-layout > .admin-content { flex: 1; min-width: 280px; }
+.admin-panel[hidden] { display: none; }
+@media (max-width: 860px) {
+  .admin-layout > .subnav { flex: 1 1 100%; position: static; }
+}

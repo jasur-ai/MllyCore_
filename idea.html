@@ -59,6 +59,13 @@
         </section>
 
         <section class="workspace-layout">
+          <div class="ws-tabs" role="tablist" aria-label="Idea bo'limlari">
+            <button type="button" class="ws-tab" role="tab" data-tab="umumiy" aria-selected="true" id="tab-umumiy">📝 Umumiy</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="battle" aria-selected="false" id="tab-battle">🥊 Battle (T52)</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="keyingi" aria-selected="false" id="tab-keyingi">➡️ Keyingi qadam</button>
+          </div>
+          <div class="ws-tab-panels">
+          <div class="ws-tab-panel" data-panel="umumiy" role="tabpanel" aria-labelledby="tab-umumiy">
           <div class="workspace-main-stack">
             <div class="workspace-surface pad">
               <div class="section-head"><h2>Tavsif</h2></div>
@@ -135,16 +142,18 @@
                 </div>
               </div>
             </div>
-
+          </div>
+          <div class="ws-tab-panel" data-panel="battle" role="tabpanel" aria-labelledby="tab-battle" hidden>
             <div class="workspace-surface pad" id="battleSurface" style="display:none;">
               <div class="section-head"><h2>🥊 Idea Battle (T52)</h2></div>
               <p class="workspace-surface-copy">Ikki g'oyani solishtiring va yaxshiroq deb ovoz bering. G'olib reytingga yoziladi.</p>
               <button class="btn btn-primary btn-sm" id="battleNextBtn">Keyingi juftlikni olish</button>
               <div id="battlePair" style="margin-top:10px;"></div>
-              <button class="btn btn-ghost btn-sm" id="battleStandingsBtn" style="margin-top:8px;">Reytingni ko'rsatish</button>
+              <button class="btn btn-secondary btn-sm" id="battleStandingsBtn" style="margin-top:8px;">Reytingni ko'rsatish</button>
               <div id="battleStandings" style="margin-top:8px;"></div>
             </div>
-
+          </div>
+          <div class="ws-tab-panel" data-panel="keyingi" role="tabpanel" aria-labelledby="tab-keyingi" hidden>
             <div class="workspace-surface pad">
               <div class="section-head"><h2>Keyingi qadam</h2></div>
               <div class="workspace-note-bar">${escapeHtml(team?.name || 'Workspace')} ichiga qaytib, task va chat oqimi bilan bog'lab ishlashingiz mumkin.</div>
@@ -152,6 +161,8 @@
                 <a class="btn btn-primary" href="team.html?id=${idea.teamId}&focus=${idea.entryType === 'startup' ? 'startup' : 'ideas'}&entity=${idea.id}">Workspacega o'tish</a>
               </div>
             </div>
+          </div>
+          </div>
           </div>
 
           <aside class="workspace-side-stack">
@@ -312,6 +323,21 @@
         relatedEntityId: idea.id,
         types: ['idea_created', 'idea_imported', 'startup_created', 'startup_owner_changed']
       }).catch(() => {});
+
+      // T-UI — Idea sahifasi tablari
+      (() => {
+        const tabs = Array.from(document.querySelectorAll('.ws-tab'));
+        const panels = Array.from(document.querySelectorAll('.ws-tab-panel'));
+        if (!tabs.length) return;
+        const key = 'mlly_idea_tab_' + (idea && idea.id || '');
+        const activate = (name) => {
+          tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
+          panels.forEach((p) => { p.hidden = (p.dataset.panel !== name); });
+          try { localStorage.setItem(key, name); } catch (_) {}
+        };
+        tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab)));
+        try { const s = localStorage.getItem(key); if (tabs.some((t) => t.dataset.tab === s)) activate(s); } catch (_) {}
+      })();
     })();
   </script>
 </body>

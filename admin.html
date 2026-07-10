@@ -10,154 +10,170 @@
 <body>
   <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
-    <div class="workspace-app">
+    <div class="workspace-app" data-roles="admin">
       <section class="workspace-command">
         <div>
           <h1 class="workspace-command-title">Admin control layer</h1>
           <p class="workspace-command-copy">Workspace lifecycle, team lead tayinlash va production-level boshqaruv shu yerda.</p>
         </div>
         <div class="workspace-command-tools">
-          <a class="btn btn-ghost" href="dashboard.html">Dashboard</a>
+          <a class="btn btn-tertiary" href="dashboard.html">Dashboard</a>
           <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
         </div>
       </section>
 
       <section class="workspace-overview" id="stats"></section>
 
-      <section class="workspace-surface" style="margin-top:16px;">
-        <div class="workspace-surface-head">
-          <div>
-            <h2>🩺 System Health (T57)</h2>
-            <div class="workspace-surface-copy">API holati, Firebase ulanishi va xatolik kuzatuvi.</div>
-          </div>
-          <button class="btn btn-secondary btn-sm" id="healthCheckBtn" aria-label="System health ni tekshirish">Tekshirish</button>
+            <div class="admin-layout">
+        <nav class="subnav" aria-label="Admin bo'limlari">
+          <div class="subnav-group-title">Boshqaruv</div>
+          <button type="button" class="subnav-item" data-panel="workspaces" aria-current="true">🏢 Workspace'lar</button>
+          <div class="subnav-group-title">Analitika</div>
+          <button type="button" class="subnav-item" data-panel="analytics">📊 Analitika</button>
+          <div class="subnav-group-title">Audit &amp; Tizim</div>
+          <button type="button" class="subnav-item" data-panel="audit">🔒 Audit &amp; Tizim</button>
+          <div class="subnav-group-title">Sozlamalar</div>
+          <button type="button" class="subnav-item" data-panel="settings">⚙️ Sozlamalar</button>
+        </nav>
+        <div class="admin-content">
+
+          <section class="admin-panel" data-panel="workspaces" role="tabpanel" aria-labelledby="sub-workspaces">
+            <div class="workspace-surface pad">
+              <div class="section-head"><h2>Admin qoidasi</h2></div>
+              <div class="workspace-note-bar">Admin idea, chat yoki secret key oqimiga aralashmaydi. Admin faqat workspace yaratadi, team leadni belgilaydi va kerak bo'lsa workspace'ni o'chiradi.</div>
+            </div>
+
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Workspace registry</h2>
+                  <div class="workspace-surface-copy">A'zolar soni, team lead tayinlanganligi va delete action.</div>
+                </div>
+                <span class="badge">Production control</span>
+              </div>
+              <div class="workspace-card-grid cols-2" id="workspaceList"></div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:20px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>Managerlar va Jamoalar Boshqaruvi</h2>
+                  <div class="workspace-surface-copy">Yangi manager tayinlash hamda unga mas'ul komandalarni biriktirish.</div>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="UTIL.openModal('addManagerModal')">+ Manager qo'shish</button>
+              </div>
+              <div id="managerList" style="padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
+            </div>
+
+            <aside class="workspace-side-stack">
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Admin vazifasi</h3>
+                <div class="workspace-security-list">
+                  <span>Workspace yaratish</span>
+                  <span>Lead email tayinlash</span>
+                  <span>Workspace o'chirish</span>
+                </div>
+              </div>
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
+                <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni yuritish team lead zimmasida.</p>
+              </div>
+            </aside>
+          </section>
+
+          <section class="admin-panel" data-panel="analytics" role="tabpanel" aria-labelledby="sub-analytics" hidden>
+            <div class="workspace-surface">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>📊 Global Analytics</h2>
+                  <div class="workspace-surface-copy">Platformaning umumiy statistikasi va performance metrikalari.</div>
+                </div>
+              </div>
+              <div id="globalAnalytics" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:20px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>🧠 G'oyalar tahlili (T10)</h2>
+                  <div class="workspace-surface-copy">AI-klasterlash va dublikatlarni aniqlash.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="analyzeIdeas()">Tahlil qilish</button>
+              </div>
+              <div class="workspace-form-stack" style="padding:16px;">
+                <label class="label">Workspace tanlang</label>
+                <select class="select" id="analyzeTeamId">${teams.length ? teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join('') : '<option value="">Workspace yo\'q</option>'}</select>
+              </div>
+              <div id="analyzeResult" style="padding:0 16px 16px;"></div>
+            </div>
+          </section>
+
+          <section class="admin-panel" data-panel="audit" role="tabpanel" aria-labelledby="sub-audit" hidden>
+            <div class="workspace-surface" style="margin-top:16px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>🔒 Audit Logs</h2>
+                  <div class="workspace-surface-copy">Tizimdagi barcha muhim o'zgarishlar va amallari.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="refreshAuditLogs()">Yangilash</button>
+              </div>
+              <div id="auditLogsContainer" style="padding:16px;"></div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:16px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>🩺 System Health (T57)</h2>
+                  <div class="workspace-surface-copy">API holati, Firebase ulanishi va xatolik kuzatuvi.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="healthCheckBtn" aria-label="System health ni tekshirish">Tekshirish</button>
+              </div>
+              <div id="healthDetail" class="muted" style="padding:8px 16px 4px;" role="status" aria-live="polite">Tekshirish uchun tugmani bosing.</div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:16px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>🐞 Xatolik loglari (T57)</h2>
+                  <div class="workspace-surface-copy">Klient va server xatoliklari (so'nggi 50 ta).</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" id="errorLogsRefreshBtn" aria-label="Xatolik loglarini yangilash">Yangilash</button>
+              </div>
+              <div id="errorLogsContainer" style="padding:16px;"></div>
+            </div>
+          </section>
+
+          <section class="admin-panel" data-panel="settings" role="tabpanel" aria-labelledby="sub-settings" hidden>
+            <div class="workspace-surface" style="margin-top:20px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>🎚️ Feature Flags (T6)</h2>
+                  <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="saveFeatureFlags()">Saqlash</button>
+              </div>
+              <div id="featureFlagsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:20px;">
+              <div class="workspace-surface-head">
+                <div>
+                  <h2>📋 Shablonlar (T13)</h2>
+                  <div class="workspace-surface-copy">Workspace yaratishda ishlatiladigan tayyor shablonlar (urug' vazifalari).</div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="loadTemplates()">Yangilash</button>
+              </div>
+              <div id="templatesContainer" style="padding:16px;"></div>
+              <div class="workspace-form-stack" style="padding:0 16px 16px;">
+                <input class="input mb-3" id="templateName" placeholder="Shablon nomi">
+                <textarea class="textarea mb-3" id="templateSeed" rows="3" placeholder="Har qatorda bitta tayanch vazifa nomi"></textarea>
+                <button class="btn btn-primary" id="createTemplateBtn">Shablon yaratish</button>
+              </div>
+            </div>
+          </section>
+
         </div>
-        <div id="healthDetail" class="muted" style="padding:8px 16px 4px;" role="status" aria-live="polite">Tekshirish uchun tugmani bosing.</div>
-      </section>
-
-      <section class="workspace-surface" style="margin-top:16px;">
-        <div class="workspace-surface-head">
-          <div>
-            <h2>🐞 Xatolik loglari (T57)</h2>
-            <div class="workspace-surface-copy">Klient va server xatoliklari (so'nggi 50 ta).</div>
-          </div>
-          <button class="btn btn-secondary btn-sm" id="errorLogsRefreshBtn" aria-label="Xatolik loglarini yangilash">Yangilash</button>
-        </div>
-        <div id="errorLogsContainer" style="padding:16px;"></div>
-      </section>
-
-      <section class="workspace-layout" style="margin-top:24px;">
-        <div class="workspace-main-stack">
-          <div class="workspace-surface">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>📊 Global Analytics</h2>
-                <div class="workspace-surface-copy">Platformaning umumiy statistikasi va performance metrikalari.</div>
-              </div>
-            </div>
-            <div id="globalAnalytics" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
-          </div>
-
-          <div class="workspace-surface" style="margin-top:20px;">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>🔒 Audit Logs</h2>
-                <div class="workspace-surface-copy">Tizimdagi barcha muhim o'zgarishlar va amallari.</div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="refreshAuditLogs()">Yangilash</button>
-            </div>
-            <div id="auditLogsContainer" style="padding:16px;"></div>
-          </div>
-
-          <div class="workspace-surface" style="margin-top:20px;">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>🧠 G'oyalar tahlili (T10)</h2>
-                <div class="workspace-surface-copy">AI-klasterlash va dublikatlarni aniqlash.</div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="analyzeIdeas()">Tahlil qilish</button>
-            </div>
-            <div class="workspace-form-stack" style="padding:16px;">
-              <label class="label">Workspace tanlang</label>
-              <select class="select" id="analyzeTeamId">${teams.length ? teams.map((t) => `<option value="${t.id}">${t.name}</option>`).join('') : '<option value="">Workspace yo\'q</option>'}</select>
-            </div>
-            <div id="analyzeResult" style="padding:0 16px 16px;"></div>
-          </div>
-
-          <div class="workspace-surface" style="margin-top:20px;">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>📋 Shablonlar (T13)</h2>
-                <div class="workspace-surface-copy">Workspace yaratishda ishlatiladigan tayyor shablonlar (urug' vazifalari).</div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="loadTemplates()">Yangilash</button>
-            </div>
-            <div id="templatesContainer" style="padding:16px;"></div>
-            <div class="workspace-form-stack" style="padding:0 16px 16px;">
-              <input class="input mb-3" id="templateName" placeholder="Shablon nomi">
-              <textarea class="textarea mb-3" id="templateSeed" rows="3" placeholder="Har qatorda bitta tayanch vazifa nomi"></textarea>
-              <button class="btn btn-primary" id="createTemplateBtn">Shablon yaratish</button>
-            </div>
-          </div>
-
-          <div class="workspace-surface" style="margin-top:20px;">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>🎚️ Feature Flags (T6)</h2>
-                <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
-              </div>
-              <button class="btn btn-secondary btn-sm" onclick="saveFeatureFlags()">Saqlash</button>
-            </div>
-            <div id="featureFlagsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspace-layout" style="margin-top:0;">
-        <div class="workspace-main-stack">
-          <div class="workspace-surface pad">
-            <div class="section-head"><h2>Admin qoidasi</h2></div>
-            <div class="workspace-note-bar">Admin idea, chat yoki secret key oqimiga aralashmaydi. Admin faqat workspace yaratadi, team leadni belgilaydi va kerak bo'lsa workspace'ni o'chiradi.</div>
-          </div>
-
-          <div class="workspace-surface">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>Workspace registry</h2>
-                <div class="workspace-surface-copy">A'zolar soni, team lead tayinlanganligi va delete action.</div>
-              </div>
-              <span class="badge">Production control</span>
-            </div>
-            <div class="workspace-card-grid cols-2" id="workspaceList"></div>
-          </div>
-
-          <div class="workspace-surface" style="margin-top:20px;">
-            <div class="workspace-surface-head">
-              <div>
-                <h2>Managerlar va Jamoalar Boshqaruvi</h2>
-                <div class="workspace-surface-copy">Yangi manager tayinlash hamda unga mas'ul komandalarni biriktirish.</div>
-              </div>
-              <button class="btn btn-primary btn-sm" onclick="UTIL.openModal('addManagerModal')">+ Manager qo'shish</button>
-            </div>
-            <div id="managerList" style="padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
-          </div>
-        </div>
-
-        <aside class="workspace-side-stack">
-          <div class="workspace-surface pad">
-            <h3 style="margin:0 0 12px">Admin vazifasi</h3>
-            <div class="workspace-security-list">
-              <span>Workspace yaratish</span>
-              <span>Lead email tayinlash</span>
-              <span>Workspace o'chirish</span>
-            </div>
-          </div>
-          <div class="workspace-surface pad">
-            <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
-            <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni yuritish team lead zimmasida.</p>
-          </div>
-        </aside>
-      </section>
+      </div>
     </div>
   </div>
 
@@ -173,7 +189,7 @@
       </div>
       <div class="workspace-modal-error" id="addManagerError" style="color:#ef4444;font-size:13px;margin-top:8px;"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('addManagerModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('addManagerModal')">Bekor qilish</button>
         <button class="btn btn-primary" type="button" id="confirmAddManagerBtn">Qo'shish</button>
       </div>
     </div>
@@ -192,7 +208,7 @@
       </div>
       <div class="workspace-modal-error" id="revokeManagerError"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('revokeManagerModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('revokeManagerModal')">Bekor qilish</button>
         <button class="btn btn-danger" type="button" id="confirmRevokeManagerBtn">O'chirish</button>
       </div>
     </div>
@@ -203,7 +219,7 @@
       <h3 id="customConfirmTitle">Tasdiqlash</h3>
       <p class="modal-sub" id="customConfirmText" style="margin-bottom:20px;font-size:14px;color:var(--text);"></p>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" id="customConfirmNoBtn">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" id="customConfirmNoBtn">Bekor qilish</button>
         <button class="btn btn-primary" type="button" id="customConfirmYesBtn">Rostdan ham Tasdiqlash</button>
       </div>
     </div>
@@ -222,7 +238,7 @@
       </div>
       <div class="workspace-modal-error" id="deleteWorkspaceError"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
         <button class="btn btn-danger" type="button" id="confirmDeleteWorkspaceBtn">O'chirish</button>
       </div>
     </div>
@@ -234,7 +250,7 @@
       <p class="modal-sub">Har bir a'zo uchun maxsus ruxsatlarni belgilang (T11). Belgilanmagan ruxsat standart rolga bo'ysunadi.</p>
       <div id="permissionsModalBody" style="max-height:50vh;overflow:auto;"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" type="button" onclick="UTIL.closeModal('permissionsModal')">Bekor qilish</button>
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('permissionsModal')">Bekor qilish</button>
         <button class="btn btn-primary" type="button" id="confirmPermissionsBtn">Saqlash</button>
       </div>
     </div>
@@ -338,7 +354,7 @@
                         <td style="padding:12px;font-size:12px;color:var(--text-muted);">${new Date(log.timestamp?.toMillis?.() || log.timestamp || 0).toLocaleString('uz-UZ')}</td>
                         <td style="padding:12px;">
                           ${log.previousState !== undefined ? `<button class="btn btn-sm btn-secondary" onclick="rollbackLog('${log.id}')">Qaytarish</button>` : '<span class="text-xs muted">—</span>'}
-                          ${log.currentState !== undefined ? `<button class="btn btn-sm" onclick="showAuditDiff('${log.id}')">Diff</button>` : ''}
+                          ${log.currentState !== undefined ? `<button class=\"btn btn-secondary btn-sm\" onclick=\"showAuditDiff('${log.id}')">Diff</button>` : ''}
                         </td>
                       </tr>
                     `).join('')}
@@ -410,6 +426,23 @@
       };
       document.getElementById('errorLogsRefreshBtn')?.addEventListener('click', () => window.refreshErrorLogs());
       window.refreshErrorLogs();
+
+      // T-UI — Admin sub-nav (bo'lim almashtirish)
+      (() => {
+        const items = Array.from(document.querySelectorAll('.subnav-item'));
+        const panels = Array.from(document.querySelectorAll('.admin-panel'));
+        if (!items.length) return;
+        const activate = (name) => {
+          items.forEach((b) => b.setAttribute('aria-current', String(b.dataset.panel === name)));
+          panels.forEach((p) => { p.hidden = (p.dataset.panel !== name); });
+          try { localStorage.setItem('mlly_admin_tab', name); } catch (_) {}
+        };
+        items.forEach((b) => b.addEventListener('click', () => activate(b.dataset.panel)));
+        try {
+          const s = localStorage.getItem('mlly_admin_tab');
+          if (items.some((b) => b.dataset.panel === s)) activate(s);
+        } catch (_) {}
+      })();
 
       // ===== T10 AI klasterlash / dublikat aniqlash =====
       window.analyzeIdeas = async () => {
@@ -870,7 +903,7 @@
     <div style="background:var(--surface);max-width:720px;width:92%;max-height:82vh;overflow:auto;border-radius:12px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
         <h3 id="auditDiffTitle" style="margin:0;font-size:16px;">Diff</h3>
-        <button class="btn" onclick="closeAuditDiff()">Yopish</button>
+        <button class="btn btn-secondary" onclick="closeAuditDiff()">Yopish</button>
       </div>
       <div id="auditDiffBody"></div>
     </div>

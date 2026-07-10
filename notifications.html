@@ -39,7 +39,7 @@
               </div>
               <div class="workspace-stack-tight" style="align-items:end">
                 <span class="badge" id="notificationCount">0</span>
-                <button class="btn btn-ghost btn-sm" id="batchToggleBtn" type="button">📦 Guruhlangan</button>
+                <button class="btn btn-secondary btn-sm" id="batchToggleBtn" type="button">📦 Guruhlangan</button>
               </div>
             </div>
             <div class="workspace-card-grid" id="list"></div>
@@ -196,7 +196,7 @@
           batchOn = !batchOn;
           batchView.style.display = batchOn ? 'block' : 'none';
           batchBtn.classList.toggle('btn-primary', batchOn);
-          batchBtn.classList.toggle('btn-ghost', !batchOn);
+          batchBtn.classList.toggle('btn-secondary', !batchOn);
           if (!batchOn) { batchView.innerHTML = ''; return; }
           batchView.innerHTML = '<div class="muted">Yuklanmoqda...</div>';
           try {
