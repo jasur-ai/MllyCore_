@@ -778,8 +778,8 @@
                   <button type="button" class="ws-acc-head" data-acc="reputation">🏅 Reputation  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-reputation"><p class="ws-acc-hint">A'zolarning obro'si reytingi. Ochib ko'rish uchun bosing.</p></div>
                 </div>
-                <div class="ws-acc" data-group="moliya">
-                  <button type="button" class="ws-acc-head" data-acc="finance">💰 Moliyaviy  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="moliya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="finance">💰 Moliyaviy <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-finance">
                     <p class="ws-acc-hint">Oylik byudjet va burn-rate ni kiriting — qancha oy yetishin (runway) hisoblab ko'rsatamiz.</p>
                     <div class="ws-mini-form">
@@ -806,8 +806,8 @@
                   </div>
                 </div>
                 <!-- T41 Backup accordion -->
-                <div class="ws-acc" data-group="moliya">
-                  <button type="button" class="ws-acc-head" data-acc="backup">💾 Backup  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="moliya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="backup">💾 Backup <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-backup">
                     <p class="ws-acc-hint">Butun workspace (g'oyalar, vazifalar, a'zolar, chat) export/import — migratsiya yoki halokatdan tiklash uchun.</p>
                     <div class="ws-mini-form">
@@ -819,8 +819,8 @@
                   </div>
                 </div>
                 <!-- T44 Load accordion -->
-                <div class="ws-acc" data-group="jamoa">
-                  <button type="button" class="ws-acc-head" data-acc="load">🔥 Load signal  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="jamoa" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="load">🔥 Load signal <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-load">
                     <p class="ws-acc-hint">A'zolarning yuklanish signali (timeLogs + tasks + presence asosida).</p>
                     <div id="loadSummary" class="muted" style="margin-bottom:8px;"></div>
@@ -828,8 +828,8 @@
                   </div>
                 </div>
                 <!-- T46 Webhooks accordion -->
-                <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="webhooks">🔗 Webhooks  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="webhooks">🔗 Webhooks <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-webhooks">
                     <p class="ws-acc-hint">Zapier / Make / Notion kabi tashqi xizmatlarga event yuborish (task_created, idea_created, member_invited yoki * — hammasi).</p>
                     <div class="ws-mini-form">
@@ -847,8 +847,8 @@
                   </div>
                 </div>
                 <!-- T47 Idea Lifecycle Analytics accordion -->
-                <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-analytics">
                     <p class="ws-acc-hint">G'oyalar hayotiy sikli: T18 (RICE score), T29 (stage), T26 (stale/health), T34 (ovoz).</p>
                     <div id="analyticsSummary" class="muted" style="margin-bottom:8px;"></div>
@@ -859,8 +859,8 @@
                   </div>
                 </div>
                 <!-- T54 Attachment Versioning accordion -->
-                <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="attachments" aria-expanded="false" aria-controls="acc-attachments">📎 Biriktirmalar  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="attachments" aria-expanded="false" aria-controls="acc-attachments">📎 Biriktirmalar <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-attachments">
                     <p class="ws-acc-hint">Workspace ga biriktirilgan shifrlangan fayllar va ularning versiya tarixi.</p>
                     <div id="attachmentsList" class="workspace-message-stack"></div>
@@ -868,8 +868,8 @@
                   </div>
                 </div>
                 <!-- T55 Timezone-aware Scheduling accordion -->
-                <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="timezone" aria-expanded="false" aria-controls="acc-timezone">🌍 Vaqt / Timezone  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="timezone" aria-expanded="false" aria-controls="acc-timezone">🌍 Vaqt / Timezone <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-timezone">
                     <p class="ws-acc-hint">Shaxsiy timezone va ish vaqti (working hours) — bildirishnomalar va uchrashuvlar uchun.</p>
                     <div class="ws-mini-form">
@@ -1301,17 +1301,17 @@
         document.querySelector('.workspace-command-tools')?.appendChild(collabBar);
         const myColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
         const myName = (window.MLLYCORE_PROFILE && (window.MLLYCORE_PROFILE.name || window.MLLYCORE_PROFILE.email)) || 'User';
-        const _move = (e) => {
-          const now = Date.now();
-          if (now - (_move._last || 0) < 60) return;
-          _move._last = now;
-          MllyCore.updateCursor({ teamId: teamIdT, x: e.clientX, y: e.clientY, name: myName, color: myColor });
-        };
-        window.addEventListener('mousemove', _move);
-        const _unsubCursors = MllyCore.subscribeCursors(teamIdT, (cursors) => {
+
+        // FIX (complaint 10): jonli kursolar (kursorni kuzatib yuguradigan nuqtalar) ba'zan
+        // bezovta qiladi. Shuning uchun ularni foydalanuvchi o'zi yoqishi/o'chirishi mumkin
+        // (holat localStorage da saqlanadi). Presence (kim onlayn) esa doim ko'rinadi.
+        const _cursorKey = 'mlly_cursor_enabled';
+        let _cursorsOn = (() => { const v = localStorage.getItem(_cursorKey); return v === null ? true : v === '1'; })();
+        let _unsubCursors = null;
+        const _renderCursors = (cursors) => {
+          if (!_cursorsOn) return;
           try {
             cursorLayer.innerHTML = '';
-            collabBar.innerHTML = '';
             cursors.forEach((c) => {
               if (c.userId === window.MLLYCORE_AUTH_USER?.uid) return;
               const dot = document.createElement('div');
@@ -1321,20 +1321,50 @@
               dot.style.background = c.color || '#7dd3fc';
               dot.innerHTML = '<span class="cursor-label">' + escapeHtml(c.name || 'User') + '</span>';
               cursorLayer.appendChild(dot);
-              const av = document.createElement('span');
-              av.className = 'cursor-avatar';
-              av.style.background = c.color || '#7dd3fc';
-              av.textContent = (c.name || 'U').slice(0, 1).toUpperCase();
-              av.title = c.name || 'User';
-              collabBar.appendChild(av);
             });
           } catch (_) {}
+        };
+        const _move = (e) => {
+          if (!_cursorsOn) return;
+          const now = Date.now();
+          if (now - (_move._last || 0) < 60) return;
+          _move._last = now;
+          MllyCore.updateCursor({ teamId: teamIdT, x: e.clientX, y: e.clientY, name: myName, color: myColor });
+        };
+        const _enableCursors = () => {
+          if (_unsubCursors) return;
+          window.addEventListener('mousemove', _move);
+          _unsubCursors = MllyCore.subscribeCursors(teamIdT, _renderCursors);
+          cursorLayer.style.display = '';
+        };
+        const _disableCursors = () => {
+          try { window.removeEventListener('mousemove', _move); } catch (_) {}
+          if (_unsubCursors) { try { _unsubCursors(); } catch (_) {} _unsubCursors = null; }
+          cursorLayer.innerHTML = '';
+          cursorLayer.style.display = 'none';
+        };
+        if (_cursorsOn) _enableCursors();
+
+        const _cursorToggle = document.createElement('button');
+        _cursorToggle.type = 'button';
+        _cursorToggle.className = 'btn btn-tertiary btn-sm collab-toggle';
+        _cursorToggle.textContent = _cursorsOn ? '👁 Kursolar: Yoq' : '👁 Kursolar: O‘ch';
+        _cursorToggle.setAttribute('aria-pressed', String(_cursorsOn));
+        _cursorToggle.title = 'Jonli kursolarni yoqish/o‘chirish';
+        _cursorToggle.addEventListener('click', () => {
+          _cursorsOn = !_cursorsOn;
+          localStorage.setItem(_cursorKey, _cursorsOn ? '1' : '0');
+          _cursorToggle.textContent = _cursorsOn ? '👁 Kursolar: Yoq' : '👁 Kursolar: O‘ch';
+          _cursorToggle.setAttribute('aria-pressed', String(_cursorsOn));
+          if (_cursorsOn) _enableCursors(); else _disableCursors();
         });
+        collabBar.appendChild(_cursorToggle);
+
         window.__mllyCollabCleanup = () => {
           try { window.removeEventListener('mousemove', _move); } catch (_) {}
           try { if (cursorLayer.parentNode) cursorLayer.parentNode.removeChild(cursorLayer); } catch (_) {}
           try { if (collabBar.parentNode) collabBar.parentNode.removeChild(collabBar); } catch (_) {}
-          try { if (typeof _unsubCursors === 'function') _unsubCursors(); } catch (_) {}
+          try { if (_unsubCursors) _unsubCursors(); } catch (_) {}
         };
 
         // T53 — Automated Weekly Report (Telegram + in-app)
@@ -1473,8 +1503,14 @@
             teamId: data.team.id,
             title: document.getElementById('taskTitle').value,
             description: document.getElementById('taskDescription').value,
-            assignmentMode: document.getElementById('taskAssignmentMode').value,
-            assignedUserId: document.getElementById('taskAssignedUserId')?.value || '',
+            assignmentMode: document.getElementById('taskAssignmentMode').value || 'open',
+            // FIX (complaints 8 & 9): server `assignedTo` maydonini kutyapti, klient esa
+            // `assignedUserId` yuborardi — shuning uchun tayinlash tiklanmaydi va vazifa
+            // har doim createdBy (lead) ga bog'lanib qolardi. Endi to'g'ri maydon yuboriladi.
+            // "Bir kishiga" (direct) rejimida tanlangan a'zo; qolgan rejimlarda — bo'sh (masulsiz).
+            assignedTo: (document.getElementById('taskAssignmentMode').value === 'direct')
+              ? (document.getElementById('taskAssignedUserId')?.value || '')
+              : '',
             deadline: document.getElementById('taskDeadline').value,
             dependsOn,
             requiredSkill: document.getElementById('taskRequiredSkill')?.value || ''
@@ -1488,6 +1524,14 @@
           button.disabled = false;
         }
       });
+
+      // FIX (complaint 9): Mas'ul faqat "Bir kishiga" (direct) rejimida kerak.
+      // Qolgan rejimlarda mas'ul tanlash maydoni yashiriladi — shunda foydalanuvchi
+      // vazifani masulsiz yaratishi va keyinroq tayinlashi mumkin.
+      const _modeSel = document.getElementById('taskAssignmentMode');
+      const _assigneeWrap = document.getElementById('taskAssigneeWrap');
+      const _syncAssignee = () => { if (_assigneeWrap) _assigneeWrap.style.display = (_modeSel && _modeSel.value === 'direct') ? '' : 'none'; };
+      if (_modeSel) { _modeSel.addEventListener('change', _syncAssignee); _syncAssignee(); }
 
       document.getElementById('resetSecretBtn')?.addEventListener('click', async () => {
         const button = document.getElementById('resetSecretBtn');

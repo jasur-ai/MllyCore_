@@ -390,15 +390,19 @@
       window.refreshAuditLogs();
 
       // ===== Feature Flags =====
+      // ===== Feature Flags (Global) =====
+      // Bu flaglar butun tizimga ta'sir qiladi va faqat admin tomonidan boshqariladi.
+      // Har bir flag yoqilsa — tegishli funksionallik faollashadi, o'chirilsa — o'chadi.
+      // (Izoh: avvalgi versiyada bu qismda tushuntirish yo'q edi — endi har bir flag ma'nosi aniq.)
       const FLAG_DEFS = [
-        { key: 'timeTracking', label: 'Vaqt kuzatuvi' },
-        { key: 'guestRole', label: 'Mehmon/Viewer roli' },
-        { key: 'twoFactor', label: 'Admin uchun 2FA' },
-        { key: 'dependencies', label: 'Vazifa bog\'liqligi' },
-        { key: 'templates', label: 'Shablonlar' },
-        { key: 'quietHours', label: 'Quiet Hours' },
-        { key: 'encryptedFiles', label: 'Shifrlangan fayllar' },
-        { key: 'weeklyDigest', label: 'Haftalik Digest' }
+        { key: 'timeTracking',    label: 'Vaqt kuzatuvi',        desc: "A'zolar vazifalarga sarflangan vaqtni kuzatadi." },
+        { key: 'guestRole',       label: 'Mehmon/Viewer roli',  desc: "Faqat o'qish huquqiga ega viewer rolini yoqadi." },
+        { key: 'twoFactor',       label: 'Admin uchun 2FA',     desc: 'Admin akkauntlari uchun ikki bosqichli tasdiqlash majburiy.' },
+        { key: 'dependencies',    label: 'Vazifa bog\'liqligi', desc: 'Vazifalar bir-biriga bog\'lanadi (bloklanish hosil bo\'ladi).' },
+        { key: 'templates',       label: 'Shablonlar',          desc: 'Workspace yaratish uchun tayyor shablonlar.' },
+        { key: 'quietHours',      label: 'Quiet Hours',         desc: 'Belgilangan soatlarda bildirishnomalar sukut saqlaydi.' },
+        { key: 'encryptedFiles',  label: 'Shifrlangan fayllar', desc: 'Biriktirmalar shifrlanib saqlanadi.' },
+        { key: 'weeklyDigest',    label: 'Haftalik Digest',     desc: 'Haftalik umumlashma hisoboti.' }
       ];
       const loadFeatureFlags = async () => {
         try {

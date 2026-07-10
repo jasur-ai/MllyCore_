@@ -210,7 +210,11 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const profile = window.MLLYCORE_PROFILE;
-      mountLayout('profile', { profile, teams: [], notifications: [] });
+      // FIX (complaint 7): profilga o'tganda "Workspace'larim" yo'qolmasligi uchun
+      // haqiqiy jamoalar ro'yxatini yuklab, sidebar ga uzatamiz.
+      let dash = { teams: [], notifications: [] };
+      try { dash = await MllyCore.getDashboardData(user.uid); } catch (_) {}
+      mountLayout('profile', { profile, teams: dash.teams || [], notifications: dash.notifications || [] });
       document.getElementById('name').value = profile.name || '';
       document.getElementById('username').value = profile.username || '';
       document.getElementById('email').value = profile.email || user.email || '';

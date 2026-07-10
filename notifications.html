@@ -97,6 +97,11 @@
     function renderNotificationPage(data) {
       const invites = data.pendingInvites || [];
       document.getElementById('inviteCount').textContent = invites.length;
+      // FIX (complaint 6): "Team takliflari" bo'limi faqat haqiqatan ham kutilayotgan
+      // takliflar bo'lganda ko'rsatiladi. Aks holda (masalan, managerlar uchun bo'sh holatda)
+      // keraksiz bo'lim chiqmaydi.
+      const _invSec = document.getElementById('invites')?.closest('.workspace-surface');
+      if (_invSec) _invSec.style.display = invites.length ? '' : 'none';
       document.getElementById('notificationCount').textContent = data.notifications.length;
 
       document.getElementById('invites').innerHTML = invites.length ? invites.map((invite) => `
