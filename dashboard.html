@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
     <div class="workspace-app">
       <section class="workspace-command">
@@ -29,7 +30,7 @@
 
       <section class="workspace-main-stack" id="memberDashboard">
         <div class="workspace-main-stack">
-          <div class="workspace-surface">
+          <div class="workspace-surface" id="teamsSurface">
             <div class="workspace-surface-head">
               <div>
                 <h2>Mening workspace'larim</h2>
@@ -48,7 +49,18 @@
             <div class="workspace-note-bar" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
           </div>
 
-          <div class="workspace-surface">
+          <div class="workspace-surface pad" id="personalizationSurface">
+            <div class="section-head"><h3>Personalizatsiya (T51)</h3></div>
+            <div class="workspace-surface-copy" id="roleQuickActions">Rolingizga mos tez amallar shu yerda.</div>
+            <div class="workspace-form-inline mt-3" id="widgetToggles">
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="teams" checked> Workspace'lar</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="ideas" checked> G'oyalar</label>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="notifs" checked> Bildirishnomalar</label>
+            </div>
+            <div class="text-sm muted" id="personalizationStatus"></div>
+          </div>
+
+          <div class="workspace-surface" id="ideasSurface">
             <div class="workspace-surface-head">
               <div>
                 <h2>So'nggi g'oyalar</h2>
@@ -64,7 +76,7 @@
             </div>
           </div>
 
-          <div class="workspace-surface">
+          <div class="workspace-surface" id="notifsSurface">
             <div class="workspace-surface-head">
               <div>
                 <h3>Bildirishnomalar</h3>
@@ -360,6 +372,44 @@
           <span>${n.type || 'notification'}</span>
         </div>
       `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
+
+      // T51 — Role-based Dashboard Personalization
+      const roleQuick = document.getElementById('roleQuickActions');
+      const widgetToggles = Array.from(document.querySelectorAll('.widget-toggle'));
+      const applyHidden = (hidden) => {
+        const h = Array.isArray(hidden) ? hidden : [];
+        const map = { teams: 'teamsSurface', ideas: 'ideasSurface', notifs: 'notifsSurface' };
+        Object.entries(map).forEach(([k, id]) => {
+          const el = document.getElementById(id);
+          if (el) el.style.display = h.includes(k) ? 'none' : '';
+        });
+        widgetToggles.forEach((c) => { c.checked = !h.includes(c.value); });
+      };
+      if (roleQuick) {
+        const role = profile?.role || 'member';
+        const qa = {
+          admin: "<a class=\"btn btn-primary btn-sm\" href=\"#\" onclick=\"UTIL.openModal('newTeamModal');return false;\">+ Workspace yaratish</a>",
+          team_lead: "<a class=\"btn btn-ghost btn-sm\" href=\"dashboard.html\">Workspace'larim</a> <a class=\"btn btn-ghost btn-sm\" href=\"notifications.html\">Takliflar</a>",
+          manager: "<a class=\"btn btn-ghost btn-sm\" href=\"reports.html\">Hisobotlar</a>",
+          member: "<a class=\"btn btn-ghost btn-sm\" href=\"my-ideas.html\">Mening g'oyalarim</a> <a class=\"btn btn-ghost btn-sm\" href=\"dashboard.html\">Workspace'larim</a>"
+        };
+        roleQuick.innerHTML = 'Rolingiz: <strong>' + role + '</strong> — ' + (qa[role] || qa.member);
+      }
+      try {
+        const prefsRes = await MllyCore.getDashboardPrefs();
+        applyHidden(prefsRes.prefs && prefsRes.prefs.hiddenWidgets);
+      } catch (_) {}
+      widgetToggles.forEach((c) => {
+        c.addEventListener('change', async () => {
+          const hidden = widgetToggles.filter((x) => !x.checked).map((x) => x.value);
+          const status = document.getElementById('personalizationStatus');
+          if (status) status.textContent = 'Saqlanmoqda...';
+          try {
+            await MllyCore.saveDashboardPrefs({ hiddenWidgets: hidden });
+            if (status) status.textContent = 'Saplandi.';
+          } catch (e) { if (status) status.textContent = e.message; }
+        });
+      });
 
       document.getElementById('globalSearch').addEventListener('input', (event) => {
         const q = event.target.value.trim().toLowerCase();

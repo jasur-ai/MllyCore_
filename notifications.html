@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
     <div class="workspace-app">
       <section class="workspace-command">
@@ -36,9 +37,13 @@
                 <h2>Bildirishnomalar</h2>
                 <div class="workspace-surface-copy">Bosilganda kerakli joyga olib boradi va o'qilgan bo'ladi.</div>
               </div>
-              <span class="badge" id="notificationCount">0</span>
+              <div class="workspace-stack-tight" style="align-items:end">
+                <span class="badge" id="notificationCount">0</span>
+                <button class="btn btn-ghost btn-sm" id="batchToggleBtn" type="button">📦 Guruhlangan</button>
+              </div>
             </div>
             <div class="workspace-card-grid" id="list"></div>
+            <div id="batchView" style="margin-top:12px;display:none;"></div>
           </div>
         </div>
 
@@ -181,6 +186,31 @@
       const data = await MllyCore.getDashboardData(user.uid);
       mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
       renderNotificationPage(data);
+
+      // T49 — Smart Notification Batching (guruhlab ko'rsatish)
+      const batchBtn = document.getElementById('batchToggleBtn');
+      const batchView = document.getElementById('batchView');
+      let batchOn = false;
+      if (batchBtn && batchView) {
+        batchBtn.addEventListener('click', async () => {
+          batchOn = !batchOn;
+          batchView.style.display = batchOn ? 'block' : 'none';
+          batchBtn.classList.toggle('btn-primary', batchOn);
+          batchBtn.classList.toggle('btn-ghost', !batchOn);
+          if (!batchOn) { batchView.innerHTML = ''; return; }
+          batchView.innerHTML = '<div class="muted">Yuklanmoqda...</div>';
+          try {
+            const r = await MllyCore.getNotificationDigest();
+            const groups = r.groups || [];
+            const total = r.total || 0;
+            batchView.innerHTML = '<div class="ws-mini-form" style="margin-bottom:8px"><strong>Jami o‘qilmagan: ' + total + '</strong></div>' + (groups.length ? groups.map((g) => `
+              <div class="workspace-message-item">
+                <strong>${escapeHtml(g.type)}</strong> — ${g.count} ta
+                <div class="text-xs muted">${(g.sample || []).map((x) => escapeHtml((x.content || x.text || '').slice(0, 60))).join(' • ')}</div>
+              </div>`).join('') : '<div class="muted">Guruhlanadigan bildirishnoma yo‘q</div>');
+          } catch (e) { batchView.textContent = e.message; }
+        });
+      }
 
       MllyCore.subscribeUserNotifications(user.uid, (notifications) => {
         const nextData = { ...data, notifications };

@@ -1,0 +1,11 @@
+{
+  "name": "MllyCore",
+  "short_name": "MllyCore",
+  "description": "Startup-ideas workspace platform — g'oyalar, vazifalar va jamoa.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": []
+}

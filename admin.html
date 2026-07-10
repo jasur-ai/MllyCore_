@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
     <div class="workspace-app">
       <section class="workspace-command">
@@ -22,6 +23,28 @@
       </section>
 
       <section class="workspace-overview" id="stats"></section>
+
+      <section class="workspace-surface" style="margin-top:16px;">
+        <div class="workspace-surface-head">
+          <div>
+            <h2>🩺 System Health (T57)</h2>
+            <div class="workspace-surface-copy">API holati, Firebase ulanishi va xatolik kuzatuvi.</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="healthCheckBtn" aria-label="System health ni tekshirish">Tekshirish</button>
+        </div>
+        <div id="healthDetail" class="muted" style="padding:8px 16px 4px;" role="status" aria-live="polite">Tekshirish uchun tugmani bosing.</div>
+      </section>
+
+      <section class="workspace-surface" style="margin-top:16px;">
+        <div class="workspace-surface-head">
+          <div>
+            <h2>🐞 Xatolik loglari (T57)</h2>
+            <div class="workspace-surface-copy">Klient va server xatoliklari (so'nggi 50 ta).</div>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="errorLogsRefreshBtn" aria-label="Xatolik loglarini yangilash">Yangilash</button>
+        </div>
+        <div id="errorLogsContainer" style="padding:16px;"></div>
+      </section>
 
       <section class="workspace-layout" style="margin-top:24px;">
         <div class="workspace-main-stack">
@@ -290,6 +313,7 @@
           });
           const data = await response.json();
           if (data.logs) {
+            window._auditLogs = data.logs;
             const container = document.getElementById('auditLogsContainer');
             if (data.logs.length === 0) {
               container.innerHTML = '<div class="workspace-empty" style="text-align:center;padding:20px;">Hozircha audit logs yo\'q</div>';
@@ -312,7 +336,10 @@
                         <td style="padding:12px;font-weight:500;">${log.action || 'Unknown'}</td>
                         <td style="padding:12px;">${log.userName || 'Unknown'}</td>
                         <td style="padding:12px;font-size:12px;color:var(--text-muted);">${new Date(log.timestamp?.toMillis?.() || log.timestamp || 0).toLocaleString('uz-UZ')}</td>
-                        <td style="padding:12px;">${log.previousState !== undefined ? `<button class="btn btn-sm btn-secondary" onclick="rollbackLog('${log.id}')">Qaytarish</button>` : '<span class="text-xs muted">—</span>'}</td>
+                        <td style="padding:12px;">
+                          ${log.previousState !== undefined ? `<button class="btn btn-sm btn-secondary" onclick="rollbackLog('${log.id}')">Qaytarish</button>` : '<span class="text-xs muted">—</span>'}
+                          ${log.currentState !== undefined ? `<button class="btn btn-sm" onclick="showAuditDiff('${log.id}')">Diff</button>` : ''}
+                        </td>
                       </tr>
                     `).join('')}
                   </tbody>
@@ -357,6 +384,32 @@
         catch (e) { alert(e.message); }
       };
       loadFeatureFlags();
+
+      // ===== T57 System Health + Error Tracking =====
+      const escapeHtmlT57 = (v) => String(v || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
+      const refreshHealth = async () => {
+        const detail = document.getElementById('healthDetail');
+        if (detail) detail.textContent = 'Tekshirilmoqda...';
+        try {
+          const h = await MllyCore.getHealth();
+          if (detail) detail.innerHTML = 'Status: <b>' + (h.status || '?') + '</b> · Firebase: ' + (h.firebase ? '✅ ulangan' : '❌ uzildi') + ' · Node ' + (h.node || '-') + ' · Region: ' + (h.region || '-') + ' · Uptime: ' + (h.uptimeSeconds || 0) + 's · Latency: ' + (h.latencyMs || 0) + 'ms';
+        } catch (e) { if (detail) detail.textContent = 'Xatolik: ' + (e.message || ''); }
+      };
+      document.getElementById('healthCheckBtn')?.addEventListener('click', refreshHealth);
+      refreshHealth();
+
+      window.refreshErrorLogs = async () => {
+        const c = document.getElementById('errorLogsContainer');
+        if (!c) return;
+        try {
+          const r = await MllyCore.getErrorLogs();
+          const logs = r.logs || [];
+          if (!logs.length) { c.innerHTML = '<div class="workspace-empty">Xatolik loglari yo‘q</div>'; return; }
+          c.innerHTML = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:2px solid var(--line);"><th style="padding:10px;text-align:left;color:var(--text-muted);">Vaqt</th><th style="padding:10px;text-align:left;color:var(--text-muted);">Daraja</th><th style="padding:10px;text-align:left;color:var(--text-muted);">Xabar</th></tr></thead><tbody>' + logs.map((l) => '<tr style="border-bottom:1px solid var(--line);"><td style="padding:10px;white-space:nowrap;">' + (l.createdAt ? new Date(l.createdAt).toLocaleString('uz-UZ') : '-') + '</td><td style="padding:10px;"><span class="badge ' + (l.level === 'error' ? 'badge-active' : '') + '">' + escapeHtmlT57(l.level) + '</span></td><td style="padding:10px;">' + escapeHtmlT57(l.message) + (l.context ? ' <span class="muted">(' + escapeHtmlT57(l.context) + ')</span>' : '') + '</td></tr>').join('') + '</tbody></table></div>';
+        } catch (e) { c.innerHTML = '<div class="workspace-empty">Xatolik loglarini yuklashda xato: ' + (e.message || '') + '</div>'; }
+      };
+      document.getElementById('errorLogsRefreshBtn')?.addEventListener('click', () => window.refreshErrorLogs());
+      window.refreshErrorLogs();
 
       // ===== T10 AI klasterlash / dublikat aniqlash =====
       window.analyzeIdeas = async () => {
@@ -414,6 +467,29 @@
         try { await MllyCore.rollbackAction(id); alert('Qaytarildi.'); refreshAuditLogs(); }
         catch (e) { alert(e.message); }
       };
+
+      // ===== T40 Audit Diff Viewer =====
+      window.showAuditDiff = (id) => {
+        const logs = window._auditLogs || [];
+        const log = logs.find((l) => l.id === id);
+        if (!log) return;
+        const prev = log.previousState || {};
+        const cur = log.currentState || {};
+        const keys = Object.keys(Object.assign({}, prev, cur));
+        const rows = [];
+        keys.forEach((k) => {
+          const pv = JSON.stringify(prev[k]);
+          const cv = JSON.stringify(cur[k]);
+          if (pv !== cv) rows.push('<tr><td style="padding:6px;border:1px solid var(--line);font-weight:600;">' + k + '</td><td style="padding:6px;border:1px solid var(--line);color:#e5484d;">' + pv + '</td><td style="padding:6px;border:1px solid var(--line);color:#46a758;">' + cv + '</td></tr>');
+        });
+        const body = rows.length
+          ? '<table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th style="padding:6px;border:1px solid var(--line);">Maydon</th><th style="padding:6px;border:1px solid var(--line);">Oldingi</th><th style="padding:6px;border:1px solid var(--line);">Joriy</th></tr>' + rows.join('') + '</table>'
+          : 'O‘zgarish topilmadi (oldingi va joriy bir xil).';
+        document.getElementById('auditDiffTitle').textContent = 'Diff: ' + (log.action || 'amal');
+        document.getElementById('auditDiffBody').innerHTML = body;
+        document.getElementById('auditDiffModal').style.display = 'flex';
+      };
+      window.closeAuditDiff = () => { document.getElementById('auditDiffModal').style.display = 'none'; };
 
       // ===== T11 Permissions modal =====
       window.openPermissionsModal = async (teamId, teamName) => {
@@ -788,5 +864,17 @@
       });
     })();
   </script>
+
+  <!-- T40 Audit Diff Viewer modal -->
+  <div id="auditDiffModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--surface);max-width:720px;width:92%;max-height:82vh;overflow:auto;border-radius:12px;padding:20px;box-shadow:0 10px 40px rgba(0,0,0,.3);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 id="auditDiffTitle" style="margin:0;font-size:16px;">Diff</h3>
+        <button class="btn" onclick="closeAuditDiff()">Yopish</button>
+      </div>
+      <div id="auditDiffBody"></div>
+    </div>
+  </div>
+
 </body>
 </html>

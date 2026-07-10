@@ -6,8 +6,10 @@
   <title>Kirish - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body class="auth-page">
+  <a href="#loginForm" class="skip-link">Asosiy kontentga o'tish</a>
   <div class="auth-shell-pro">
     <div class="auth-shell-toolbar">
       <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()"><span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span><span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span></button>
@@ -52,12 +54,12 @@
         <form id="loginForm" class="workspace-form-grid" style="margin-top:20px">
           <div>
             <label class="label">Username</label>
-            <input class="input" id="identifier" required autocomplete="username">
+            <input class="input" id="identifier" required autocomplete="username" aria-label="Email yoki foydalanuvchi nomi">
           </div>
           <div>
             <label class="label">Parol</label>
             <div class="password-field">
-              <input class="input" id="password" type="password" required autocomplete="current-password">
+              <input class="input" id="password" type="password" required autocomplete="current-password" aria-label="Parol">
               <button type="button" class="password-toggle" data-target="password">Ko'rsat</button>
             </div>
           </div>
@@ -67,7 +69,7 @@
             <a href="#" id="forgotLink" class="text-sm" style="color:#7dd3fc; display:block; margin-top:6px;">Parolni unutdingizmi?</a>
           </div>
           <button class="btn btn-primary w-full" type="submit">Kirish</button>
-          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0"></p>
+          <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0" role="status" aria-live="polite"></p>
         </form>
         <div id="forgotBox" style="display:none; margin-top:14px;">
           <p class="text-sm muted">Parol tiklash uchun emailingizni kiriting (faqat admin bo'lmagan foydalanuvchilar):</p>
@@ -158,6 +160,14 @@
         forgotMessage.textContent = err.message || 'Xatolik yuz berdi.';
       }
     });
+  </script>
+  <script>
+    // T50 — PWA: service worker ro'yxatdan o'tkazish (app-shell offline caching)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
   </script>
 </body>
 </html>

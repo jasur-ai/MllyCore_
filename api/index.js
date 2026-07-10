@@ -134,9 +134,15 @@ function requireRole(user, ...roles) {
   if (!roles.includes(user.role)) throw new Error('Ruxsat yoq.');
 }
 
-async function audit(db, action, data) {
+async function audit(db, action, data, opts) {
   try {
-    await db.collection('auditLogs').add({ action, ...data, timestamp: TS() });
+    const entry = { action, ...data, timestamp: TS() };
+    // T40 — Audit Diff Viewer uchun: qaytarish mumkin bo'lgan amallar
+    // oldingi holatni (previousState) va qaytarish manzilini saqlaydi.
+    if (opts && opts.restoreCollection) entry.restoreCollection = opts.restoreCollection;
+    if (opts && opts.restoreDocId) entry.restoreDocId = opts.restoreDocId;
+    if (typeof (opts && opts.previousState) !== 'undefined') entry.previousState = opts.previousState;
+    await db.collection('auditLogs').add(entry);
   } catch (_) { /* non-fatal */ }
 }
 
@@ -240,6 +246,8 @@ async function handleInviteMember(req, res, db, decoded, user) {
   });
 
   await audit(db, 'member_invited', { teamId, inviteeUserId: target.id, role });
+  // T46 — Generic webhook'larga event yuborish (non-fatal, bloklamaydi)
+  emitWebhook(db, teamId, 'member_invited', { inviteeUserId: target.id, role }).catch(() => {});
   return { status: 201, success: true, message: 'Taklif yuborildi.' };
 }
 
@@ -320,6 +328,8 @@ async function handleCreateTask(req, res, db, decoded, user) {
   });
 
   await audit(db, 'task_created', { teamId, taskId: ref.id });
+  // T46 — Generic webhook'larga event yuborish (non-fatal, bloklamaydi)
+  emitWebhook(db, teamId, 'task_created', { taskId: ref.id, title }).catch(() => {});
   return { status: 201, success: true, taskId: ref.id };
 }
 
@@ -463,6 +473,8 @@ async function handleCreateEntry(req, res, db, decoded, user) {
     createdAt: SV(),
     updatedAt: SV(),
   });
+  // T46 — Generic webhook'larga event yuborish (non-fatal, bloklamaydi)
+  emitWebhook(db, teamId, 'idea_created', { ideaId: ref.id, title: title.trim() }).catch(() => {});
   return { status: 201, success: true, ideaId: ref.id };
 }
 
@@ -732,7 +744,17 @@ async function handleUtils(req, res, db, decoded, user) {
     let q = db.collection('auditLogs').orderBy('timestamp', 'desc').limit(limit);
     if (req.query.actionType) q = q.where('action', '==', req.query.actionType);
     if (req.query.userId) q = q.where('byUserId', '==', req.query.userId);
-    const logs = (await q.get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+    const rawLogs = (await q.get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+    // T40 — har bir log uchun joriy holatni (currentState) qaytaramiz (diff uchun)
+    const logs = await Promise.all(rawLogs.map(async (log) => {
+      if (log.restoreCollection && log.restoreDocId) {
+        try {
+          const cur = await db.collection(log.restoreCollection).doc(log.restoreDocId).get();
+          log.currentState = cur.exists ? cur.data() : null;
+        } catch (_) { log.currentState = null; }
+      }
+      return log;
+    }));
     return { status: 200, logs };
   }
 
@@ -894,8 +916,15 @@ async function handleUpdateMemberPermissions(req, res, db, decoded, user) {
   if (typeof permissionsOverride !== 'object' || permissionsOverride === null) {
     return { status: 400, error: 'permissionsOverride obyekt bolishi kerak.' };
   }
-  await db.collection('teamMembers').doc(teamId + '_' + userId).update({ permissionsOverride });
-  await audit(db, 'member_permissions_updated', { teamId, userId, permissionsOverride });
+  // T40 — Audit Diff Viewer: rollback uchun oldingi holatni saqlaymiz
+  const memRef = db.collection('teamMembers').doc(teamId + '_' + userId);
+  const beforeMem = await memRef.get();
+  await memRef.update({ permissionsOverride });
+  await audit(db, 'member_permissions_updated', { teamId, userId, permissionsOverride }, {
+    restoreCollection: 'teamMembers',
+    restoreDocId: teamId + '_' + userId,
+    previousState: beforeMem.exists ? beforeMem.data() : null,
+  });
   return { status: 200, success: true };
 }
 
@@ -1010,23 +1039,281 @@ async function handleExportMyData(req, res, db, decoded) {
 
 // T16 - Shifrlangan fayl metadata (fayl byte'lari Storage'ga client-side yoziladi).
 async function handleCreateAttachment(req, res, db, decoded, user) {
-  const { teamId, taskId, ideaId, fileName, size, iv } = req.body || {};
+  const { teamId, taskId, ideaId, fileName, size, iv, versionNote } = req.body || {};
   if (!teamId || !fileName) return { status: 400, error: 'teamId va fileName kerak.' };
   const membership = await getMembership(db, teamId, decoded.uid);
   if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
   if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
-  const ref = await db.collection('attachments').add({
+
+  // T54 — Attachment Versioning: bir xil (teamId + taskId/ideaId + fileName) ga
+  // qayta fayl yuklansa, yangi versiya sifatida saqlanadi. Eski holat `versions`
+  // massiviga tarix sifatida yoziladi (server ochiq faylni ko'rmaydi — faqat meta).
+  const taskKey = taskId || null;
+  const ideaKey = ideaId || null;
+  const existingSnap = await db.collection('attachments')
+    .where('teamId', '==', teamId)
+    .where('fileName', '==', fileName)
+    .get();
+  const existing = existingSnap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .find((a) => (a.taskId || null) === taskKey && (a.ideaId || null) === ideaKey);
+
+  const meta = {
     teamId,
-    taskId: taskId || null,
-    ideaId: ideaId || null,
+    taskId: taskKey,
+    ideaId: ideaKey,
     fileName,
     size: size || 0,
     iv: iv || null, // client-side shifr uchun IV (server ochiq fayl ko'rmaydi)
     uploadedBy: decoded.uid,
+  };
+
+  if (existing) {
+    const prevVersion = existing.version || 1;
+    const versionSnapshot = {
+      version: prevVersion,
+      fileName: existing.fileName,
+      size: existing.size || 0,
+      iv: existing.iv || null,
+      uploadedBy: existing.uploadedBy || null,
+      uploadedByName: existing.uploadedByName || null,
+      note: existing.versionNote || null,
+      createdAt: existing.createdAt || null,
+    };
+    const versions = Array.isArray(existing.versions) ? existing.versions : [];
+    versions.push(versionSnapshot);
+    const ref = db.collection('attachments').doc(existing.id);
+    await ref.update({
+      ...meta,
+      version: prevVersion + 1,
+      versionNote: versionNote || null,
+      versions,
+      updatedAt: SV(),
+    });
+    await audit(db, 'attachment_versioned', { teamId, attachmentId: existing.id, version: prevVersion + 1 });
+    return { status: 200, success: true, attachmentId: existing.id, version: prevVersion + 1, versioned: true };
+  }
+
+  const ref = await db.collection('attachments').add({
+    ...meta,
+    version: 1,
+    versionNote: versionNote || null,
+    versions: [],
+    createdAt: SV(),
+    updatedAt: SV(),
+  });
+  await audit(db, 'attachment_added', { teamId, attachmentId: ref.id, version: 1 });
+  return { status: 201, success: true, attachmentId: ref.id, version: 1, versioned: false };
+}
+
+// T54 — Attachment ro'yxatini qaytarish (teamId bo'yicha, ixtiyoriy taskId/ideaId filteri).
+async function handleListAttachments(req, res, db, decoded, user) {
+  const { teamId, taskId, ideaId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  let snap = await db.collection('attachments').where('teamId', '==', teamId).orderBy('updatedAt', 'desc').get();
+  let items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  if (taskId) items = items.filter((a) => (a.taskId || null) === (taskId || null));
+  if (ideaId) items = items.filter((a) => (a.ideaId || null) === (ideaId || null));
+
+  // uploadedBy uid -> name/email xaritasi (ko'rsatish uchun).
+  const uids = new Set();
+  items.forEach((a) => {
+    if (a.uploadedBy) uids.add(a.uploadedBy);
+    (a.versions || []).forEach((v) => { if (v.uploadedBy) uids.add(v.uploadedBy); });
+  });
+  const userMap = {};
+  const uidArr = Array.from(uids);
+  for (let i = 0; i < uidArr.length; i += 30) {
+    const batch = uidArr.slice(i, i + 30);
+    const usersSnap = await db.collection('users').where(admin.firestore.FieldPath.documentId(), 'in', batch).get();
+    usersSnap.docs.forEach((d) => {
+      const u = d.data();
+      userMap[d.id] = u.name || u.displayName || u.email || d.id;
+    });
+  }
+  const toMs = (t) => (t && typeof t.toMillis === 'function') ? t.toMillis() : (t ? new Date(t).getTime() : null);
+  items = items.map((a) => ({
+    id: a.id,
+    teamId: a.teamId,
+    taskId: a.taskId || null,
+    ideaId: a.ideaId || null,
+    fileName: a.fileName,
+    size: a.size || 0,
+    version: a.version || 1,
+    versionNote: a.versionNote || null,
+    uploadedBy: a.uploadedBy || null,
+    uploadedByName: userMap[a.uploadedBy] || a.uploadedByName || a.uploadedBy || 'Noma’lum',
+    createdAt: toMs(a.createdAt),
+    updatedAt: toMs(a.updatedAt),
+    versions: (a.versions || []).map((v) => ({
+      version: v.version,
+      fileName: v.fileName,
+      size: v.size || 0,
+      note: v.note || null,
+      uploadedByName: userMap[v.uploadedBy] || v.uploadedByName || v.uploadedBy || 'Noma’lum',
+      createdAt: toMs(v.createdAt),
+    })),
+  }));
+  return { status: 200, success: true, attachments: items };
+}
+
+/* ----------------- T55 Timezone-aware Scheduling ----------------- */
+// Berilgan UTC vaqtda (Date) va timezone uchun offset (ms) hisoblash.
+function tzOffsetMs(utcDate, tz) {
+  const dtf = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = dtf.formatToParts(utcDate).reduce((a, x) => { a[x.type] = x.value; return a; }, {});
+  const hour = p.hour === '24' ? 0 : parseInt(p.hour, 10);
+  const asIfUtc = Date.UTC(+p.year, +p.month - 1, +p.day, hour, +p.minute, +p.second);
+  return asIfUtc - utcDate.getTime();
+}
+// "2026-07-15T14:30" kabi devor-soati (wall-clock) vaqtini `tz` timezone dagi
+// haqiqiy UTC ms ga aylantiradi.
+function wallTimeToUtcMs(iso, tz) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(iso || '');
+  if (!m) return null;
+  const guess = Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0);
+  const off = tzOffsetMs(new Date(guess), tz);
+  return guess - off;
+}
+function formatInTz(utcMs, tz) {
+  try {
+    return new Intl.DateTimeFormat('uz-UZ', {
+      timeZone: tz, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).format(new Date(utcMs));
+  } catch (_) { return new Date(utcMs).toISOString(); }
+}
+function localHHMM(utcMs, tz) {
+  try {
+    return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(utcMs));
+  } catch (_) { return '??:??'; }
+}
+
+async function handleGetTimezone(req, res, db, decoded, user) {
+  const u = await db.collection('users').doc(decoded.uid).get();
+  const d = u.exists ? u.data() : {};
+  return { status: 200, success: true, timezone: d.timezone || 'UTC', workingHours: d.workingHours || null };
+}
+
+async function handleSaveTimezone(req, res, db, decoded, user) {
+  const { timezone, workingHours, teamId } = req.body || {};
+  const upd = {};
+  if (timezone) upd.timezone = String(timezone).slice(0, 64);
+  if (workingHours) upd.workingHours = workingHours;
+  if (Object.keys(upd).length) await db.collection('users').doc(decoded.uid).update(upd);
+  let teamUpdated = false;
+  if (teamId && timezone) {
+    const mem = await getMembership(db, teamId, decoded.uid);
+    if (user.role === 'admin' || (mem && mem.role === 'team_lead')) {
+      await db.collection('teams').doc(teamId).update({ timezone: String(timezone).slice(0, 64) });
+      teamUpdated = true;
+    }
+  }
+  return { status: 200, success: true, timezone: upd.timezone || null, teamUpdated };
+}
+
+async function handleConvertTime(req, res, db, decoded, user) {
+  const { iso, fromTz = 'UTC', toTz = 'UTC' } = req.body || {};
+  if (!iso) return { status: 400, error: 'iso kerak.' };
+  const utc = wallTimeToUtcMs(iso, fromTz);
+  if (utc == null) return { status: 400, error: "Noto'g'ri vaqt formati." };
+  return {
+    status: 200, success: true,
+    from: { iso, tz: fromTz, utc },
+    to: { tz: toTz, local: formatInTz(utc, toTz), utc },
+  };
+}
+
+async function handleWorkingHoursCheck(req, res, db, decoded, user) {
+  const { iso, tz = 'UTC', start = '09:00', end = '18:00' } = req.body || {};
+  if (!iso) return { status: 400, error: 'iso kerak.' };
+  const utc = wallTimeToUtcMs(iso, tz);
+  if (utc == null) return { status: 400, error: "Noto'g'ri vaqt formati." };
+  const local = localHHMM(utc, tz);
+  const within = local >= start && local <= end;
+  return { status: 200, success: true, localTime: local, start, end, within, iso, tz };
+}
+
+async function handleCreateSchedule(req, res, db, decoded, user) {
+  const { teamId, title, iso, tz = 'UTC' } = req.body || {};
+  if (!teamId || !title || !iso) return { status: 400, error: 'teamId, title va iso kerak.' };
+  const mem = await getMembership(db, teamId, decoded.uid);
+  if (!mem && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const utc = wallTimeToUtcMs(iso, tz);
+  if (utc == null) return { status: 400, error: "Noto'g'ri vaqt formati." };
+  const ref = await db.collection('schedules').add({
+    teamId, title: String(title).slice(0, 200), iso, timezone: tz,
+    scheduledForUtc: new Date(utc), createdBy: decoded.uid, createdAt: SV(),
+  });
+  await audit(db, 'schedule_created', { teamId, scheduleId: ref.id });
+  return { status: 201, success: true, scheduleId: ref.id, scheduledForUtc: utc };
+}
+
+async function handleListSchedules(req, res, db, decoded, user) {
+  const { teamId } = req.query.teamId ? req.query : (req.body || {});
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const mem = await getMembership(db, teamId, decoded.uid);
+  if (!mem && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snap = await db.collection('schedules').where('teamId', '==', teamId).orderBy('scheduledForUtc', 'asc').get();
+  const toMs = (t) => (t && typeof t.toMillis === 'function') ? t.toMillis() : (t ? new Date(t).getTime() : null);
+  const items = snap.docs.map((d) => {
+    const s = d.data();
+    return { id: d.id, title: s.title, iso: s.iso, timezone: s.timezone, scheduledForUtc: toMs(s.scheduledForUtc), createdBy: s.createdBy, createdAt: toMs(s.createdAt) };
+  });
+  return { status: 200, success: true, schedules: items };
+}
+
+/* ----------------- T57 API Health / Error Tracking ----------------- */
+async function handleHealth(req, res, db) {
+  const start = Date.now();
+  let firebaseOk = false;
+  try {
+    await db.collection('settings').limit(1).get();
+    firebaseOk = true;
+  } catch (_) { firebaseOk = false; }
+  return {
+    status: firebaseOk ? 'ok' : 'degraded',
+    firebase: firebaseOk,
+    time: Date.now(),
+    latencyMs: Date.now() - start,
+    uptimeSeconds: Math.floor(process.uptime ? process.uptime() : 0),
+    version: process.env.npm_package_version || '1.0.0',
+    node: process.version,
+    region: process.env.VERCEL_REGION || 'local',
+  };
+}
+
+async function handleErrorLog(req, res, db, decoded, user) {
+  const { level = 'error', message, stack, context } = req.body || {};
+  if (!message) return { status: 400, error: 'message kerak.' };
+  const ref = await db.collection('errorLogs').add({
+    level: ['error', 'warn', 'info'].includes(level) ? level : 'error',
+    message: String(message).slice(0, 2000),
+    stack: stack ? String(stack).slice(0, 4000) : null,
+    context: context ? String(context).slice(0, 1000) : null,
+    uid: decoded.uid,
+    userAgent: req.headers['user-agent'] || null,
+    path: (req.url || '').split('?')[0],
     createdAt: SV(),
   });
-  await audit(db, 'attachment_added', { teamId, attachmentId: ref.id });
-  return { status: 201, success: true, attachmentId: ref.id };
+  await audit(db, 'error_logged', { errorId: ref.id, level: (['error', 'warn', 'info'].includes(level) ? level : 'error') });
+  return { status: 201, success: true, id: ref.id };
+}
+
+async function handleErrorLogs(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const snap = await db.collection('errorLogs').orderBy('createdAt', 'desc').limit(50).get();
+  const toMs = (t) => (t && typeof t.toMillis === 'function') ? t.toMillis() : (t ? new Date(t).getTime() : null);
+  const items = snap.docs.map((d) => {
+    const e = d.data();
+    return { id: d.id, level: e.level || 'error', message: e.message, context: e.context || null, uid: e.uid || null, createdAt: toMs(e.createdAt) };
+  });
+  return { status: 200, success: true, logs: items };
 }
 
 /* ---------------- T3 Admin 2FA (enable / verify / disable) ---------------- */
@@ -1483,6 +1770,12 @@ async function handleSetStage(req, res, db, decoded, user) {
   const membership = await getMembership(db, snap.data().teamId, decoded.uid);
   if (!(membership && membership.role === 'team_lead') && user.role !== 'admin') return { status: 403, error: 'Faqat lead/admin.' };
   await ref.update({ stage, updatedAt: SV() });
+  // T40 — Audit Diff Viewer: oldingi g'oya holatini saqlaymiz
+  await audit(db, 'idea_stage_changed', { ideaId, stage }, {
+    restoreCollection: 'ideas',
+    restoreDocId: ideaId,
+    previousState: snap.exists ? snap.data() : null,
+  });
   return { status: 200, success: true };
 }
 
@@ -1650,6 +1943,455 @@ async function handleForgotPassword(req, res, db) {
   return { status: 200, ok: true, email };
 }
 
+// T41 - Workspace-level Backup / Export / Import
+// To'liq workspace backup: ideas + tasks + members + chat + team meta.
+async function handleExportWorkspace(req, res, db, decoded, user) {
+  const { teamId } = req.query || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (user.role !== 'admin' && !(membership && membership.role === 'team_lead')) {
+    return { status: 403, error: 'Ruxsat yoq.' };
+  }
+  const teamSnap = await db.collection('teams').doc(teamId).get();
+  if (!teamSnap.exists) return { status: 404, error: 'Workspace topilmadi.' };
+  const [ideas, tasks, members, chat, reports] = await Promise.all([
+    db.collection('ideas').where('teamId', '==', teamId).get(),
+    db.collection('tasks').where('teamId', '==', teamId).get(),
+    db.collection('teamMembers').where('teamId', '==', teamId).get(),
+    db.collection('chatMessages').where('teamId', '==', teamId).get(),
+    db.collection('reports').where('teamId', '==', teamId).get(),
+  ]);
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    team: { id: teamSnap.id, ...teamSnap.data() },
+    ideas: ideas.docs.map((d) => ({ id: d.id, ...d.data() })),
+    tasks: tasks.docs.map((d) => ({ id: d.id, ...d.data() })),
+    members: members.docs.map((d) => ({ id: d.id, ...d.data() })),
+    chat: chat.docs.map((d) => ({ id: d.id, ...d.data() })),
+    reports: reports.docs.map((d) => ({ id: d.id, ...d.data() })),
+  };
+  return { status: 200, workspace: payload };
+}
+
+// T41 - Import (migratsiya / halokatdan tiklash). Faqat admin yoki team_lead.
+async function handleImportWorkspace(req, res, db, decoded, user) {
+  const { teamId, data } = req.body || {};
+  if (!teamId || !data) return { status: 400, error: 'teamId va data kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (user.role !== 'admin' && !(membership && membership.role === 'team_lead')) {
+    return { status: 403, error: 'Ruxsat yoq.' };
+  }
+  const teamSnap = await db.collection('teams').doc(teamId).get();
+  if (!teamSnap.exists) return { status: 404, error: 'Target workspace topilmadi.' };
+  const collections = ['ideas', 'tasks', 'teamMembers', 'chatMessages', 'reports'];
+  let imported = 0;
+  for (const col of collections) {
+    const items = (data[col] || []);
+    if (!items.length) continue;
+    const batch = db.batch();
+    items.forEach((item) => {
+      const ref = item.id ? db.collection(col).doc(String(item.id)) : db.collection(col).doc();
+      const clean = { ...item };
+      delete clean.id;
+      clean.teamId = teamId; // target team ga bog'laymiz
+      batch.set(ref, clean);
+      imported += 1;
+    });
+    await batch.commit();
+  }
+  await audit(db, 'workspace_imported', { teamId, imported, byUserId: decoded.uid });
+  return { status: 200, success: true, imported };
+}
+
+// T42 - AI Idea → Task Auto-Breakdown (heuristic / offline)
+// G'oya tavsifidan kalit so'zlarga qarab boshlang'ich vazifalar ro'yxatini generatsiya qiladi.
+const BREAKDOWN_RULES = [
+  { kw: ['auth', 'login', 'register', 'tizimga kirish', 'ro‘yxatdan o‘tish'], task: 'Foydalanuvchi autentifikatsiyasini yoqish' },
+  { kw: ['payment', 'pay', 'subscribe', 'obuna', 'to‘lov'], task: 'To‘lov/obuna tizimini ulash' },
+  { kw: ['design', 'ui', 'ux', 'dizayn', 'interfeys'], task: 'UI/UX dizayn qilish' },
+  { kw: ['api', 'backend', 'server'], task: 'Backend API yaratish' },
+  { kw: ['frontend', 'front', 'sahifa', 'web'], task: 'Frontend sahifalarni yaratish' },
+  { kw: ['test', 'qa', 'sinov'], task: 'Avtomatik testlar yozish' },
+  { kw: ['deploy', 'launch', 'ishga tushir', 'chiqar'], task: 'Deploy qilish va ishga tushirish' },
+  { kw: ['market', 'reklama', 'seo', 'auditoriya'], task: 'Marketing va auditoriya jalb qilish' },
+];
+
+async function handleBreakdownIdea(req, res, db, decoded, user) {
+  const { ideaId, create } = req.body || {};
+  if (!ideaId) return { status: 400, error: 'ideaId kerak.' };
+  const ref = db.collection('ideas').doc(ideaId);
+  const snap = await ref.get();
+  if (!snap.exists) return { status: 404, error: 'G‘oya topilmadi.' };
+  const idea = snap.data();
+  const teamId = idea.teamId;
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+
+  const text = `${idea.title || ''} ${idea.description || ''}`.toLowerCase();
+  const tasks = [];
+  tasks.push({ title: 'Tadqiqot va talablarni aniqlash', priority: 'high' });
+  tasks.push({ title: 'MVP prototipini yaratish', priority: 'high' });
+  for (const rule of BREAKDOWN_RULES) {
+    if (rule.kw.some((k) => text.includes(k))) {
+      tasks.push({ title: rule.task, priority: 'medium' });
+    }
+  }
+  tasks.push({ title: 'Beta-test va fikr-mulohaza yig‘ish', priority: 'medium' });
+  tasks.push({ title: 'Rasmiy ishga tushirish (launch)', priority: 'low' });
+
+  if (create) {
+    const batch = db.batch();
+    tasks.forEach((t) => {
+      const r = db.collection('tasks').doc();
+      batch.set(r, {
+        teamId, ideaId, title: t.title, description: '', status: 'todo',
+        priority: t.priority, createdBy: decoded.uid, assignedTo: null,
+        dueDate: null, createdAt: SV(),
+      });
+    });
+    await batch.commit();
+    await audit(db, 'idea_breakdown', { ideaId, teamId, count: tasks.length, byUserId: decoded.uid });
+    return { status: 201, success: true, created: tasks.length, tasks };
+  }
+  return { status: 200, success: true, tasks };
+}
+
+// T43 - Investor CRM / Pipeline
+// Pitch generatsiyasini haqiqiy investor jarayoniga aylantiradi.
+// Har bir investor g'oya (ideaId) + team bilan bog'lanadi; stage: contacted→pitched→passed→invested.
+async function handleInvestorPipeline(req, res, db, decoded, user) {
+  const { teamId, ideaId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  let q = db.collection('investors').where('teamId', '==', teamId);
+  if (ideaId) q = q.where('ideaId', '==', ideaId);
+  const snaps = await q.get();
+  const list = snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const stages = { contacted: 0, pitched: 0, passed: 0, invested: 0 };
+  list.forEach((i) => { if (stages[i.stage]) stages[i.stage] += 1; });
+  return { status: 200, investors: list, pipeline: stages };
+}
+
+async function handleAddInvestor(req, res, db, decoded, user) {
+  const { teamId, ideaId, name, email, note } = req.body || {};
+  if (!teamId || !name || !name.trim()) return { status: 400, error: 'teamId va name kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = db.collection('investors').doc();
+  await ref.set({
+    teamId, ideaId: ideaId || null, name: name.trim(), email: (email || '').trim(),
+    stage: 'contacted', note: note || '', createdBy: decoded.uid, createdAt: SV(),
+  });
+  await audit(db, 'investor_added', { teamId, investorId: ref.id, ideaId });
+  return { status: 201, success: true, investorId: ref.id };
+}
+
+async function handleUpdateInvestorStage(req, res, db, decoded, user) {
+  const { investorId, stage } = req.body || {};
+  if (!investorId || !stage) return { status: 400, error: 'investorId va stage kerak.' };
+  const ref = db.collection('investors').doc(investorId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'Investor topilmadi.' };
+  const data = snap.data();
+  const membership = await getMembership(db, data.teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const allowed = ['contacted', 'pitched', 'passed', 'invested'];
+  if (!allowed.includes(stage)) return { status: 400, error: 'Noto‘g‘ri stage.' };
+  await ref.update({ stage, updatedAt: SV() });
+  await audit(db, 'investor_stage_changed', { investorId, stage });
+  return { status: 200, success: true, stage };
+}
+
+// T44 - Team Burnout / Load Signal
+// Mavjud ma'lumotdan (timeLogs + tasks + presence) foydalanib, a'zolarning
+// yuklanishini hisoblaydi va "hadan tashqari yuklangan" signalini chiqaradi.
+async function handleTeamLoad(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+
+  const [membersSnap, tasksSnap, timeSnap] = await Promise.all([
+    db.collection('teamMembers').where('teamId', '==', teamId).get(),
+    db.collection('tasks').where('teamId', '==', teamId).get(),
+    db.collection('timeLogs').where('teamId', '==', teamId).get(),
+  ]);
+  const members = membersSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const tasks = tasksSnap.docs.map((d) => d.data());
+  const timeByUser = {};
+  timeSnap.docs.forEach((d) => { const t = d.data(); timeByUser[t.userId] = (timeByUser[t.userId] || 0) + (t.durationMs || 0); });
+
+  const load = [];
+  for (const m of members) {
+    const uid = m.userId;
+    const assigned = tasks.filter((t) => t.assignedTo === uid && t.status !== 'done');
+    const done = tasks.filter((t) => t.assignedTo === uid && t.status === 'done');
+    let presence = 'offline';
+    try { const p = await db.collection('presence').doc(uid).get(); presence = (p.exists && p.data().status) || 'offline'; } catch (_) {}
+    const openCount = assigned.length;
+    const signal = openCount >= 5 ? 'overloaded' : openCount >= 3 ? 'busy' : 'ok';
+    load.push({ userId: uid, name: m.name || uid, openTasks: openCount, doneTasks: done.length, timeLoggedMs: timeByUser[uid] || 0, presence, signal });
+  }
+  const overloaded = load.filter((l) => l.signal === 'overloaded').length;
+  const busy = load.filter((l) => l.signal === 'busy').length;
+  return { status: 200, load, summary: { members: load.length, overloaded, busy } };
+}
+
+// T47 - Idea Lifecycle Analytics Dashboard
+// T18 (RICE score) + T29 (stage) + T26 (stale/health) + T34 (votes) birlashtirilgan ko'rsatkich.
+async function handleIdeaAnalytics(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+
+  const snap = await db.collection('ideas').where('teamId', '==', teamId).get();
+  const ideas = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const total = ideas.length;
+  const withScore = ideas.filter((i) => i.score && typeof i.score.rice === 'number');
+  const avgRice = withScore.length ? Math.round(withScore.reduce((s, i) => s + (i.score.rice || 0), 0) / withScore.length) : 0;
+  const totalVotes = ideas.reduce((s, i) => s + (i.voteCount || (Array.isArray(i.votes) ? i.votes.length : 0) || 0), 0);
+  const staleCount = ideas.filter((i) => i.stale).length;
+
+  const stageDistribution = {};
+  ideas.forEach((i) => { const k = i.stage || 'none'; stageDistribution[k] = (stageDistribution[k] || 0) + 1; });
+
+  const topByScore = [...ideas].sort((a, b) => ((b.score && b.score.rice) || 0) - ((a.score && a.score.rice) || 0)).slice(0, 5)
+    .map((i) => ({ id: i.id, title: i.title, rice: (i.score && i.score.rice) || 0 }));
+  const topByVotes = [...ideas].sort((a, b) => ((b.voteCount || 0) - (a.voteCount || 0))).slice(0, 5)
+    .map((i) => ({ id: i.id, title: i.title, votes: (i.voteCount || 0) }));
+
+  const perIdea = ideas.map((i) => ({
+    id: i.id,
+    title: i.title,
+    rice: (i.score && i.score.rice) || 0,
+    stage: i.stage || '',
+    voteCount: i.voteCount || (Array.isArray(i.votes) ? i.votes.length : 0) || 0,
+    stale: !!i.stale,
+    lastActivityAt: i.lastActivityAt || i.updatedAt || null,
+  }));
+
+  return {
+    status: 200,
+    total,
+    avgRice,
+    totalVotes,
+    staleCount,
+    stageDistribution,
+    topByScore,
+    topByVotes,
+    ideas: perIdea,
+  };
+}
+
+// T49 - Smart Notification Batching
+// Foydalanuvchining o'qilmagan bildirishnomalarini tur bo'yicha guruhlab yuboradi.
+async function handleNotificationDigest(req, res, db, decoded, user) {
+  const snap = await db.collection('notifications').where('userId', '==', decoded.uid).get();
+  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const unread = all.filter((n) => n.unread === true || n.isRead === false || n.read === false);
+  const groupsMap = {};
+  unread.forEach((n) => {
+    const type = n.type || 'general';
+    if (!groupsMap[type]) groupsMap[type] = { type, count: 0, sample: [] };
+    groupsMap[type].count += 1;
+    if (groupsMap[type].sample.length < 3) groupsMap[type].sample.push(n);
+  });
+  const groups = Object.values(groupsMap).sort((a, b) => b.count - a.count);
+  return { status: 200, total: unread.length, groups };
+}
+
+// T51 - Role-based Dashboard Personalization
+// Foydalanuvchi dashboard'da qaysi widget'larni ko'rishini va pinned team'ni saqlaydi.
+async function handleDashboardPrefs(req, res, db, decoded, user) {
+  const ref = db.collection('users').doc(decoded.uid);
+  if (req.method === 'POST') {
+    const { hiddenWidgets, pinnedTeamId } = req.body || {};
+    const upd = {};
+    if (Array.isArray(hiddenWidgets)) {
+      upd.dashboardPrefs = { hiddenWidgets: hiddenWidgets.filter((w) => ['teams', 'ideas', 'notifs'].includes(w)) };
+    }
+    if (typeof pinnedTeamId === 'string') upd.pinnedTeamId = pinnedTeamId;
+    if (Object.keys(upd).length) await ref.update(upd);
+    return { status: 200, success: true };
+  }
+  const snap = await ref.get();
+  const data = snap.exists ? snap.data() : {};
+  return {
+    status: 200,
+    prefs: data.dashboardPrefs || { hiddenWidgets: [] },
+    pinnedTeamId: data.pinnedTeamId || '',
+  };
+}
+
+// T52 - Idea Battle / Voting Tournament
+// Ikki g'oyani tasodifiy juftlik qilib qaytaradi.
+async function handleIdeaBattle(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snap = await db.collection('ideas').where('teamId', '==', teamId).get();
+  const ideas = snap.docs.map((d) => ({ id: d.id, title: d.data().title })).filter((i) => i.title);
+  if (ideas.length < 2) return { status: 200, success: true, pair: null, message: "Kamida 2 ta idea kerak." };
+  const a = ideas[Math.floor(Math.random() * ideas.length)];
+  let b = a;
+  let guard = 0;
+  while (b.id === a.id && guard < 20) { b = ideas[Math.floor(Math.random() * ideas.length)]; guard += 1; }
+  return { status: 200, success: true, pair: [a, b] };
+}
+
+async function handleIdeaBattleVote(req, res, db, decoded, user) {
+  const { teamId, winnerId, loserId } = req.body || {};
+  if (!teamId || !winnerId || !loserId) return { status: 400, error: 'teamId, winnerId, loserId kerak.' };
+  if (winnerId === loserId) return { status: 400, error: "O'ziga ovoz bera olmaysiz." };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const winIdea = await db.collection('ideas').doc(winnerId).get();
+  const loseIdea = await db.collection('ideas').doc(loserId).get();
+  const winTitle = winIdea.exists ? (winIdea.data().title || winnerId) : winnerId;
+  const loseTitle = loseIdea.exists ? (loseIdea.data().title || loserId) : loserId;
+  const winRef = db.collection('ideaBattles').doc(teamId + '_' + winnerId);
+  const winSnap = await winRef.get();
+  const winData = winSnap.exists ? winSnap.data() : { teamId, ideaId: winnerId, ideaTitle: winTitle, wins: 0, losses: 0, voters: [] };
+  const voters = Array.isArray(winData.voters) ? winData.voters : [];
+  if (voters.includes(decoded.uid)) return { status: 409, error: "Bu juftlikda allaqachon ovoz bergansiz." };
+  await winRef.set({
+    teamId, ideaId: winnerId, ideaTitle: winTitle,
+    wins: (winData.wins || 0) + 1,
+    losses: winData.losses || 0,
+    voters: [...voters, decoded.uid],
+    updatedAt: SV()
+  }, { merge: true });
+  const loseRef = db.collection('ideaBattles').doc(teamId + '_' + loserId);
+  const loseSnap = await loseRef.get();
+  const loseData = loseSnap.exists ? loseSnap.data() : { teamId, ideaId: loserId, ideaTitle: loseTitle, wins: 0, losses: 0, voters: [] };
+  await loseRef.set({
+    teamId, ideaId: loserId, ideaTitle: loseTitle,
+    wins: loseData.wins || 0,
+    losses: (loseData.losses || 0) + 1,
+    voters: Array.isArray(loseData.voters) ? loseData.voters : [],
+    updatedAt: SV()
+  }, { merge: true });
+  return { status: 200, success: true };
+}
+
+async function handleIdeaBattleStandings(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snap = await db.collection('ideaBattles').where('teamId', '==', teamId).get();
+  const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+    .sort((a, b) => (b.wins || 0) - (a.wins || 0))
+    .slice(0, 10);
+  return { status: 200, standings: rows };
+}
+
+// T53 - Automated Weekly Report (email/Telegram)
+// Admin uchun: tanlangan workspace bo'yicha haftalik xulosani Telegram va in-app notification orqali yuborish.
+async function handleSendWeeklyReport(req, res, db, decoded, user) {
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const teamSnap = await db.collection('teams').doc(teamId).get();
+  if (!teamSnap.exists) return { status: 404, error: 'Workspace topilmadi.' };
+  const team = teamSnap.data();
+  const [taskSnap, ideaSnap, memberSnap] = await Promise.all([
+    db.collection('tasks').where('teamId', '==', teamId).get(),
+    db.collection('ideas').where('teamId', '==', teamId).get(),
+    db.collection('teamMembers').where('teamId', '==', teamId).get(),
+  ]);
+  const tasks = taskSnap.docs.map((d) => d.data());
+  const completed = tasks.filter((t) => t.status === 'done').length;
+  const members = memberSnap.docs.map((d) => d.data());
+  const text = `📊 Haftalik hisobot — ${team.name}\n✅ Bajarilgan vazifalar: ${completed}/${tasks.length}\n💡 G'oyalar: ${ideaSnap.size}\n👥 A'zolar: ${members.length}`;
+  let sentTelegram = 0;
+  for (const m of members) {
+    const u = await db.collection('users').doc(m.userId).get();
+    const ud = u.exists ? u.data() : {};
+    if (ud.telegramChatId) { await pushTelegram(db, m.userId, text).catch(() => {}); sentTelegram += 1; }
+  }
+  let notificationId = null;
+  const lead = members.find((m) => m.role === 'team_lead');
+  if (lead) {
+    const ref = await db.collection('notifications').add({
+      userId: lead.userId, teamId, type: 'weekly_report', text,
+      link: 'team.html?id=' + teamId, unread: true, isRead: false, createdAt: SV()
+    });
+    notificationId = ref.id;
+  }
+  return {
+    status: 200, success: true, sentTelegram, notificationId,
+    summary: { completed, total: tasks.length, ideas: ideaSnap.size, members: members.length },
+  };
+}
+
+// T46 - Generic Outgoing Webhooks
+// Har qanday tashqi xizmatga (Zapier, Make, Notion) event yuborish.
+// Barcha integratsiyalar (Telegram, GitHub) uchun umumiy chiqish nuqtasi.
+async function emitWebhook(db, teamId, event, payload) {
+  try {
+    const snaps = await db.collection('webhooks').where('teamId', '==', teamId).get();
+    const hooks = snaps.docs.map((d) => d.data()).filter((h) => (h.events || []).includes(event) || (h.events || []).includes('*'));
+    await Promise.all(hooks.map(async (h) => {
+      try {
+        await fetch(h.url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event, teamId, payload, timestamp: Date.now() }),
+        });
+      } catch (_) { /* non-fatal */ }
+    }));
+  } catch (_) { /* non-fatal */ }
+}
+
+async function handleWebhookList(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const snaps = await db.collection('webhooks').where('teamId', '==', teamId).get();
+  return { status: 200, webhooks: snaps.docs.map((d) => ({ id: d.id, ...d.data() })) };
+}
+
+async function handleWebhookAdd(req, res, db, decoded, user) {
+  const { teamId, url, events } = req.body || {};
+  if (!teamId || !url || !url.trim()) return { status: 400, error: 'teamId va url kerak.' };
+  const membership = await getMembership(db, teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  const ref = db.collection('webhooks').doc();
+  await ref.set({ teamId, url: url.trim(), events: Array.isArray(events) ? events : ['*'], createdBy: decoded.uid, createdAt: SV() });
+  return { status: 201, success: true, webhookId: ref.id };
+}
+
+async function handleWebhookDelete(req, res, db, decoded, user) {
+  const { webhookId } = req.body || {};
+  if (!webhookId) return { status: 400, error: 'webhookId kerak.' };
+  const ref = db.collection('webhooks').doc(webhookId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'Webhook topilmadi.' };
+  const membership = await getMembership(db, snap.data().teamId, decoded.uid);
+  if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
+  await ref.delete();
+  return { status: 200, success: true };
+}
+
+async function handleWebhookTest(req, res, db, decoded, user) {
+  const { webhookId } = req.body || {};
+  if (!webhookId) return { status: 400, error: 'webhookId kerak.' };
+  const ref = db.collection('webhooks').doc(webhookId);
+  const snap = await ref.get();
+  if (!snap.exists()) return { status: 404, error: 'Webhook topilmadi.' };
+  const data = snap.data();
+  try {
+    const r = await fetch(data.url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ event: 'test', teamId: data.teamId, payload: { ok: true }, timestamp: Date.now() }) });
+    return { status: 200, success: true, statusCode: r.status };
+  } catch (e) { return { status: 200, success: false, error: e.message }; }
+}
+
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -1679,6 +2421,18 @@ module.exports = async (req, res) => {
     }
   }
 
+  // T57 - API Health (authsiz; monitoring / status uchun). Auth blokidan oldin.
+  if (_pathname.includes('health')) {
+    try {
+      initAdmin();
+      const _db = admin.firestore();
+      const _result = await handleHealth(req, res, _db);
+      return res.status(200).json(_result);
+    } catch (e) {
+      return res.status(200).json({ status: 'degraded', error: (e && e.message) || 'Xatolik', time: Date.now() });
+    }
+  }
+
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
@@ -1695,6 +2449,24 @@ module.exports = async (req, res) => {
 
     const action = req.query.action || pathname.split('/').pop();
     let result;
+
+    // T39 (R6) - Rate limiting for sensitive endpoints (brute-force / spam himoyasi)
+    // Mavjud handler logicga tegmaydi: faqat sezgir action'lar oldidan tekshiruv qo'shiladi.
+    const { checkRateLimit } = require('./_lib/rate-limit');
+    const ip = (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || 'unknown';
+    const rlAction = pathname.includes('invite-member') ? 'invite-member'
+      : pathname.includes('delete-workspace') ? 'delete-workspace'
+      : action;
+    const SENSITIVE = new Set([
+      'invite-member', 'delete-workspace', 'verify-2fa', 'enable-2fa', 'disable-2fa',
+      'send-chat', 'create-workspace', 'forgot-password', 'telegram-webhook',
+    ]);
+    if (SENSITIVE.has(rlAction)) {
+      const rl = await checkRateLimit({ uid: decoded.uid, ip, action: rlAction });
+      if (rl.limited) {
+        return res.status(429).json({ error: 'Juda ko’p so’rov. Keyinroq urinib koring.', retryAfter: rl.retryAfter });
+      }
+    }
 
     if (pathname.includes('accept-invite')) result = await handleAcceptInvite(req, res, db, decoded, user);
     else if (pathname.includes('create-workspace')) result = await handleCreateWorkspace(req, res, db, decoded, user);
@@ -1719,9 +2491,36 @@ module.exports = async (req, res) => {
     else if (action === 'member-permissions') result = await handleUpdateMemberPermissions(req, res, db, decoded, user);
     else if (action === 'rollback') result = await handleRollbackAction(req, res, db, decoded, user);
     else if (action === 'my-overview') result = await handleGetMyOverview(req, res, db, decoded, user);
+    else if (action === 'export-workspace') result = await handleExportWorkspace(req, res, db, decoded, user);
+    else if (action === 'import-workspace') result = await handleImportWorkspace(req, res, db, decoded, user);
+    else if (action === 'breakdown-idea') result = await handleBreakdownIdea(req, res, db, decoded, user);
+    else if (action === 'investor-pipeline') result = await handleInvestorPipeline(req, res, db, decoded, user);
+    else if (action === 'add-investor') result = await handleAddInvestor(req, res, db, decoded, user);
+    else if (action === 'investor-stage') result = await handleUpdateInvestorStage(req, res, db, decoded, user);
+    else if (action === 'webhook-list') result = await handleWebhookList(req, res, db, decoded, user);
+    else if (action === 'webhook-add') result = await handleWebhookAdd(req, res, db, decoded, user);
+    else if (action === 'webhook-delete') result = await handleWebhookDelete(req, res, db, decoded, user);
+    else if (action === 'webhook-test') result = await handleWebhookTest(req, res, db, decoded, user);
+    else if (action === 'team-load') result = await handleTeamLoad(req, res, db, decoded, user);
+    else if (action === 'idea-analytics') result = await handleIdeaAnalytics(req, res, db, decoded, user);
+    else if (action === 'notification-digest') result = await handleNotificationDigest(req, res, db, decoded, user);
+    else if (action === 'dashboard-prefs' || action === 'save-dashboard-prefs') result = await handleDashboardPrefs(req, res, db, decoded, user);
+    else if (action === 'idea-battle') result = await handleIdeaBattle(req, res, db, decoded, user);
+    else if (action === 'idea-battle-vote') result = await handleIdeaBattleVote(req, res, db, decoded, user);
+    else if (action === 'idea-battle-standings') result = await handleIdeaBattleStandings(req, res, db, decoded, user);
+    else if (action === 'send-weekly-report') result = await handleSendWeeklyReport(req, res, db, decoded, user);
     else if (action === 'log-time') result = await handleLogTime(req, res, db, decoded, user);
     else if (action === 'export-my-data') result = await handleExportMyData(req, res, db, decoded, user);
     else if (pathname.includes('create-attachment')) result = await handleCreateAttachment(req, res, db, decoded, user);
+    else if (pathname.includes('list-attachments')) result = await handleListAttachments(req, res, db, decoded, user);
+    else if (pathname.includes('get-timezone')) result = await handleGetTimezone(req, res, db, decoded, user);
+    else if (pathname.includes('save-timezone')) result = await handleSaveTimezone(req, res, db, decoded, user);
+    else if (pathname.includes('convert-time')) result = await handleConvertTime(req, res, db, decoded, user);
+    else if (pathname.includes('working-hours-check')) result = await handleWorkingHoursCheck(req, res, db, decoded, user);
+    else if (pathname.includes('create-schedule')) result = await handleCreateSchedule(req, res, db, decoded, user);
+    else if (pathname.includes('list-schedules')) result = await handleListSchedules(req, res, db, decoded, user);
+    else if (pathname.includes('error-logs')) result = await handleErrorLogs(req, res, db, decoded, user);
+    else if (pathname.includes('error-log')) result = await handleErrorLog(req, res, db, decoded, user);
     else if (action === 'enable-2fa') result = await handleEnable2FA(req, res, db, decoded, user);
     else if (action === 'verify-2fa') result = await handleVerify2FA(req, res, db, decoded, user);
     else if (action === 'disable-2fa') result = await handleDisable2FA(req, res, db, decoded, user);

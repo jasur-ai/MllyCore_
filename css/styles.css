@@ -1151,3 +1151,124 @@ hr.sep { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
 /* GitHub tugmasi (vazifa kartasida) */
 .github-synced { display: inline-flex; align-items: center; gap: 6px; color: #6ee7b7; font-size: 12px; font-weight: 600; }
+
+/* ===== T48 Live Collaboration (cursors + presence) ===== */
+.cursor-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+.cursor-dot {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50% 50% 50% 0;
+  transform: translate(-2px, -2px) rotate(-45deg);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  transition: left 0.08s linear, top 0.08s linear;
+}
+.cursor-dot .cursor-label {
+  position: absolute;
+  left: 14px;
+  top: 8px;
+  transform: rotate(45deg);
+  background: rgba(15,23,42,0.85);
+  color: #e2e8f0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.collab-presence {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cursor-avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 700;
+  border: 2px solid rgba(255,255,255,0.6);
+}
+
+/* ===================== T56 Accessibility Pass (a11y) ===================== */
+/* Skip-link: faqat fokusda ko'rinadi, klaviatura bilan tez navigatsiya uchun. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 2000;
+  background: var(--primary);
+  color: #fff;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus { top: 8px; }
+
+/* Ko'rinmaydigan lekin ekran o'qiydiychilar uchun matn */
+.visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Aniq, ko'rinadigan fokus indikatori (klaviatura foydalanuvchilari uchun) */
+:focus-visible {
+  outline: 3px solid var(--info, #38bdf8);
+  outline-offset: 2px;
+}
+.btn:focus-visible,
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible,
+.ws-acc-head:focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: 3px solid var(--info, #38bdf8);
+  outline-offset: 2px;
+}
+/* Sichqoncha bilan bosganda outline'ni yashirish (faqat klaviatura uchun ko'rsatish) */
+:focus:not(:focus-visible) { outline: none; }
+
+/* Kontrast: "muted" matn minimal darajadan past bo'lmasin */
+.muted, .text-muted, .text-xs.muted, .text-sm.muted { color: var(--muted); }
+body.theme-light .muted, body.theme-light .text-muted { color: #475569; }
+
+/* Accordion sarlavhasi: klaviatura uchun aniq button ko'rinishi */
+.ws-acc-head { cursor: pointer; }
+.ws-acc-head[aria-expanded="true"] .ws-acc-ico { transform: rotate(90deg); display: inline-block; }
+.ws-acc-ico { transition: transform 0.15s ease; }
+
+/* Live-region (bildirishnomalar/status) vizual ajratib ko'rsatilishi */
+[aria-live] { min-height: 1px; }
+.feedback-error { color: var(--danger); }
+.feedback-success { color: var(--success); }
+
+/* Harakatni kamaytirish (vestibular muammolari uchun) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Kattaroq bosish maydoni: teglar/formalar ekran o'qiydiychilar uchun aniq */
+label, .label { cursor: pointer; }

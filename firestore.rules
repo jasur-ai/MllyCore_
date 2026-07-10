@@ -207,6 +207,49 @@ service cloud.firestore {
       allow update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
     }
 
+    // --- T39 (R6) Rate limiting store — faqat server (admin SDK) yozadi; clientga ruxsat yo'q ---
+    match /rateLimits/{id} {
+      allow read, write: if false;
+    }
+
+    // --- T43 Investor CRM ---
+    match /investors/{invId} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create, update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T46 Generic Outgoing Webhooks ---
+    match /webhooks/{id} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create, update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T52 Idea Battle / Voting Tournament ---
+    match /ideaBattles/{id} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create, update: if isAdmin() || isTeamMember(resource.data.teamId);
+    }
+
+    // --- T55 Timezone-aware Scheduling (rejalashtirilgan eslatmalar) ---
+    match /schedules/{id} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow create: if signedIn() && (isAdmin() || isTeamMember(request.resource.data.teamId));
+      allow update, delete: if isAdmin() || isTeamLead(resource.data.teamId);
+    }
+
+    // --- T57 API Error Tracking (klient xatoliklari logi) ---
+    match /errorLogs/{id} {
+      allow read: if isAdmin();
+      allow create: if signedIn();
+      allow update, delete: if isAdmin();
+    }
+
+    // --- T48 Live Collaboration (real-time cursors) ---
+    match /cursors/{id} {
+      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
+      allow write: if signedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
     // --- T27 Idea Comments ---
     match /ideaComments/{commentId} {
       allow read: if isAdmin() || isTeamMember(resource.data.teamId);

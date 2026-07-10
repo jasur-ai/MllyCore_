@@ -8,8 +8,9 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#content" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
-    <div id="content" class="workspace-app"><div class="workspace-empty loading-copy"><h3>Yuklanmoqda...</h3><p>Workspace tayyorlanmoqda.</p></div></div>
+    <div id="content" class="workspace-app" role="main" tabindex="-1" aria-label="Workspace asosiy kontenti"><div class="workspace-empty loading-copy"><h3>Yuklanmoqda...</h3><p>Workspace tayyorlanmoqda.</p></div></div>
   </div>
   <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
@@ -565,7 +566,7 @@
                       </select>
                       <button class="btn btn-primary" id="inviteMemberBtn">Taklif yuborish</button>
                     </div>
-                    <div class="text-sm muted" id="memberInviteFeedback"></div>
+                      <div class="text-sm muted" id="memberInviteFeedback" aria-live="polite"></div>
                   </div>
                   <button class="btn btn-ghost" id="resetSecretBtn">Secret key reset</button>
                 </div>
@@ -610,7 +611,7 @@
                     <div class="workspace-form-actions">
                       <button class="btn btn-primary" id="createStartupBtn">Startup qo'shish</button>
                     </div>
-                    <div class="text-sm muted" id="startupFeedback"></div>
+                    <div class="text-sm muted" id="startupFeedback" aria-live="polite"></div>
                   </div>
                 </div>
               </div>
@@ -637,7 +638,7 @@
                   <div class="workspace-form-actions">
                     <button class="btn btn-primary" id="createIdeaBtn">G'oya qo'shish</button>
                   </div>
-                  <div class="text-sm muted" id="ideaFeedback"></div>
+                  <div class="text-sm muted" id="ideaFeedback" aria-live="polite"></div>
                 </div>
               </div>
             </div>
@@ -695,7 +696,7 @@
                     <div class="workspace-form-actions">
                       <button class="btn btn-primary" id="createTaskBtn">Topshiriq qo'shish</button>
                     </div>
-                    <div class="text-sm muted" id="taskCreateFeedback"></div>
+                    <div class="text-sm muted" id="taskCreateFeedback" aria-live="polite"></div>
                   </div>
                 ` : `
                   <div class="workspace-note-bar" style="margin-bottom:16px">Jamoaviy topshiriqqa natija yuklashingiz mumkin. Umumiy topshiriqni esa olib keyin tugatishingiz mumkin.</div>
@@ -789,6 +790,102 @@
                     <div id="financeRunway" style="margin-top:10px"></div>
                   </div>
                 </div>
+                <!-- T41 Backup accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="backup">💾 Backup (T41) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-backup">
+                    <p class="ws-acc-hint">Butun workspace (g'oyalar, vazifalar, a'zolar, chat) export/import — migratsiya yoki halokatdan tiklash uchun.</p>
+                    <div class="ws-mini-form">
+                      <button class="btn btn-primary btn-sm" id="exportBackupBtn" style="justify-self:start">⬇ Export (JSON)</button>
+                      <button class="btn btn-sm" id="importBackupBtn" style="justify-self:start">⬆ Import (JSON)</button>
+                      <input type="file" id="importBackupFile" accept="application/json" style="display:none;">
+                    </div>
+                    <div id="backupStatus" style="margin-top:10px"></div>
+                  </div>
+                </div>
+                <!-- T44 Load accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="load">🔥 Load signal (T44) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-load">
+                    <p class="ws-acc-hint">A'zolarning yuklanish signali (timeLogs + tasks + presence asosida).</p>
+                    <div id="loadSummary" class="muted" style="margin-bottom:8px;"></div>
+                    <div id="loadList"></div>
+                  </div>
+                </div>
+                <!-- T46 Webhooks accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="webhooks">🔗 Webhooks (T46) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-webhooks">
+                    <p class="ws-acc-hint">Zapier / Make / Notion kabi tashqi xizmatlarga event yuborish (task_created, idea_created, member_invited yoki * — hammasi).</p>
+                    <div class="ws-mini-form">
+                      <input class="input" id="webhookUrl" placeholder="https://hooks.zapier.com/... (endpoint URL)">
+                      <div class="workspace-inline-meta" style="gap:6px;flex-wrap:wrap">
+                        <label style="font-weight:500"><input type="checkbox" class="webhook-event" value="task_created" checked> task_created</label>
+                        <label style="font-weight:500"><input type="checkbox" class="webhook-event" value="idea_created" checked> idea_created</label>
+                        <label style="font-weight:500"><input type="checkbox" class="webhook-event" value="member_invited"> member_invited</label>
+                        <label style="font-weight:500"><input type="checkbox" class="webhook-event" value="*"> * (hammasi)</label>
+                      </div>
+                      <button class="btn btn-primary btn-sm" id="webhookAddBtn" style="justify-self:start">➕ Webhook qo'shish</button>
+                    </div>
+                    <div id="webhookList" class="workspace-message-stack" style="margin-top:10px;"></div>
+                    <div id="webhookStatus" class="text-sm muted" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+                <!-- T47 Idea Lifecycle Analytics accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics (T47) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-analytics">
+                    <p class="ws-acc-hint">G'oyalar hayotiy sikli: T18 (RICE score), T29 (stage), T26 (stale/health), T34 (ovoz).</p>
+                    <div id="analyticsSummary" class="muted" style="margin-bottom:8px;"></div>
+                    <div id="analyticsTop" style="margin-bottom:8px;"></div>
+                    <div id="analyticsList"></div>
+                    <button class="btn btn-primary btn-sm" id="weeklyReportBtn" style="margin-top:10px;">📤 Haftalik hisobot yuborish (T53)</button>
+                    <div id="weeklyReportStatus" class="text-sm muted" style="margin-top:6px;"></div>
+                  </div>
+                </div>
+                <!-- T54 Attachment Versioning accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="attachments" aria-expanded="false" aria-controls="acc-attachments">📎 Biriktirmalar (T54) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-attachments">
+                    <p class="ws-acc-hint">Workspace ga biriktirilgan shifrlangan fayllar va ularning versiya tarixi (T16 + T54).</p>
+                    <div id="attachmentsList" class="workspace-message-stack"></div>
+                    <div id="attachmentsStatus" class="text-sm muted" style="margin-top:8px;"></div>
+                  </div>
+                </div>
+                <!-- T55 Timezone-aware Scheduling accordion -->
+                <div class="ws-acc">
+                  <button type="button" class="ws-acc-head" data-acc="timezone" aria-expanded="false" aria-controls="acc-timezone">🌍 Vaqt / Timezone (T55) <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-timezone">
+                    <p class="ws-acc-hint">Shaxsiy timezone va ish vaqti (working hours) — bildirishnomalar va uchrashuvlar uchun.</p>
+                    <div class="ws-mini-form">
+                      <label class="label" for="tzMySelect">Mening timezone'im</label>
+                      <select class="select" id="tzMySelect" aria-label="Mening timezone'im"></select>
+                      <button class="btn btn-primary btn-sm" id="tzSaveBtn" style="justify-self:start">Saqlash</button>
+                      <div id="tzSaveStatus" class="text-sm muted"></div>
+                    </div>
+                    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0;">
+                    <label class="label" for="tzFromInput">Vaqt konvertori</label>
+                    <div class="ws-mini-form">
+                      <input class="input" type="datetime-local" id="tzFromInput" aria-label="Manba vaqt">
+                      <select class="select" id="tzFromTz" aria-label="Manba timezone"></select>
+                      <span class="muted">→</span>
+                      <select class="select" id="tzToTz" aria-label="Maqsad timezone"></select>
+                      <button class="btn btn-secondary btn-sm" id="tzConvertBtn" style="justify-self:start">Aylantirish</button>
+                    </div>
+                    <div id="tzConvertResult" class="text-sm muted" style="margin:6px 0;"></div>
+                    <div id="tzWhResult" class="text-sm muted" style="margin-bottom:10px;"></div>
+                    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0;">
+                    <label class="label" for="tzScheduleTitle">Jamoa uchun eslatma rejalashtirish</label>
+                    <div class="ws-mini-form">
+                      <input class="input" id="tzScheduleTitle" placeholder="Eslatma nomi" aria-label="Eslatma nomi">
+                      <input class="input" type="datetime-local" id="tzScheduleWhen" aria-label="Eslatma vaqti">
+                      <select class="select" id="tzScheduleTz" aria-label="Eslatma timezone"></select>
+                      <button class="btn btn-primary btn-sm" id="tzScheduleBtn" style="justify-self:start">Rejalashtirish</button>
+                    </div>
+                    <div id="tzScheduleStatus" class="text-sm muted" style="margin:6px 0;"></div>
+                    <div id="tzScheduleList" class="workspace-message-stack"></div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -803,14 +900,14 @@
               <div class="chat">
                 <div class="chat-messages" id="chatMessages"></div>
                 <div class="chat-input">
-                  <input class="input" id="chatText" placeholder="Xabar yozing...">
+                  <input class="input" id="chatText" placeholder="Xabar yozing..." aria-label="Chat xabari">
                   <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <aside class="workspace-side-stack">
+          <aside class="workspace-side-stack" role="complementary" aria-label="A'zolar va workspace eslatmalari">
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -871,6 +968,49 @@
         const loadedAcc = {};
 
         const renderList = (container, title, arr, fmt) => {
+
+        // T46 — Webhook ro'yxatini yuklash, test / o'chirish (delete) amallari
+        const renderWebhooks = async (teamId, body) => {
+          const status = document.getElementById('webhookStatus');
+          const listEl = document.getElementById('webhookList');
+          if (!listEl) return;
+          try {
+            const r = await MllyCore.getWebhookList(teamId);
+            const hooks = r.webhooks || [];
+            listEl.innerHTML = hooks.length ? hooks.map((h) => `
+              <div class=\"workspace-message-item\" data-webhook-id=\"${h.id}\">
+                <div>
+                  <strong>${escapeHtml(h.url)}</strong>
+                  <span>${(h.events || []).join(', ')}</span>
+                </div>
+                <div class=\"workspace-subgrid cols-2\" style=\"gap:6px;margin-top:6px\">
+                  <button class=\"btn btn-ghost btn-sm\" data-webhook-test=\"${h.id}\">Test</button>
+                  <button class=\"btn btn-ghost btn-sm\" data-webhook-del=\"${h.id}\">O'chirish</button>
+                </div>
+              </div>`).join('') : '<div class=\"muted\">Hozircha webhook yo‘q</div>';
+
+            listEl.querySelectorAll('[data-webhook-test]').forEach((btn) => {
+              btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                try {
+                  const res = await MllyCore.testWebhook(btn.dataset.webhookTest);
+                  if (status) status.textContent = (res && res.success) ? 'Test yuborildi (kod: ' + (res.statusCode || '?') + ')' : 'Test xatosi: ' + ((res && res.error) || 'noma’lum');
+                } catch (e) { if (status) status.textContent = e.message; }
+                finally { btn.disabled = false; }
+              });
+            });
+            listEl.querySelectorAll('[data-webhook-del]').forEach((btn) => {
+              btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                try {
+                  await MllyCore.deleteWebhook(btn.dataset.webhookDel);
+                  await renderWebhooks(teamId, body);
+                  if (status) status.textContent = 'Webhook o‘chirildi.';
+                } catch (e) { if (status) status.textContent = e.message; btn.disabled = false; }
+              });
+            });
+          } catch (e) { listEl.textContent = e.message; }
+        };
           container.innerHTML = `<h3 style="margin:8px 0 4px;">${title}</h3>` + (arr && arr.length ? `<div class="workspace-message-stack">${arr.map(fmt).join('')}</div>` : '<div class="muted">Ma’lumot yo’q</div>');
         };
 
@@ -880,8 +1020,10 @@
             const key = head.dataset.acc;
             const wasOpen = acc.classList.contains('open');
             document.querySelectorAll('.ws-acc').forEach((a) => a.classList.remove('open'));
+            document.querySelectorAll('.ws-acc-head').forEach((h) => h.setAttribute('aria-expanded', 'false'));
             if (wasOpen) return;
             acc.classList.add('open');
+            head.setAttribute('aria-expanded', 'true');
 
             if (loadedAcc[key]) return;
             const body = acc.querySelector('.ws-acc-body');
@@ -898,6 +1040,63 @@
               } else if (key === 'activity' && body) {
                 const r = await MllyCore.getActivityFeed(teamIdT); loadedAcc.activity = true;
                 renderList(body, '📡 Activity', r.feed, (f) => `<div class="workspace-message-item"><span>${escapeHtml(f.kind || '')}</span> <span>${escapeHtml(f.action || f.type || f.text || '')}</span></div>`);
+              } else if (key === 'backup' && body) {
+                loadedAcc.backup = true;
+                body.innerHTML = '<div class="muted">Yuqoridagi tugmalardan foydalaning.</div>';
+              } else if (key === 'load' && body) {
+                loadedAcc.load = true;
+                const r = await MllyCore.getTeamLoad(teamIdT);
+                const s = r.summary || {};
+                document.getElementById('loadSummary').textContent = 'Jamoa: ' + (s.members || 0) + ' a’zo — ' + (s.overloaded || 0) + ' overloaded, ' + (s.busy || 0) + ' busy';
+                const colorOf = (sig) => sig === 'overloaded' ? '#e5484d' : sig === 'busy' ? '#f59e0b' : '#22c55e';
+                body.innerHTML = '<div class="workspace-message-stack">' + (r.load || []).map((m) => '<div class="workspace-message-item"><strong>' + escapeHtml(m.name) + '</strong> — ' + m.openTasks + ' ochiq, ' + (m.timeLoggedMs / 3600000).toFixed(1) + ' soat, ' + m.presence + ' <span style="color:' + colorOf(m.signal) + '">' + m.signal + '</span></div>').join('') + '</div>';
+              } else if (key === 'webhooks' && body) {
+                loadedAcc.webhooks = true;
+                await renderWebhooks(teamIdT, body);
+              } else if (key === 'analytics' && body) {
+                loadedAcc.analytics = true;
+                const r = await MllyCore.getIdeaAnalytics(teamIdT);
+                const sd = r.stageDistribution || {};
+                const stagesStr = Object.entries(sd).map((e) => e[0] + ': ' + e[1]).join(', ');
+                const sum = document.getElementById('analyticsSummary');
+                if (sum) sum.innerHTML = 'Jami: ' + r.total + ' | O‘rtacha RICE: ' + r.avgRice + ' | Ovozlar: ' + r.totalVotes + ' | Eski (stale): ' + r.staleCount + '<br>Stage: ' + (stagesStr || '-');
+                const top = document.getElementById('analyticsTop');
+                if (top) top.innerHTML =
+                  '<div class="workspace-message-item"><strong>Top RICE:</strong> ' + (r.topByScore || []).map((x) => escapeHtml(x.title) + ' (' + x.rice + ')').join(', ') + '</div>' +
+                  '<div class="workspace-message-item"><strong>Top ovoz:</strong> ' + (r.topByVotes || []).map((x) => escapeHtml(x.title) + ' (' + x.votes + ')').join(', ') + '</div>';
+                const list = document.getElementById('analyticsList');
+                  if (list) list.innerHTML = '<div class="workspace-message-stack">' + (r.ideas || []).map((i) => '<div class="workspace-message-item"><strong>' + escapeHtml(i.title) + '</strong> — RICE ' + i.rice + ', stage ' + escapeHtml(i.stage || '-') + ', ovoz ' + i.voteCount + (i.stale ? ' ⚠ stale' : '') + '</div>').join('') + '</div>';
+              } else if (key === 'attachments' && body) {
+                loadedAcc.attachments = true;
+                const rA = await MllyCore.listAttachments({ teamId: teamIdT });
+                const listA = document.getElementById('attachmentsList');
+                const statusA = document.getElementById('attachmentsStatus');
+                if (statusA) statusA.textContent = (rA.attachments || []).length + ' ta fayl';
+                if (listA) listA.innerHTML = (rA.attachments || []).length ? (rA.attachments || []).map((a) => {
+                  const vers = (a.versions || []);
+                  const verHtml = vers.length ? '<div class="ws-sub" style="margin-top:6px;font-size:12px;color:var(--text-muted);">Tarix: ' + vers.slice().reverse().map((v) => 'v' + v.version + ' (' + escapeHtml(v.uploadedByName) + ')').join(', ') + '</div>' : '';
+                  return '<div class="workspace-message-item"><strong>' + escapeHtml(a.fileName) + '</strong> <span>v' + (a.version || 1) + ' · ' + escapeHtml(a.uploadedByName) + (a.size ? ' · ' + (a.size / 1024).toFixed(1) + ' KB' : '') + '</span>' + verHtml + '</div>';
+                }).join('') : '<div class="muted">Hozircha biriktirma yo‘q</div>';
+              } else if (key === 'timezone' && body) {
+                loadedAcc.timezone = true;
+                const TZS = ['UTC', 'Asia/Tashkent', 'Asia/Almaty', 'Europe/Istanbul', 'Europe/Moscow', 'Europe/Berlin', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Asia/Dubai', 'Asia/Kolkata', 'Australia/Sydney'];
+                const optHtml = (sel) => TZS.map((z) => '<option value="' + z + '"' + (z === sel ? ' selected' : '') + '>' + z + '</option>').join('');
+                const myTz = await MllyCore.getTimezone().catch(() => ({ timezone: 'UTC' }));
+                const cur = myTz.timezone || 'UTC';
+                ['tzMySelect', 'tzFromTz', 'tzToTz', 'tzScheduleTz'].forEach((id) => {
+                  const el = document.getElementById(id);
+                  if (el) el.innerHTML = optHtml(cur);
+                });
+                const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+                const fromEl = document.getElementById('tzFromInput');
+                const schedEl = document.getElementById('tzScheduleWhen');
+                if (fromEl && !fromEl.value) fromEl.value = nowLocal;
+                if (schedEl && !schedEl.value) schedEl.value = nowLocal;
+                const sList = document.getElementById('tzScheduleList');
+                try {
+                  const sR = await MllyCore.listSchedules({ teamId: teamIdT });
+                  if (sList) sList.innerHTML = (sR.schedules || []).length ? (sR.schedules || []).map((s) => '<div class="workspace-message-item"><strong>' + escapeHtml(s.title) + '</strong> <span>' + escapeHtml(s.iso) + ' (' + escapeHtml(s.timezone) + ')</span></div>').join('') : '<div class="muted">Rejalashtirilgan eslatma yo‘q</div>';
+                } catch (_) { if (sList) sList.textContent = ''; }
               }
             } catch (e) {
               if (body) body.textContent = e.message;
@@ -935,6 +1134,150 @@
             UTIL.toast('Moliyaviy saqlandi');
           } catch (e) { if (fb) fb.textContent = e.message; }
           finally { btn.disabled = false; }
+        });
+
+        // T41 Backup — Export / Import
+        document.getElementById('exportBackupBtn')?.addEventListener('click', async () => {
+          try {
+            const ws = await MllyCore.exportWorkspace(teamIdT);
+            const blob = new Blob([JSON.stringify(ws, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'mllycore-backup-' + teamIdT + '.json'; a.click();
+            URL.revokeObjectURL(url);
+            document.getElementById('backupStatus').textContent = 'Export tayyor.';
+          } catch (e) { document.getElementById('backupStatus').textContent = e.message; }
+        });
+        document.getElementById('importBackupBtn')?.addEventListener('click', () => document.getElementById('importBackupFile')?.click());
+        document.getElementById('importBackupFile')?.addEventListener('change', async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            const parsed = JSON.parse(await file.text());
+            const res = await MllyCore.importWorkspace(teamIdT, parsed);
+            document.getElementById('backupStatus').textContent = 'Import qilindi: ' + (res.imported || 0) + ' yozuv.';
+          } catch (err) { document.getElementById('backupStatus').textContent = err.message; }
+        });
+
+        // T46 Webhooks — qo'shish (add)
+        document.getElementById('webhookAddBtn')?.addEventListener('click', async () => {
+          const urlInput = document.getElementById('webhookUrl');
+          const status = document.getElementById('webhookStatus');
+          const events = Array.from(document.querySelectorAll('.webhook-event:checked')).map((c) => c.value);
+          const url = (urlInput?.value || '').trim();
+          if (!url) { if (status) status.textContent = 'URL kiriting.'; return; }
+          const btn = document.getElementById('webhookAddBtn');
+          if (btn) btn.disabled = true;
+          try {
+            await MllyCore.addWebhook({ teamId: teamIdT, url, events: events.length ? events : ['*'] });
+            if (urlInput) urlInput.value = '';
+            if (status) status.textContent = 'Webhook qo‘shildi.';
+            await renderWebhooks(teamIdT, document.getElementById('acc-webhooks'));
+          } catch (e) { if (status) status.textContent = e.message; }
+          finally { if (btn) btn.disabled = false; }
+        });
+
+        // T55 — Timezone preferences (shaxsiy timezone saqlash)
+        document.getElementById('tzSaveBtn')?.addEventListener('click', async () => {
+          const sel = document.getElementById('tzMySelect');
+          const status = document.getElementById('tzSaveStatus');
+          try {
+            await MllyCore.saveTimezone({ timezone: sel?.value, teamId: teamIdT });
+            if (status) status.textContent = 'Timezone saqlandi: ' + (sel?.value || '');
+          } catch (e) { if (status) status.textContent = e.message; }
+        });
+
+        // T55 — Time converter + working-hours check
+        document.getElementById('tzConvertBtn')?.addEventListener('click', async () => {
+          const iso = document.getElementById('tzFromInput')?.value;
+          const fromTz = document.getElementById('tzFromTz')?.value || 'UTC';
+          const toTz = document.getElementById('tzToTz')?.value || 'UTC';
+          const resEl = document.getElementById('tzConvertResult');
+          const whEl = document.getElementById('tzWhResult');
+          if (!iso) { if (resEl) resEl.textContent = 'Vaqt kiriting.'; return; }
+          try {
+            const r = await MllyCore.convertTime({ iso, fromTz, toTz });
+            if (resEl) resEl.textContent = iso + ' (' + fromTz + ') = ' + r.to.local + ' (' + toTz + ')';
+            const wh = await MllyCore.checkWorkingHours({ iso, tz: fromTz });
+            if (whEl) whEl.textContent = 'Ish vaqti (' + fromTz + '): ' + wh.localTime + ' — ' + (wh.within ? '✅ ichida' : '🌙 tashqarisida');
+          } catch (e) { if (resEl) resEl.textContent = e.message; }
+        });
+
+        // T55 — Schedule a team reminder (rejalashtirilgan eslatma)
+        document.getElementById('tzScheduleBtn')?.addEventListener('click', async () => {
+          const title = document.getElementById('tzScheduleTitle')?.value;
+          const iso = document.getElementById('tzScheduleWhen')?.value;
+          const tz = document.getElementById('tzScheduleTz')?.value || 'UTC';
+          const status = document.getElementById('tzScheduleStatus');
+          if (!title || !iso) { if (status) status.textContent = 'Nomi va vaqtni kiriting.'; return; }
+          try {
+            await MllyCore.createSchedule({ teamId: teamIdT, title, iso, tz });
+            if (status) status.textContent = 'Rejalashtirildi: ' + title;
+            const sR = await MllyCore.listSchedules({ teamId: teamIdT });
+            const sList = document.getElementById('tzScheduleList');
+            if (sList) sList.innerHTML = (sR.schedules || []).map((s) => '<div class="workspace-message-item"><strong>' + escapeHtml(s.title) + '</strong> <span>' + escapeHtml(s.iso) + ' (' + escapeHtml(s.timezone) + ')</span></div>').join('');
+          } catch (e) { if (status) status.textContent = e.message; }
+        });
+
+        // T48 — Live Collaboration: real-time kursolar va presence
+        if (window.__mllyCollabCleanup) { try { window.__mllyCollabCleanup(); } catch (_) {} window.__mllyCollabCleanup = null; }
+        const cursorLayer = document.createElement('div');
+        cursorLayer.id = 'cursorLayer';
+        cursorLayer.className = 'cursor-layer';
+        document.body.appendChild(cursorLayer);
+        const collabBar = document.createElement('div');
+        collabBar.id = 'collabPresence';
+        collabBar.className = 'collab-presence';
+        document.querySelector('.workspace-command-tools')?.appendChild(collabBar);
+        const myColor = '#' + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0');
+        const myName = (window.MLLYCORE_PROFILE && (window.MLLYCORE_PROFILE.name || window.MLLYCORE_PROFILE.email)) || 'User';
+        const _move = (e) => {
+          const now = Date.now();
+          if (now - (_move._last || 0) < 60) return;
+          _move._last = now;
+          MllyCore.updateCursor({ teamId: teamIdT, x: e.clientX, y: e.clientY, name: myName, color: myColor });
+        };
+        window.addEventListener('mousemove', _move);
+        const _unsubCursors = MllyCore.subscribeCursors(teamIdT, (cursors) => {
+          try {
+            cursorLayer.innerHTML = '';
+            collabBar.innerHTML = '';
+            cursors.forEach((c) => {
+              if (c.userId === window.MLLYCORE_AUTH_USER?.uid) return;
+              const dot = document.createElement('div');
+              dot.className = 'cursor-dot';
+              dot.style.left = (c.x || 0) + 'px';
+              dot.style.top = (c.y || 0) + 'px';
+              dot.style.background = c.color || '#7dd3fc';
+              dot.innerHTML = '<span class="cursor-label">' + escapeHtml(c.name || 'User') + '</span>';
+              cursorLayer.appendChild(dot);
+              const av = document.createElement('span');
+              av.className = 'cursor-avatar';
+              av.style.background = c.color || '#7dd3fc';
+              av.textContent = (c.name || 'U').slice(0, 1).toUpperCase();
+              av.title = c.name || 'User';
+              collabBar.appendChild(av);
+            });
+          } catch (_) {}
+        });
+        window.__mllyCollabCleanup = () => {
+          try { window.removeEventListener('mousemove', _move); } catch (_) {}
+          try { if (cursorLayer.parentNode) cursorLayer.parentNode.removeChild(cursorLayer); } catch (_) {}
+          try { if (collabBar.parentNode) collabBar.parentNode.removeChild(collabBar); } catch (_) {}
+          try { if (typeof _unsubCursors === 'function') _unsubCursors(); } catch (_) {}
+        };
+
+        // T53 — Automated Weekly Report (Telegram + in-app)
+        document.getElementById('weeklyReportBtn')?.addEventListener('click', async () => {
+          const status = document.getElementById('weeklyReportStatus');
+          const btn = document.getElementById('weeklyReportBtn');
+          if (status) status.textContent = 'Yuborilmoqda...';
+          if (btn) btn.disabled = true;
+          try {
+            const r = await MllyCore.sendWeeklyReport({ teamId: teamIdT });
+            if (status) status.textContent = 'Yuborildi: ' + (r.sentTelegram || 0) + ' ta Telegram, xulosa: ' + JSON.stringify(r.summary);
+          } catch (e) { if (status) status.textContent = e.message; }
+          finally { if (btn) btn.disabled = false; }
         });
       })();
       scheduleChatSeen(data.messages || [], currentUserId, data.team.id);

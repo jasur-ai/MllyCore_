@@ -8,8 +8,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <link rel="manifest" href="manifest.webmanifest">
 </head>
 <body>
+  <a href="#workflow" class="skip-link">Asosiy kontentga o'tish</a>
   <script src="js/theme.js"></script>
   <div class="landing-page">
     <header class="landing-nav">
@@ -271,5 +273,13 @@
       </section>
     </main>
   </div>
+  <script>
+    // T50 — PWA: service worker ro'yxatdan o'tkazish (app-shell offline caching)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>

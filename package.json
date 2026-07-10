@@ -9,7 +9,8 @@
     "reset:prod": "node scripts/reset-production-data.js",
     "backfill:team-summaries": "node scripts/backfill-team-summaries.js",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
-    "deploy:hosting": "firebase deploy --only hosting"
+    "deploy:hosting": "firebase deploy --only hosting",
+    "test:smoke": "firebase emulators:exec --only auth,firestore node scripts/smoke-test.js"
   },
   "dependencies": {
     "firebase-admin": "^13.10.0"

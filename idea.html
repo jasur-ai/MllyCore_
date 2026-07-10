@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
+  <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
   <div id="app">
     <div class="workspace-app" id="ideaApp">
       <div class="workspace-empty loading-copy"><h3>Yuklanmoqda...</h3><p>G'oya tafsiloti olinmoqda.</p></div>
@@ -94,6 +95,17 @@
                 <div>
                   <label class="label">Pitch (T19)</label>
                   <button class="btn btn-secondary btn-sm" id="pitchBtn">One-Pager yasash</button>
+                  <button class="btn btn-primary btn-sm" id="breakdownBtn">🧩 Vazifalarga ajratish (T42)</button>
+                  <div id="investorPanel" style="margin-top:14px;display:none;">
+                    <h4 style="margin:0 0 8px;">💰 Investor CRM (T43)</h4>
+                    <div class="ws-mini-form">
+                      <input class="input" id="invName" placeholder="Investor ismi">
+                      <input class="input" id="invEmail" placeholder="Email (ixtiyoriy)">
+                      <button class="btn btn-sm btn-primary" id="invAddBtn">Qo‘shish</button>
+                    </div>
+                    <div id="invList" style="margin-top:10px;"></div>
+                    <div id="invStats" class="muted" style="margin-top:6px;font-size:12px;"></div>
+                  </div>
                 </div>
               </div>
               <div class="workspace-form-grid" style="margin-top:12px;">
@@ -122,6 +134,15 @@
                   <button class="btn btn-primary btn-sm" id="riskBtn">Qo'shish</button>
                 </div>
               </div>
+            </div>
+
+            <div class="workspace-surface pad" id="battleSurface" style="display:none;">
+              <div class="section-head"><h2>🥊 Idea Battle (T52)</h2></div>
+              <p class="workspace-surface-copy">Ikki g'oyani solishtiring va yaxshiroq deb ovoz bering. G'olib reytingga yoziladi.</p>
+              <button class="btn btn-primary btn-sm" id="battleNextBtn">Keyingi juftlikni olish</button>
+              <div id="battlePair" style="margin-top:10px;"></div>
+              <button class="btn btn-ghost btn-sm" id="battleStandingsBtn" style="margin-top:8px;">Reytingni ko'rsatish</button>
+              <div id="battleStandings" style="margin-top:8px;"></div>
             </div>
 
             <div class="workspace-surface pad">
@@ -192,6 +213,31 @@
           try { const r = await MllyCore.generatePitch(ideaId); const blob = new Blob([r.html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pitch.html'; a.click(); }
           catch (e) { UTIL.toast(e.message); }
         });
+        document.getElementById('breakdownBtn')?.addEventListener('click', async () => {
+          try { const r = await MllyCore.breakdownIdea(ideaId); const list = (r.tasks || []).map((t, i) => (i + 1) + '. ' + t.title + ' [' + t.priority + ']').join('\n');
+            if (confirm('Quyidagi vazifalar yaratilsinmi?\n\n' + list)) { const c = await MllyCore.breakdownIdea(ideaId, true); UTIL.toast('Yaratildi: ' + (c.created || 0) + ' vazifa'); }
+            else UTIL.toast('Generatsiya: ' + (r.tasks || []).length + ' vazifa (yaratilmadi)');
+          } catch (e) { UTIL.toast(e.message); }
+        });
+        // T43 Investor CRM
+        const invPanel = document.getElementById('investorPanel');
+        const invList = document.getElementById('invList');
+        const invStats = document.getElementById('invStats');
+        const STAGES = ['contacted', 'pitched', 'passed', 'invested'];
+        const renderInv = (list, stats) => {
+          if (!list || !list.length) { invList.innerHTML = '<div class="muted">Hali investor qo‘shilmagan.</div>'; }
+          else {
+            invList.innerHTML = list.map((i) => '<div class="workspace-message-item"><strong>' + escapeHtml(i.name) + '</strong> — <select class="input" style="display:inline;width:auto;" data-inv="' + i.id + '">' + STAGES.map((s) => '<option value="' + s + '"' + (i.stage === s ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></div>').join('');
+            invList.querySelectorAll('select[data-inv]').forEach((sel) => sel.addEventListener('change', async () => { try { await MllyCore.updateInvestorStage({ investorId: sel.dataset.inv, stage: sel.value }); UTIL.toast('Stage: ' + sel.value); } catch (e) { UTIL.toast(e.message); } }));
+          }
+          if (stats) invStats.textContent = 'Pipeline: ' + Object.entries(stats).map((kv) => kv[0] + ':' + kv[1]).join('  ');
+        };
+        document.getElementById('invAddBtn')?.addEventListener('click', async () => {
+          const name = document.getElementById('invName').value.trim();
+          if (!name) return UTIL.toast('Ism kiriting');
+          try { await MllyCore.addInvestor({ teamId: idea.teamId, ideaId, name, email: document.getElementById('invEmail').value }); document.getElementById('invName').value = ''; document.getElementById('invEmail').value = ''; const r = await MllyCore.getInvestorPipeline(idea.teamId, ideaId); renderInv(r.investors, r.pipeline); UTIL.toast('Investor qo‘shildi'); } catch (e) { UTIL.toast(e.message); }
+        });
+        if (invPanel) { invPanel.style.display = 'block'; try { const r = await MllyCore.getInvestorPipeline(idea.teamId, ideaId); renderInv(r.investors, r.pipeline); } catch (e) { invStats.textContent = e.message; } }
         document.getElementById('scoreBtn')?.addEventListener('click', async () => {
           try {
             const r = await MllyCore.scoreIdea(ideaId, {
@@ -219,6 +265,47 @@
             UTIL.toast("Xavf qo'shildi");
           } catch (e) { UTIL.toast(e.message); }
         });
+        // T52 — Idea Battle / Voting Tournament
+        const battleSurface = document.getElementById('battleSurface');
+        const battlePair = document.getElementById('battlePair');
+        const battleStandings = document.getElementById('battleStandings');
+        if (battleSurface) {
+          battleSurface.style.display = '';
+          const renderPair = (pair) => {
+            if (!pair) { battlePair.innerHTML = '<div class="muted">Battle uchun kamida 2 ta idea kerak.</div>'; return; }
+            battlePair.innerHTML = pair.map((p) => `
+              <div class="workspace-record" style="margin-bottom:8px;">
+                <div class="workspace-record-top"><h3>${escapeHtml(p.title)}</h3></div>
+                <button class="btn btn-primary btn-sm" data-battle-win="${p.id}">Victory deb belgilash</button>
+              </div>`).join('');
+            battlePair.querySelectorAll('[data-battle-win]').forEach((btn) => {
+              btn.addEventListener('click', async () => {
+                const winnerId = btn.dataset.battleWin;
+                const loser = pair.find((p) => p.id !== winnerId);
+                if (!loser) return;
+                btn.disabled = true;
+                try {
+                  await MllyCore.voteIdeaBattle({ teamId, winnerId, loserId: loser.id });
+                  UTIL.toast('Ovoz qabul qilindi');
+                  loadPair();
+                } catch (e) { UTIL.toast(e.message); btn.disabled = false; }
+              });
+            });
+          };
+          const loadPair = async () => {
+            try { const r = await MllyCore.getIdeaBattle(teamId); renderPair(r.pair); }
+            catch (e) { battlePair.textContent = e.message; }
+          };
+          document.getElementById('battleNextBtn')?.addEventListener('click', loadPair);
+          document.getElementById('battleStandingsBtn')?.addEventListener('click', async () => {
+            try {
+              const r = await MllyCore.getIdeaBattleStandings(teamId);
+              const rows = r.standings || [];
+              battleStandings.innerHTML = rows.length ? rows.map((s) => '<div class="workspace-message-item"><strong>' + escapeHtml(s.ideaTitle || s.ideaId) + '</strong> — ' + (s.wins || 0) + ' yutuq / ' + (s.losses || 0) + ' yutqazilgan</div>').join('') : '<div class="muted">Hali reyting mavjud emas</div>';
+            } catch (e) { battleStandings.textContent = e.message; }
+          });
+          loadPair();
+        }
       })();
 
       await MllyCore.markNotificationsRead({

@@ -1260,6 +1260,194 @@ window.MllyCore = {
     invalidateCacheByPrefix(getCacheKey('team', ''));
     return r;
   },
+  // ===== T41 Workspace Backup / Export / Import =====
+  async exportWorkspace(teamId) {
+    const authUser = await this.ensureAuthed();
+    const r = await apiPost('/api/export-workspace?teamId=' + encodeURIComponent(teamId), authUser, {});
+    return r && r.workspace;
+  },
+  async importWorkspace(teamId, data) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/import-workspace', authUser, { teamId, data });
+  },
+  // ===== T42 AI Idea → Task Auto-Breakdown =====
+  async breakdownIdea(ideaId, create = false) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/breakdown-idea', authUser, { ideaId, create });
+  },
+  // ===== T43 Investor CRM / Pipeline =====
+  async getInvestorPipeline(teamId, ideaId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/investor-pipeline', authUser, { teamId, ideaId });
+  },
+  async addInvestor({ teamId, ideaId, name, email, note }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/add-investor', authUser, { teamId, ideaId, name, email, note });
+  },
+  async updateInvestorStage({ investorId, stage }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/investor-stage', authUser, { investorId, stage });
+  },
+  // ===== T44 Team Burnout / Load Signal =====
+  async getTeamLoad(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/team-load', authUser, { teamId });
+  },
+  // ===== T45 Command Palette search =====
+  async search(q, type) {
+    const authUser = await this.ensureAuthed();
+    const qs = '?q=' + encodeURIComponent(q) + (type ? '&type=' + encodeURIComponent(type) : '');
+    return apiPost('/api/search' + qs, authUser, {});
+  },
+  // ===== T46 Generic Outgoing Webhooks (Zapier / Make / Notion) =====
+  async getWebhookList(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/webhook-list', authUser, { teamId });
+  },
+  async addWebhook({ teamId, url, events }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/webhook-add', authUser, { teamId, url, events });
+  },
+  async deleteWebhook(webhookId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/webhook-delete', authUser, { webhookId });
+  },
+  async testWebhook(webhookId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/webhook-test', authUser, { webhookId });
+  },
+
+  // ===== T47 Idea Lifecycle Analytics Dashboard =====
+  async getIdeaAnalytics(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/idea-analytics', authUser, { teamId });
+  },
+
+  // ===== T48 Live Collaboration (real-time cursors) =====
+  async updateCursor({ teamId, x, y, name, color }) {
+    const state = await this.init();
+    if (!state) return;
+    const authUser = await this.ensureAuthed();
+    const { doc, setDoc, serverTimestamp } = state.modules.dbMod;
+    await setDoc(
+      doc(state.db, 'cursors', teamId + '_' + authUser.uid),
+      {
+        teamId,
+        userId: authUser.uid,
+        name: name || authUser.email || 'User',
+        color: color || '#7dd3fc',
+        x: Number(x) || 0,
+        y: Number(y) || 0,
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  },
+  subscribeCursors(teamId, onUpdate) {
+    return this.init().then((state) => {
+      if (!state) return () => {};
+      const { collection, onSnapshot, query, where } = state.modules.dbMod;
+      return onSnapshot(
+        query(collection(state.db, 'cursors'), where('teamId', '==', teamId)),
+        (snap) => {
+          const cursors = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          onUpdate(cursors);
+        }
+      );
+    });
+  },
+
+  // ===== T49 Smart Notification Batching =====
+  async getNotificationDigest() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/notification-digest', authUser, {});
+  },
+
+  // ===== T51 Role-based Dashboard Personalization =====
+  async getDashboardPrefs() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/dashboard-prefs', authUser, {});
+  },
+  async saveDashboardPrefs({ hiddenWidgets = [], pinnedTeamId = '' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/save-dashboard-prefs', authUser, { hiddenWidgets, pinnedTeamId });
+  },
+
+  // ===== T52 Idea Battle / Voting Tournament =====
+  async getIdeaBattle(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/idea-battle', authUser, { teamId });
+  },
+  async voteIdeaBattle({ teamId, winnerId, loserId }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/idea-battle-vote', authUser, { teamId, winnerId, loserId });
+  },
+  async getIdeaBattleStandings(teamId) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/idea-battle-standings', authUser, { teamId });
+  },
+
+  // ===== T53 Automated Weekly Report (email/Telegram) =====
+  async sendWeeklyReport({ teamId }) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/send-weekly-report', authUser, { teamId });
+  },
+
+  // ===== T54 Attachment Versioning =====
+  async listAttachments({ teamId, taskId = '', ideaId = '' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/list-attachments', authUser, { teamId, taskId, ideaId });
+  },
+
+  // ===== T55 Timezone-aware Scheduling =====
+  async getTimezone() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/get-timezone', authUser, {});
+  },
+  async saveTimezone({ timezone, workingHours = null, teamId = '' } = {}) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/save-timezone', authUser, { timezone, workingHours, teamId });
+    invalidateDashboardCache(authUser.uid); // R4 — foydalanuvchi sozlamasi o'zgardi
+    return result;
+  },
+  async convertTime({ iso, fromTz = 'UTC', toTz = 'UTC' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/convert-time', authUser, { iso, fromTz, toTz });
+  },
+  async checkWorkingHours({ iso, tz = 'UTC', start = '09:00', end = '18:00' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/working-hours-check', authUser, { iso, tz, start, end });
+  },
+  async createSchedule({ teamId, title, iso, tz = 'UTC' } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/create-schedule', authUser, { teamId, title, iso, tz });
+  },
+  async listSchedules({ teamId } = {}) {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/list-schedules', authUser, { teamId });
+  },
+
+  // ===== T57 API Health / Error Tracking =====
+  async getHealth() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/health', authUser, {});
+  },
+  async logError({ level = 'error', message, stack = null, context = null } = {}) {
+    try {
+      const authUser = await this.ensureAuthed().catch(() => null);
+      if (!authUser) return { skipped: true };
+      return await apiPost('/api/error-log', authUser, {
+        level: ['error', 'warn', 'info'].includes(level) ? level : 'error',
+        message: String(message || '').slice(0, 2000),
+        stack: stack ? String(stack).slice(0, 4000) : null,
+        context: context ? String(context).slice(0, 1000) : null,
+      });
+    } catch (_) { return { skipped: true }; }
+  },
+  async getErrorLogs() {
+    const authUser = await this.ensureAuthed();
+    return apiPost('/api/error-logs', authUser, {});
+  },
 
   async requireAuth() {
     const state = await this.init();

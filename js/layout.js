@@ -1,3 +1,33 @@
+// T57 — Global klient tomoni xatolik kuzatuvi (faqat bir marta o'rnatiladi).
+(function setupErrorTracking() {
+  if (window.__mllyErrorTracking) return;
+  window.__mllyErrorTracking = true;
+  let lastFlush = 0;
+  const FLUSH_MS = 5000;
+  const send = (level, message, extra) => {
+    try {
+      const now = Date.now();
+      if (now - lastFlush < FLUSH_MS) return; // throttle: spam bo'lmasin
+      lastFlush = now;
+      if (window.MllyCore && typeof window.MllyCore.logError === 'function') {
+        window.MllyCore.logError({
+          level,
+          message: String(message || 'Unknown error').slice(0, 2000),
+          stack: extra && extra.stack ? extra.stack : null,
+          context: extra && extra.context ? extra.context : (location.pathname || ''),
+        });
+      }
+    } catch (_) { /* non-fatal */ }
+  };
+  window.addEventListener('error', (e) => {
+    send('error', e.message || 'Unknown error', { stack: e.error && e.error.stack, context: (e.filename || '') + ':' + (e.lineno || '') });
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    const reason = e.reason || {};
+    send('error', reason.message || String(reason), { stack: reason.stack, context: 'unhandledrejection' });
+  });
+})();
+
 window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   const profile = context.profile || window.MLLYCORE_PROFILE || {
     name: 'Foydalanuvchi',
@@ -125,6 +155,42 @@ window.mountLayout = function(active, context) {
   root.outerHTML = `<div class="app" id="app">${renderLayout(active, context)}<main class="main">${main}</main></div>`;
   const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
   window.MllyCoreTheme?.apply?.(theme);
+  // T45 — Cmd+K Command Palette (global, faqat bir marta qo'shiladi)
+  if (!window.__cmdPaletteReady) {
+    window.__cmdPaletteReady = true;
+    const palette = document.createElement('div');
+    palette.id = 'cmdPalette';
+    palette.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:flex-start;padding-top:12vh;';
+    palette.innerHTML = '<div style="background:var(--surface);width:min(640px,92%);border-radius:12px;padding:12px;box-shadow:0 10px 40px rgba(0,0,0,.4);"><input id="cmdInput" placeholder="Qidiruv: g‘oya, vazifa, a’zo yoki sahifa..." style="width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-size:14px;"><div id="cmdResults" style="margin-top:8px;max-height:50vh;overflow:auto;"></div><div class="muted" style="font-size:11px;margin-top:6px;">↑↓ tanlash · Enter ochish · Esc yopish</div></div>';
+    document.body.appendChild(palette);
+    const input = palette.querySelector('#cmdInput');
+    const results = palette.querySelector('#cmdResults');
+    const closePalette = () => { palette.style.display = 'none'; input.value = ''; results.innerHTML = ''; };
+    const openPalette = () => { palette.style.display = 'flex'; input.focus(); };
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); if (palette.style.display === 'flex') closePalette(); else openPalette(); }
+      if (e.key === 'Escape' && palette.style.display === 'flex') closePalette();
+    });
+    let timer;
+    input.addEventListener('input', () => {
+      clearTimeout(timer);
+      const q = input.value.trim();
+      if (q.length < 2) { results.innerHTML = ''; return; }
+      timer = setTimeout(async () => {
+        try {
+          const r = await window.MllyCore.search(q);
+          const items = [];
+          (r.results && r.results.tasks || []).forEach((x) => items.push({ label: '✓ ' + (x.title || ''), sub: 'Vazifa', url: 'team.html?id=' + (x.teamId || '') }));
+          (r.results && r.results.ideas || []).forEach((x) => items.push({ label: '💡 ' + (x.title || ''), sub: 'G‘oya', url: 'idea.html?id=' + (x.id || '') }));
+          (r.results && r.results.teams || []).forEach((x) => items.push({ label: '🏢 ' + (x.name || ''), sub: 'Workspace', url: 'team.html?id=' + (x.id || '') }));
+          (r.results && r.results.messages || []).forEach((x) => items.push({ label: '💬 ' + ((x.text || '').slice(0, 40)), sub: 'Xabar', url: 'team.html?id=' + (x.teamId || '') }));
+          results.innerHTML = items.length ? items.map((it, i) => '<div class="cmd-item" data-url="' + it.url + '" style="padding:8px;border-radius:6px;cursor:pointer;' + (i === 0 ? 'background:var(--bg);' : '') + '"><strong>' + it.label + '</strong> <span class="muted">' + it.sub + '</span></div>').join('') : '<div class="muted">Topilmadi</div>';
+          results.querySelectorAll('.cmd-item').forEach((el) => el.addEventListener('click', () => { location.href = el.dataset.url; }));
+        } catch (err) { results.innerHTML = '<div class="muted">Xato: ' + err.message + '</div>'; }
+      }, 250);
+    });
+  }
+
   document.querySelectorAll('a[href]').forEach((link) => {
     const href = link.getAttribute('href') || '';
     if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:')) return;
