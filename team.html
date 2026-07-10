@@ -312,7 +312,7 @@
               <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
               ${task.requiredSkill ? `<div class="workspace-detail-row"><span>Ko'nikma</span><strong>${escapeHtml(task.requiredSkill)}${(data.members || []).some((m) => Array.isArray(m.user?.skills) && m.user.skills.includes(task.requiredSkill)) ? '' : ' ⚠ gap'}</strong></div>` : ''}
               ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
-              ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="workspace-detail-row"><span>Bog'liq (T8)</span><strong>${task.dependsOn.map((id) => escapeHtml(((data.tasks || []).find((t) => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
+              ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="workspace-detail-row"><span>Bog'liq </span><strong>${task.dependsOn.map((id) => escapeHtml(((data.tasks || []).find((t) => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
             </div>
             ${taskSubs.length ? `
               <div class="workspace-message-stack">
@@ -583,7 +583,7 @@
         <section class="workspace-layout">
           <div class="ws-tabs" role="tablist" aria-label="Workspace bo'limlari">
             <button type="button" class="ws-tab" role="tab" data-tab="kanban" aria-selected="true" id="tab-kanban">📋 Ish doskasi</button>
-            <button type="button" class="ws-tab" role="tab" data-tab="activity" aria-selected="false" id="tab-activity">🧩 Faoliyat</button>
+            <button type="button" class="ws-tab" role="tab" data-tab="activity" aria-selected="false" id="tab-activity">🛠 Boshqaruv</button>
             <button type="button" class="ws-tab" role="tab" data-tab="chat" aria-selected="false" id="tab-chat">💬 Chat</button>
             <button type="button" class="ws-tab" role="tab" data-tab="members" aria-selected="false" id="tab-members">👥 A'zolar</button>
           </div>
@@ -688,7 +688,7 @@
                       </div>
                     </div>
                     <div>
-                      <label class="label">Bog'liq vazifalar (T8) — старост bajarib bo'lmaguncha blokda turadi</label>
+                      <label class="label">Bog'liq vazifalar  — ular bajarib bo'lmaguncha blokda turadi</label>
                       <select class="select" id="taskDependsOn" multiple size="3">
                         ${(data.tasks || []).map((t) => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('')}
                       </select>
@@ -698,7 +698,7 @@
                       <input class="input" id="taskDeadline" type="datetime-local" value="${fmtDateInput(new Date(Date.now() + 24 * 60 * 60 * 1000))}">
                     </div>
                     <div>
-                      <label class="label">Kerakli ko'nikma (T25)</label>
+                      <label class="label">Kerakli ko'nikma </label>
                       <input class="input" id="taskRequiredSkill" placeholder="Masalan: React">
                     </div>
                     <div class="workspace-form-actions">
@@ -741,7 +741,7 @@
               <div class="workspace-surface-head">
                 <div>
                   <h2>Boshqaruv</h2>
-                  <div class="workspace-surface-copy">Quyidagi 3 guruhdan birini tanlang — har biri alohida ko'rsatiladi (T21 / T23 / T24 / T28 / T30 / T36 / T41 / T44 / T46 / T47 / T54 / T55).</div>
+                  <div class="workspace-surface-copy">Quyidagi 3 guruhdan birini tanlang — har biri alohida ko'rsatiladi .</div>
                 </div>
               </div>
               <nav class="ws-boshqaruv-nav" aria-label="Boshqaruv bo'limlari">
@@ -751,15 +751,15 @@
           </nav>
           <div class="ws-acc-group">
                 <div class="ws-acc" data-group="moliya">
-                  <button type="button" class="ws-acc-head" data-acc="roadmap">🗺 Roadmap (T21) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="roadmap">🗺 Roadmap  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-roadmap"><p class="ws-acc-hint">Vazifalarning muddati va bog'liqligi bo'yicha vaqt chizig'i. Ochib ko'rish uchun bosing.</p></div>
                 </div>
                 <div class="ws-acc" data-group="jamoa">
-                  <button type="button" class="ws-acc-head" data-acc="decisions">📌 Qarorlar (T24) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="decisions">📌 Qarorlar  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-decisions"><p class="ws-acc-hint">Jamoa qabul qilgan qarorlar kundaligi. Ochib ko'rish uchun bosing.</p></div>
                 </div>
                 <div class="ws-acc" data-group="jamoa">
-                  <button type="button" class="ws-acc-head" data-acc="meeting">📝 Meeting (T30) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="meeting">📝 Meeting  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-meeting">
                     <p class="ws-acc-hint">Meeting qaydlarini kiriting — action item'lar avtomatik vazifaga aylanadi.</p>
                     <div class="ws-mini-form">
@@ -771,15 +771,15 @@
                   </div>
                 </div>
                 <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="activity">📡 Activity (T36) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="activity">📡 Activity  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-activity"><p class="ws-acc-hint">Jamoa activity va audit oqimi. Ochib ko'rish uchun bosing.</p></div>
                 </div>
                 <div class="ws-acc" data-group="jamoa">
-                  <button type="button" class="ws-acc-head" data-acc="reputation">🏅 Reputation (T28) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="reputation">🏅 Reputation  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-reputation"><p class="ws-acc-hint">A'zolarning obro'si reytingi. Ochib ko'rish uchun bosing.</p></div>
                 </div>
                 <div class="ws-acc" data-group="moliya">
-                  <button type="button" class="ws-acc-head" data-acc="finance">💰 Moliyaviy (T23) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="finance">💰 Moliyaviy  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-finance">
                     <p class="ws-acc-hint">Oylik byudjet va burn-rate ni kiriting — qancha oy yetishin (runway) hisoblab ko'rsatamiz.</p>
                     <div class="ws-mini-form">
@@ -807,7 +807,7 @@
                 </div>
                 <!-- T41 Backup accordion -->
                 <div class="ws-acc" data-group="moliya">
-                  <button type="button" class="ws-acc-head" data-acc="backup">💾 Backup (T41) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="backup">💾 Backup  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-backup">
                     <p class="ws-acc-hint">Butun workspace (g'oyalar, vazifalar, a'zolar, chat) export/import — migratsiya yoki halokatdan tiklash uchun.</p>
                     <div class="ws-mini-form">
@@ -820,7 +820,7 @@
                 </div>
                 <!-- T44 Load accordion -->
                 <div class="ws-acc" data-group="jamoa">
-                  <button type="button" class="ws-acc-head" data-acc="load">🔥 Load signal (T44) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="load">🔥 Load signal  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-load">
                     <p class="ws-acc-hint">A'zolarning yuklanish signali (timeLogs + tasks + presence asosida).</p>
                     <div id="loadSummary" class="muted" style="margin-bottom:8px;"></div>
@@ -829,7 +829,7 @@
                 </div>
                 <!-- T46 Webhooks accordion -->
                 <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="webhooks">🔗 Webhooks (T46) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="webhooks">🔗 Webhooks  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-webhooks">
                     <p class="ws-acc-hint">Zapier / Make / Notion kabi tashqi xizmatlarga event yuborish (task_created, idea_created, member_invited yoki * — hammasi).</p>
                     <div class="ws-mini-form">
@@ -848,28 +848,28 @@
                 </div>
                 <!-- T47 Idea Lifecycle Analytics accordion -->
                 <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics (T47) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-analytics">
                     <p class="ws-acc-hint">G'oyalar hayotiy sikli: T18 (RICE score), T29 (stage), T26 (stale/health), T34 (ovoz).</p>
                     <div id="analyticsSummary" class="muted" style="margin-bottom:8px;"></div>
                     <div id="analyticsTop" style="margin-bottom:8px;"></div>
                     <div id="analyticsList"></div>
-                    <button class="btn btn-primary btn-sm" id="weeklyReportBtn" style="margin-top:10px;">📤 Haftalik hisobot yuborish (T53)</button>
+                    <button class="btn btn-primary btn-sm" id="weeklyReportBtn" style="margin-top:10px;">📤 Haftalik hisobot yuborish </button>
                     <div id="weeklyReportStatus" class="text-sm muted" style="margin-top:6px;"></div>
                   </div>
                 </div>
                 <!-- T54 Attachment Versioning accordion -->
                 <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="attachments" aria-expanded="false" aria-controls="acc-attachments">📎 Biriktirmalar (T54) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="attachments" aria-expanded="false" aria-controls="acc-attachments">📎 Biriktirmalar  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-attachments">
-                    <p class="ws-acc-hint">Workspace ga biriktirilgan shifrlangan fayllar va ularning versiya tarixi (T16 + T54).</p>
+                    <p class="ws-acc-hint">Workspace ga biriktirilgan shifrlangan fayllar va ularning versiya tarixi.</p>
                     <div id="attachmentsList" class="workspace-message-stack"></div>
                     <div id="attachmentsStatus" class="text-sm muted" style="margin-top:8px;"></div>
                   </div>
                 </div>
                 <!-- T55 Timezone-aware Scheduling accordion -->
                 <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="timezone" aria-expanded="false" aria-controls="acc-timezone">🌍 Vaqt / Timezone (T55) <span class="ws-acc-ico">▸</span></button>
+                  <button type="button" class="ws-acc-head" data-acc="timezone" aria-expanded="false" aria-controls="acc-timezone">🌍 Vaqt / Timezone  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-timezone">
                     <p class="ws-acc-hint">Shaxsiy timezone va ish vaqti (working hours) — bildirishnomalar va uchrashuvlar uchun.</p>
                     <div class="ws-mini-form">
