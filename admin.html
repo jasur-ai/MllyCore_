@@ -38,11 +38,6 @@
         <div class="admin-content">
 
           <section class="admin-panel" data-panel="workspaces" role="tabpanel" aria-labelledby="sub-workspaces">
-            <div class="workspace-surface pad">
-              <div class="section-head"><h2>Admin qoidasi</h2></div>
-              <div class="workspace-note-bar">Admin idea, chat yoki secret key oqimiga aralashmaydi. Admin faqat workspace yaratadi, team leadni belgilaydi va kerak bo'lsa workspace'ni o'chiradi.</div>
-            </div>
-
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -64,21 +59,6 @@
               </div>
               <div id="managerList" style="padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
             </div>
-
-            <aside class="workspace-side-stack">
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Admin vazifasi</h3>
-                <div class="workspace-security-list">
-                  <span>Workspace yaratish</span>
-                  <span>Lead email tayinlash</span>
-                  <span>Workspace o'chirish</span>
-                </div>
-              </div>
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Team lead vazifasi</h3>
-                <p class="muted text-sm" style="margin:0">A'zolarni qo'shish, secret key reset qilish va workspace ichidagi ishlarni yuritish team lead zimmasida.</p>
-              </div>
-            </aside>
           </section>
 
           <section class="admin-panel" data-panel="analytics" role="tabpanel" aria-labelledby="sub-analytics" hidden>
@@ -148,7 +128,7 @@
               <div class="workspace-surface-head">
                 <div>
                   <h2>🎚️ Feature Flags</h2>
-                  <div class="workspace-surface-copy">Yangi funksiyalarni xavfsiz, bosqichma-bosqich yoqish/o'chirish.</div>
+                  <div class="workspace-surface-copy">Platforma funksiyalarini boshqarish. Flag yoqilsa — tegishli imkoniyat barcha foydalanuvchilar uchun darhol faollashadi; o'chirilsa — o'chadi. Har bir flag nima qilishini kartochkalarda ko'rasiz. O'zgarishlar "Saqlash" bosilganda qo'llanadi.</div>
                 </div>
                 <button class="btn btn-secondary btn-sm" onclick="saveFeatureFlags()">Saqlash</button>
               </div>
@@ -409,9 +389,9 @@
           const data = await MllyCore.getFeatureFlags({});
           const flags = (data.flags && data.flags.global) || {};
           document.getElementById('featureFlagsContainer').innerHTML = FLAG_DEFS.map(f => `
-            <label style="display:flex;align-items:center;gap:10px;background:var(--surface-sub);padding:12px;border-radius:10px;border:1px solid var(--line);cursor:pointer;">
-              <input type="checkbox" class="ff-toggle" data-key="${f.key}" ${flags[f.key] ? 'checked' : ''}>
-              <span style="font-size:13px;">${f.label}</span>
+            <label style="display:flex;align-items:flex-start;gap:10px;background:var(--surface-sub);padding:12px;border-radius:10px;border:1px solid var(--line);cursor:pointer;">
+              <input type="checkbox" class="ff-toggle" data-key="${f.key}" ${flags[f.key] ? 'checked' : ''} style="margin-top:3px;">
+              <span style="font-size:13px;line-height:1.45;"><strong>${f.label}</strong><br><span style="color:var(--muted);font-size:12px;font-weight:400;">${f.desc}</span></span>
             </label>
           `).join('');
         } catch (e) { console.error('Flags load', e); }

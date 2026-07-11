@@ -1500,8 +1500,18 @@ window.MllyCore = {
 };
 
 async function apiPost(url, authUser, body, forceRefreshToken = false) {
+  // Hosting rewrite (/api/(.*) -> /api/index) ba'zan asl pathni o'chirib yuboradi,
+  // natijada backend action ni aniqlay olmay "Action xato." qaytaradi.
+  // Shuning uchun har doim ?action=<oxirgi-segment> qo'shamiz — backend
+  // `req.query.action || pathname.pop()` qoidasiga ko'ra action ni to'g'ri topadi.
+  let finalUrl = url;
+  if (!/[?&]action=/.test(url)) {
+    const seg = url.split('?')[0].split('/').filter(Boolean).pop() || '';
+    const sep = url.includes('?') ? '&' : '?';
+    finalUrl = url + sep + 'action=' + encodeURIComponent(seg);
+  }
   const idToken = await authUser.getIdToken(forceRefreshToken);
-  const response = await fetch(url, {
+  const response = await fetch(finalUrl, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${idToken}`,

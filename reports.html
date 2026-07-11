@@ -114,8 +114,11 @@
     // Hech qachon jim (silent) xato bo'lmaydi; foydalanuvchi "Qayta urinish" ni bosadi.
     function showReportsError(err) {
       const root = document.getElementById('reportsRoot');
-      if (!root) return;
       const msg = (err && err.message) ? err.message : 'Noma’lum xato';
+      // Yon paneldagi "Yuklanmoqda..." matnini ham to'xtatamiz — aks holda u doimiy qoladi.
+      const statsBox = document.getElementById('reportStatsContent');
+      if (statsBox) statsBox.textContent = 'Statistikani yuklab bo‘lmadi.';
+      if (!root) return;
       root.innerHTML = `
         <div class="error-banner" role="alert">
           <div class="error-banner-icon">⚠️</div>
@@ -126,6 +129,7 @@
           </div>
         </div>`;
       document.getElementById('reportsRetryBtn')?.addEventListener('click', async () => {
+        if (statsBox) statsBox.textContent = 'Yuklanmoqda...';
         try { await loadAllReports(); } catch (e) { showReportsError(e); }
       });
     }
@@ -181,7 +185,7 @@
       let activePeriodMode = await window.MllyCore.getReportPeriodMode();
       let currentTabPeriod = activePeriodMode; // 'daily', 'weekly', or 'monthly'
 
-      async function loadAllReports() {
+      window.loadAllReports = async function loadAllReports() {
         const urlParams = new URLSearchParams(window.location.search);
         const filterTeamId = urlParams.get('teamId') || '';
         let allReportsRaw;

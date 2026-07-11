@@ -335,12 +335,13 @@
                 </div>
               ` : ''}
             </div>
+            ${(task.assignmentMode === 'team') || isAssignedToCurrent || isLead ? `
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
               <button class="btn btn-secondary btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
               <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
               <button class="btn btn-secondary btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
               <input type="file" id="file-${task.id}" style="display:none">
-            </div>
+            </div>` : ''}
             <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
             <div class="text-sm muted" data-task-feedback="${task.id}"></div>
           </div>
@@ -541,44 +542,7 @@
           </div>
         </section>
 
-        <section class="workspace-split-hero">
-          <div class="workspace-surface pad">
-            <div class="section-head"><h2>Workspace context</h2></div>
-            <div class="workspace-chip-row">
-              <span class="badge">Private workspace</span>
-              <span class="badge">Realtime chat</span>
-              <span class="badge">${isLead ? 'Lead control' : 'Member access'}</span>
-            </div>
-            <p class="muted text-sm" style="margin:14px 0 0">A'zo taklif qilinsa userga bildirishnoma tushadi, u secret key to'g'ri kiritsa keyingina kiradi. Chat, idea, startup va task activity hamma a'zolarga bildirishnoma yuboradi.</p>
-          </div>
-          <div class="workspace-action-stack">
-            ${isLead ? `
-            <div class="workspace-surface pad" data-roles="team_lead,admin">
-              <h3 style="margin:0 0 12px">Lead actions</h3>
-                <div class="workspace-form-stack">
-                  <div>
-                    <label class="label">Yangi a'zo emaili</label>
-                    <div class="workspace-form-inline">
-                      <input class="input" id="memberEmail" type="email" placeholder="member@email.com">
-                      <select class="select" id="inviteRole" title="A'zo roli">
-                        <option value="member">Member (yozishi mumkin)</option>
-                        <option value="viewer">Viewer (faqat o'qiydi)</option>
-                      </select>
-                      <button class="btn btn-primary" id="inviteMemberBtn">Taklif yuborish</button>
-                    </div>
-                      <div class="text-sm muted" id="memberInviteFeedback" aria-live="polite"></div>
-                  </div>
-                  <button class="btn btn-secondary" id="resetSecretBtn">Secret key reset</button>
-                </div>
-              </div>
-            ` : `
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Member view</h3>
-                <p class="muted text-sm" style="margin:0">Siz g'oya qo'sha olasiz, jamoaviy taskga natija yuklaysiz va chatda ishlaysiz.</p>
-              </div>
-            `}
-          </div>
-        </section>
+
 
         <section class="workspace-layout">
           <div class="ws-tabs" role="tablist" aria-label="Workspace bo'limlari">
@@ -750,6 +714,29 @@
             <button type="button" class="subnav-item" data-bq="integratsiya">🔗 Integratsiya &amp; Tizim</button>
           </nav>
           <div class="ws-acc-group">
+                ${isLead ? `
+                <div class="ws-acc" data-group="jamoa" data-roles="team_lead,admin">
+                  <button type="button" class="ws-acc-head" data-acc="member-mgmt">👥 A'zolarni boshqarish <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-member-mgmt">
+                    <p class="ws-acc-hint">Yangi a'zo taklif qiling yoki workspace secret key'ni yangilang. Faqat team lead va admin uchun.</p>
+                    <div class="workspace-form-stack">
+                      <div>
+                        <label class="label">Yangi a'zo emaili</label>
+                        <div class="workspace-form-inline">
+                          <input class="input" id="memberEmail" type="email" placeholder="member@email.com">
+                          <select class="select" id="inviteRole" title="A'zo roli">
+                            <option value="member">Member (yozishi mumkin)</option>
+                            <option value="viewer">Viewer (faqat o'qiydi)</option>
+                          </select>
+                          <button class="btn btn-primary" id="inviteMemberBtn">Taklif yuborish</button>
+                        </div>
+                        <div class="text-sm muted" id="memberInviteFeedback" aria-live="polite"></div>
+                      </div>
+                      <button class="btn btn-secondary" id="resetSecretBtn">Secret key reset</button>
+                    </div>
+                  </div>
+                </div>
+                ` : ''}
                 <div class="ws-acc" data-group="moliya">
                   <button type="button" class="ws-acc-head" data-acc="roadmap">🗺 Roadmap  <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-roadmap"><p class="ws-acc-hint">Vazifalarning muddati va bog'liqligi bo'yicha vaqt chizig'i. Ochib ko'rish uchun bosing.</p></div>
@@ -770,8 +757,8 @@
                     </div>
                   </div>
                 </div>
-                <div class="ws-acc" data-group="integratsiya">
-                  <button type="button" class="ws-acc-head" data-acc="activity">📡 Activity  <span class="ws-acc-ico">▸</span></button>
+                <div class="ws-acc" data-group="integratsiya" data-roles="admin">
+                  <button type="button" class="ws-acc-head" data-acc="activity">📡 Activity <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-activity"><p class="ws-acc-hint">Jamoa activity va audit oqimi. Ochib ko'rish uchun bosing.</p></div>
                 </div>
                 <div class="ws-acc" data-group="jamoa">
@@ -847,7 +834,7 @@
                   </div>
                 </div>
                 <!-- T47 Idea Lifecycle Analytics accordion -->
-                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,admin">
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,member,admin">
                   <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-analytics">
                     <p class="ws-acc-hint">G'oyalar hayotiy sikli: T18 (RICE score), T29 (stage), T26 (stale/health), T34 (ovoz).</p>
@@ -903,6 +890,7 @@
                 </div>
               </div>
             </div>
+          </div>
 
             <div class="ws-tab-panel" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
               <div class="workspace-surface">
@@ -1037,10 +1025,10 @@
         const teamIdT = data.team.id;
         const loadedAcc = {};
 
-        const renderList = (container, title, arr, fmt) => {
+        window.renderList = (container, title, arr, fmt) => {
 
         // T46 — Webhook ro'yxatini yuklash, test / o'chirish (delete) amallari
-        const renderWebhooks = async (teamId, body) => {
+        window.renderWebhooks = async (teamId, body) => {
           const status = document.getElementById('webhookStatus');
           const listEl = document.getElementById('webhookList');
           if (!listEl) return;

@@ -49,6 +49,7 @@
             <div class="workspace-surface pad" style="margin-top:20px;" id="twoFactorPanel">
               <div class="section-head"><h2>🔐 Ikki bosqichli tasdiqlash </h2></div>
               <p class="muted text-sm">Shaxsiy hisobingizni TOTP (Google Authenticator / Authy) orqali qo'shimcha himoyalang.</p>
+              <p class="muted text-sm" style="margin-top:6px"><strong>Qanday faollashtirish:</strong> "2FA ni yoqish" tugmasini bosing → ekranga chiqadigan <strong>secret key</strong> ni autentifikator ilovasiga kiriting yoki QR kodni skan qiling → 6 xonali kodni kiritib "Tasdiqlash" bosing. <span class="modal-secret-warn">Secret key faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang.</span></p>
               <div id="twoFactorStatus" class="text-sm muted" style="margin:8px 0;"></div>
               <div id="twoFactorSetup" style="display:none;margin-bottom:12px;">
                 <div class="text-sm">1. Secret ni autentifikatorga kiriting yoki QR ochang:</div>
@@ -138,18 +139,19 @@
             <div class="workspace-surface pad" style="margin-top:20px;" id="extraProfilePanel">
               <div class="section-head"><h2>Qo'shimcha sozlamalar </h2></div>
               <div class="workspace-form-grid">
-                <div>
+                <div class="extra-setting">
                   <label class="label">Telegram Chat ID </label>
                   <input class="input" id="telegramChatId" placeholder="masalan: 123456789">
                   <button class="btn btn-primary btn-sm" id="linkTelegramBtn" style="margin-top:6px;">Ulash</button>
                   <p class="muted text-xs" style="margin-top:6px">Chat ID qayerdan olinadi: Telegram'da @userinfobot ga yozing va /start bosing.</p>
                 </div>
-                <div>
+                <div class="extra-setting">
                   <label class="label">Ko'nikmalar (vergul bilan)</label>
                   <input class="input" id="skillsInput" placeholder="React, Figma, Marketing">
                   <button class="btn btn-primary btn-sm" id="saveSkillsBtn" style="margin-top:6px;">Saqlash</button>
+                  <p class="muted text-xs" style="margin-top:6px">Sizning ko'nikmalaringiz profilda va vazifa moslashida ko'rinadi.</p>
                 </div>
-                <div>
+                <div class="extra-setting">
                   <label class="label">Til </label>
                   <select class="input" id="localeSelect">
                     <option value="uz">O'zbekcha</option>
@@ -157,22 +159,19 @@
                     <option value="en">English</option>
                   </select>
                   <button class="btn btn-primary btn-sm" id="saveLocaleBtn" style="margin-top:6px;">Saqlash</button>
+                  <p class="muted text-xs" style="margin-top:6px">Interfeys tili shu yerda saqlanadi.</p>
                 </div>
               </div>
             </div>
 
             <div class="workspace-surface pad" style="margin-top:20px;">
               <div class="section-head"><h2>🐙 GitHub ulanishi </h2></div>
-              <p class="muted text-sm" style="margin:0 0 10px">Vazifani GitHub Issue ga aylantirish uchun workspace ichidagi vazifa kartasidagi 🐙 GitHub'ga tugmasidan foydalaning.</p>
-              <div class="workspace-message-stack">
-                <div class="workspace-message-item"><strong>Qayerda token?</strong><span>Agar serverda GITHUB_TOKEN nomli environment o'zgaruvchi sozlagan bo'lsangiz, u avtomatik ishlatiladi.</span></div>
-                <div class="workspace-message-item"><strong>Repo formati</strong><span><code>user/repo</code> ko'rinishida kiriting.</span></div>
-              </div>
+              <p class="muted text-sm" style="margin:0 0 10px">Vazifani GitHub Issue ga aylantirish uchun vazifa kartasidagi 🐙 GitHub'ga tugmasidan foydalaning. Repo nomi <code>user/repo</code> ko'rinishida kiritiladi.</p>
             </div>
           </div>
 
           <div class="ws-tab-panel" data-panel="malumotlar" role="tabpanel" aria-labelledby="tab-malumotlar" hidden>
-            <div class="workspace-surface">
+            <div class="workspace-surface" id="personalStatsSurface">
               <div class="workspace-surface-head">
                 <div>
                   <h2>Shaxsiy statistika </h2>
@@ -219,6 +218,13 @@
       document.getElementById('username').value = profile.username || '';
       document.getElementById('email').value = profile.email || user.email || '';
 
+      // Admin/Manager uchun o'z "Shaxsiy statistikasi" kerak emas — ular user/lead/team
+      // statistikasini admin paneli orqali ko'radi. Shuning uchun bu bo'limni yashiryamiz.
+      if (profile && (profile.role === 'admin' || profile.role === 'manager')) {
+        const psSurface = document.getElementById('personalStatsSurface');
+        if (psSurface) psSurface.style.display = 'none';
+      }
+
       // Load Personal Statistics
       (async () => {
         try {
@@ -230,10 +236,10 @@
           if (data.personalStats) {
             const container = document.getElementById('personalStatsContainer');
             container.innerHTML = `
-              ${window.AnalyticsWidgets.renderStatCard('Bajarilgan Vazifalar', data.personalStats.completedTasks || 0, 'Bu oy', '✅')}
+              ${window.AnalyticsWidgets.renderStatCard('Bajarilgan Vazifalar', data.personalStats.completedTasks || 0, 'Bu oy', '🟢')}
               ${window.AnalyticsWidgets.renderStatCard('Jami Vazifalar', data.personalStats.totalTasks || 0, 'Biriktirilgan', '📋')}
               ${window.AnalyticsWidgets.renderStatCard('Yaratilgan G\'oyalar', data.personalStats.ideasCreated || 0, 'Jami', '💡')}
-              ${window.AnalyticsWidgets.renderStatCard('Ball', data.score || 0, 'Gamifikatsiya', '⭐')}
+              ${window.AnalyticsWidgets.renderStatCard('Ball', data.score || 0, 'Gamifikatsiya', '🏅')}
             `;
           }
         } catch (error) {

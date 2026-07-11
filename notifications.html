@@ -102,7 +102,10 @@
       // keraksiz bo'lim chiqmaydi.
       const _invSec = document.getElementById('invites')?.closest('.workspace-surface');
       if (_invSec) _invSec.style.display = invites.length ? '' : 'none';
-      document.getElementById('notificationCount').textContent = data.notifications.length;
+      const unreadN = (data.notifications || []).filter((n) => n.unread || n.isRead === false).length;
+      const notifBadge = document.getElementById('notificationCount');
+      notifBadge.textContent = unreadN;
+      notifBadge.style.display = unreadN > 0 ? '' : 'none';
 
       document.getElementById('invites').innerHTML = invites.length ? invites.map((invite) => `
         <div class="workspace-record">
@@ -208,11 +211,11 @@
             const r = await MllyCore.getNotificationDigest();
             const groups = r.groups || [];
             const total = r.total || 0;
-            batchView.innerHTML = '<div class="ws-mini-form" style="margin-bottom:8px"><strong>Jami o‘qilmagan: ' + total + '</strong></div>' + (groups.length ? groups.map((g) => `
-              <div class="workspace-message-item">
-                <strong>${escapeHtml(g.type)}</strong> — ${g.count} ta
-                <div class="text-xs muted">${(g.sample || []).map((x) => escapeHtml((x.content || x.text || '').slice(0, 60))).join(' • ')}</div>
-              </div>`).join('') : '<div class="muted">Guruhlanadigan bildirishnoma yo‘q</div>');
+            batchView.innerHTML = '<div class="batch-summary">Jami o‘qilmagan: <strong>' + total + '</strong></div>' + (groups.length ? '<div class="batch-list">' + groups.map((g) => `
+              <div class="workspace-message-item batch-group">
+                <div class="batch-group-head"><strong>${escapeHtml(g.type)}</strong> <span class="badge badge-progress">${g.count} ta</span></div>
+                <div class="text-xs muted">${(g.sample || []).map((x) => escapeHtml((x.content || x.text || '').slice(0, 90))).join(' • ')}</div>
+              </div>`).join('') + '</div>' : '<div class="muted">Guruhlanadigan bildirishnoma yo‘q</div>');
           } catch (e) { batchView.textContent = e.message; }
         });
       }

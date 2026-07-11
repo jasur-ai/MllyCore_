@@ -52,6 +52,7 @@
           <div class="workspace-surface pad" id="personalizationSurface">
             <div class="section-head"><h3>Personalizatsiya </h3></div>
             <div class="workspace-surface-copy" id="roleQuickActions">Rolingizga mos tez amallar shu yerda.</div>
+            <p class="muted text-sm" style="margin:10px 0 0">Quyidagi belgilashlar dashbordingizda qaysi bo'limlar (Workspace'lar, G'oyalar, Bildirishnomalar) ko'rinishini boshqaradi. O'zgartirgandan keyin "Saqlash" tugmasini bosing — o'zgarish darhol qo'llanadi.</p>
             <div class="workspace-form-inline mt-3" id="widgetToggles">
               <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="teams" checked> Workspace'lar</label>
               <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="ideas" checked> G'oyalar</label>
@@ -366,13 +367,17 @@
         }
       });
 
-      document.getElementById('nextStep').textContent = isAdmin
-        ? (teams.length
-          ? "Workspace ochilgan. Keyingi operatsiya admin panel orqali lifecycle nazoratidir."
-          : "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang.")
-        : (teams.length
-          ? "Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi."
-          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni taklif qiladi, keyin bildirishnomadan secret key bilan kirasiz.");
+      const nextStepEl = document.getElementById('nextStep');
+      const nextStepSurface = nextStepEl ? nextStepEl.closest('.workspace-surface') : null;
+      if (teams.length > 0) {
+        // Foydalanuvchi allaqachon workspace'ga ulangan — "Keyingi qadam" kerak emas.
+        if (nextStepSurface) nextStepSurface.style.display = 'none';
+      } else {
+        if (nextStepSurface) nextStepSurface.style.display = '';
+        nextStepEl.textContent = isAdmin
+          ? "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang."
+          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni taklif qiladi, keyin bildirishnomadan secret key bilan kirasiz.";
+      }
 
       document.getElementById('teams').innerHTML = teams.length ? teams.map((team) => `
         <a href="team.html?id=${team.id}" class="workspace-record">

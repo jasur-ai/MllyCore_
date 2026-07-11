@@ -872,6 +872,8 @@ body.theme-light .theme-toggle-btn {
 .workspace-stat-note { display: block; color: var(--muted); font-size: 13px; margin-top: 8px; }
 .workspace-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, .9fr); gap: 16px; align-items: start; }
 .workspace-main-stack, .workspace-side-stack, .workspace-rail, .workspace-list, .workspace-action-stack, .workspace-form-grid, .workspace-message-stack { display: grid; gap: 16px; }
+.extra-setting { background: var(--surface-sub); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.extra-setting .label { margin-bottom: 0; }
 .workspace-surface { border: 1px solid var(--border); border-radius: 18px; background: rgba(21,27,44,0.96); overflow: hidden; }
 body.theme-light .workspace-surface { background: rgba(246,248,252,0.96); }
 .workspace-surface.pad { padding: 20px; }
@@ -956,6 +958,11 @@ body.theme-light .workspace-security-list span {
 .workspace-message-item { padding: 12px 14px; border-radius: 14px; border: 1px solid var(--border); background: rgba(11,15,26,0.5); }
 .workspace-message-item strong { display: block; font-size: 13px; margin-bottom: 4px; }
 .workspace-message-item span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+.batch-summary { margin-bottom: 10px; font-size: 13px; color: var(--text); }
+.batch-list { display: flex; flex-direction: column; gap: 10px; }
+.batch-group { padding: 14px 16px; line-height: 1.5; }
+.batch-group-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.batch-group-head strong { display: inline; margin: 0; font-size: 14px; }
 .notification-item {
   width: 100%;
   text-align: left;
@@ -1398,6 +1405,8 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .skeleton-line.mid { width: 65%; }
 body.theme-light .skeleton-line { background: linear-gradient(90deg, rgba(148,163,184,0.12) 25%, rgba(148,163,184,0.24) 37%, rgba(148,163,184,0.12) 63%); }
 body.theme-light .skeleton-card { background: rgba(241,245,249,0.85); }
+body.theme-light .ws-tabs { background: rgba(241,245,249,0.9); }
+body.theme-light .empty-state { background: rgba(241,245,249,0.6); }
 
 .error-banner { display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: 16px; border: 1px solid rgba(239,68,68,0.4); background: rgba(239,68,68,0.08); margin-bottom: 16px; }
 .error-banner-icon { font-size: 22px; line-height: 1; }
