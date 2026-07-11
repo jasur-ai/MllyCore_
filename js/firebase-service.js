@@ -785,6 +785,30 @@ window.MllyCore = {
     return result;
   },
 
+  // T-UI — Mas'ulni o'zgartirish: team lead tomonidan vazifaning assignedTo'sini
+  // yangilash. Bu client-side Firestore update (api/ ga tegmaydi); Firestore qoidasi
+  // team lead'ga task'ni yangilashga ruxsat beradi (firestore.rules: /tasks write -> isTeamLead).
+  async reassignTask({ teamId, taskId, assignedTo = null }) {
+    const state = await this.init();
+    if (!state) return { success: false };
+    const { doc, updateDoc } = state.modules.dbMod;
+    await updateDoc(doc(state.db, 'tasks', taskId), { assignedTo: assignedTo || null });
+    invalidateTeamCache(teamId);
+    return { success: true };
+  },
+
+  // T-UI — A'zo rolini o'zgartirish (team lead: member <-> viewer).
+  // Client-side Firestore update; Firestore qoidasi team lead'ga teamMembers
+  // hujjatini yangilashga ruxsat beradi (firestore.rules: /teamMembers update -> isTeamLead).
+  async updateMemberRole({ teamId, userId, role }) {
+    const state = await this.init();
+    if (!state) return { success: false };
+    const { doc, updateDoc } = state.modules.dbMod;
+    await updateDoc(doc(state.db, 'teamMembers', teamId + '_' + userId), { role });
+    invalidateTeamCache(teamId);
+    return { success: true };
+  },
+
   async syncTeamTasks(teamId) {
     const authUser = await this.ensureAuthed();
     const lastRun = teamSyncState.get(teamId) || 0;

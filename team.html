@@ -180,7 +180,7 @@
       }).catch(() => {});
     }
 
-    function renderMembers(data, currentUserId) {
+    function renderMembers(data, currentUserId, isLead) {
       const target = document.getElementById('membersList');
       if (!target) return;
       target.innerHTML = data.members.map((member) => `
@@ -194,8 +194,32 @@
             <span class="badge ${member.role === 'team_lead' ? 'badge-active' : ''}">${escapeHtml(member.role)}</span>
             ${member.userId === currentUserId ? '<span class="workspace-pill-note">Bu siz</span>' : ''}
           </div>
+          ${isLead && member.userId !== currentUserId && member.role !== 'team_lead' ? `
+          <div class="member-role-edit" style="display:flex;gap:6px;margin-top:8px;align-items:center;">
+            <select class="select btn-sm" data-member-role="${member.userId}">
+              <option value="member" ${member.role === 'member' ? 'selected' : ''}>Member (yozishi mumkin)</option>
+              <option value="viewer" ${member.role === 'viewer' ? 'selected' : ''}>Viewer (faqat o'qiydi)</option>
+            </select>
+            <button class="btn btn-secondary btn-sm" data-member-role-save="${member.userId}">Rolni saqlash</button>
+          </div>` : ''}
         </div>
       `).join('');
+      document.querySelectorAll('[data-member-role-save]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const userId = button.dataset.memberRoleSave;
+          const sel = document.querySelector('[data-member-role="' + userId + '"]');
+          const role = sel ? sel.value : 'member';
+          button.disabled = true;
+          try {
+            await MllyCore.updateMemberRole({ teamId: data.team.id, userId, role });
+            UTIL.toast("A'zo roli yangilandi: " + role);
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            UTIL.toast(error.message || "Rol o'zgartirilmadi.");
+            button.disabled = false;
+          }
+        });
+      });
     }
 
     function renderEntries(data, currentUserId, isLead) {
@@ -284,12 +308,20 @@
       target.innerHTML = tasks.length ? tasks.map((task) => {
         const taskSubs = submissions.filter((item) => item.taskId === task.id);
         const hasSubmitted = taskSubs.some((item) => item.userId === currentUserId);
-        const isAssignedToCurrent = task.assignedUserId === currentUserId;
-        const canClaim = task.assignmentMode === 'open' && !task.assignedUserId;
+        // Backend 'assignedTo' saqlaydi (assignedUserId/assignedUserName/assignmentMode emas),
+        // shuning uchun ularni member'lardan va mavjud maydonlardan chiqarib olamiz.
+        const assignedId = task.assignedTo || task.assignedUserId || null;
+        const assignedName = task.assignedUserName
+          || ((data.members || []).find((m) => m.userId === assignedId)?.user?.name)
+          || ((data.members || []).find((m) => m.userId === assignedId)?.name)
+          || null;
+        const mode = task.assignmentMode || (assignedId ? 'direct' : 'open');
+        const isAssignedToCurrent = assignedId === currentUserId;
+        const canClaim = mode === 'open' && !assignedId;
         const teamRequired = task.requiredCount || Math.max(1, Math.ceil(memberCount * 0.65));
         const canSubmit = (
-          (task.assignmentMode === 'team') ||
-          ((task.assignmentMode === 'direct' || task.assignmentMode === 'open') && isAssignedToCurrent)
+          (mode === 'team') ||
+          ((mode === 'direct' || mode === 'open') && isAssignedToCurrent)
         ) && !hasSubmitted && task.status !== 'completed';
 
         return `
@@ -308,7 +340,7 @@
             </div>
             <p class="workspace-helper">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</p>
             <div class="workspace-detail-list">
-              <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(task.assignedUserName || (task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
+              <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(assignedName || (mode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
               <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
               ${task.requiredSkill ? `<div class="workspace-detail-row"><span>Ko'nikma</span><strong>${escapeHtml(task.requiredSkill)}${(data.members || []).some((m) => Array.isArray(m.user?.skills) && m.user.skills.includes(task.requiredSkill)) ? '' : ' ⚠ gap'}</strong></div>` : ''}
               ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
@@ -335,12 +367,16 @@
                 </div>
               ` : ''}
             </div>
-            ${(task.assignmentMode === 'team') || isAssignedToCurrent || isLead ? `
+            ${(mode === 'team') || isAssignedToCurrent || isLead ? `
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
               <button class="btn btn-secondary btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
               <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
               <button class="btn btn-secondary btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
               <input type="file" id="file-${task.id}" style="display:none">
+              ${isLead ? `<div class="workspace-task-reassign" style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;">
+                <select class="select btn-sm" id="reassignSel-${task.id}" aria-label="Mas'ulni tanlang">${memberOptions(data.members, false)}</select>
+                <button class="btn btn-secondary btn-sm" data-task-reassign="${task.id}">Mas'ulni o'zgartirish</button>
+              </div>` : ''}
             </div>` : ''}
             <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
             <div class="text-sm muted" data-task-feedback="${task.id}"></div>
@@ -383,6 +419,27 @@
             await refreshWorkspace(data.team.id, currentUserId);
           } catch (error) {
             if (feedback) feedback.textContent = error.message || 'Natija yuborilmadi.';
+            button.disabled = false;
+          }
+        });
+      });
+
+      // Mas'ulni o'zgartirish (faqat team lead) — client-side Firestore update
+      // (Firestore qoidasi: team lead task'ni yangilashi mumkin, shuning uchun ruxsat bor).
+      document.querySelectorAll('[data-task-reassign]').forEach((button) => {
+        button.addEventListener('click', async () => {
+          const taskId = button.dataset.taskReassign;
+          const sel = document.getElementById('reassignSel-' + taskId);
+          const fb = document.querySelector('[data-task-feedback="' + taskId + '"]');
+          const newId = sel ? sel.value : '';
+          if (!newId) { if (fb) fb.textContent = "Mas'ul uchun a'zo tanlang."; return; }
+          button.disabled = true;
+          try {
+            await MllyCore.reassignTask({ teamId: data.team.id, taskId, assignedTo: newId });
+            if (fb) { fb.className = 'text-sm muted feedback-success'; fb.textContent = "Mas'ul yangilandi."; }
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            if (fb) fb.textContent = error.message || "Mas'ul o'zgartirilmadi.";
             button.disabled = false;
           }
         });
@@ -545,14 +602,12 @@
 
 
         <section class="workspace-layout">
-          <div class="ws-tabs" role="tablist" aria-label="Workspace bo'limlari">
-            <button type="button" class="ws-tab" role="tab" data-tab="kanban" aria-selected="true" id="tab-kanban">📋 Ish doskasi</button>
-            <button type="button" class="ws-tab" role="tab" data-tab="activity" aria-selected="false" id="tab-activity">🛠 Boshqaruv</button>
-            <button type="button" class="ws-tab" role="tab" data-tab="chat" aria-selected="false" id="tab-chat">💬 Chat</button>
-            <button type="button" class="ws-tab" role="tab" data-tab="members" aria-selected="false" id="tab-members">👥 A'zolar</button>
-          </div>
-          <div class="ws-tab-panels">
-          <div class="ws-tab-panel" data-panel="kanban" role="tabpanel" aria-labelledby="tab-kanban">
+          <div class="ws-accordion">
+          <div class="ws-section" data-section="kanban">
+            <button type="button" class="ws-section-head" data-section="kanban" aria-expanded="true">
+              <span>📋 Ish doskasi</span><span class="ws-section-ico">▾</span>
+            </button>
+            <div class="ws-section-body" data-section="kanban">
           <div class="workspace-main-stack">
             ${isLead ? `
               <div class="workspace-surface">
@@ -700,7 +755,12 @@
             </div>
           </div>
           </div>
-          <div class="ws-tab-panel" data-panel="activity" role="tabpanel" aria-labelledby="tab-activity" data-bq="moliya" hidden>
+          </div>
+          <div class="ws-section" data-section="activity">
+            <button type="button" class="ws-section-head" data-section="activity" aria-expanded="false">
+              <span>🛠 Boshqaruv</span><span class="ws-section-ico">▾</span>
+            </button>
+            <div class="ws-section-body" data-section="activity" data-bq="moliya" hidden>
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -892,7 +952,12 @@
             </div>
           </div>
 
-            <div class="ws-tab-panel" data-panel="chat" role="tabpanel" aria-labelledby="tab-chat" hidden>
+          </div>
+          <div class="ws-section" data-section="chat">
+            <button type="button" class="ws-section-head" data-section="chat" aria-expanded="false">
+              <span>💬 Chat</span><span class="ws-section-ico">▾</span>
+            </button>
+            <div class="ws-section-body" data-section="chat" hidden>
               <div class="workspace-surface">
                 <div class="workspace-surface-head">
                   <div>
@@ -910,7 +975,12 @@
                 </div>
               </div>
             </div>
-          <div class="ws-tab-panel" data-panel="members" role="tabpanel" aria-labelledby="tab-members" hidden>
+          </div>
+          <div class="ws-section" data-section="members">
+            <button type="button" class="ws-section-head" data-section="members" aria-expanded="false">
+              <span>👥 A'zolar</span><span class="ws-section-ico">▾</span>
+            </button>
+            <div class="ws-section-body" data-section="members" hidden>
           <aside class="workspace-side-stack" role="complementary" aria-label="A'zolar va workspace eslatmalari">
             <div class="workspace-surface">
               <div class="workspace-surface-head">
@@ -940,7 +1010,8 @@
                 </div>
               </div>
             </div>
-          </aside>
+            </aside>
+          </div>
           </div>
           </div>
         </section>
@@ -948,7 +1019,7 @@
 
       renderEntries(data, currentUserId, isLead);
       renderTasks(data, currentUserId, isLead);
-      renderMembers(data, currentUserId);
+      renderMembers(data, currentUserId, isLead);
       // T9 - Presence: har bir a'zo holatini realtime obuna qilish.
       // Eski obunalarni tozalash (har refresh'da yangi obuna yaratilib, xotira sizib chiqmasin — tezlik uchun).
       presenceUnsubs.forEach((unsub) => { try { unsub(); } catch (_) {} });
@@ -967,30 +1038,35 @@
       }
       renderChat(data.messages || [], currentUserId);
 
-      // T-UI — Tab (bo'lim) almashtirish: workspace-layout ichidagi tablarni boshqarish.
+      // T-UI — Bo'limlarni "ostidan ochiladigan" akkordeon qilib o'zgartirdik
+      // (oldingi tab'lar o'rniga). Har bir bo'lim sarlavhasini bosganda uning
+      // tanasi pastdan ochiladi/yopiladi; bir nechtasini bir vaqtda ochish mumkin.
       (() => {
-        const tabs = Array.from(document.querySelectorAll('.ws-tab'));
-        const panels = Array.from(document.querySelectorAll('.ws-tab-panel'));
-        if (!tabs.length) return;
-        const teamKey = 'mlly_tab_' + (data.team && data.team.id || '');
-        const activate = (name) => {
-          tabs.forEach((t) => t.setAttribute('aria-selected', String(t.dataset.tab === name)));
-          panels.forEach((p) => { p.hidden = (p.dataset.panel !== name); });
-          try { localStorage.setItem(teamKey, name); } catch (_) {}
+        const heads = Array.from(document.querySelectorAll('.ws-section-head'));
+        if (!heads.length) return;
+        const sections = Array.from(document.querySelectorAll('.ws-section'));
+        const teamKey = 'mlly_sec_' + (data.team && data.team.id || '');
+        const setOpen = (sec, open) => {
+          const body = sec.querySelector('.ws-section-body');
+          const head = sec.querySelector('.ws-section-head');
+          if (body) body.hidden = !open;
+          if (head) head.setAttribute('aria-expanded', String(open));
+          sec.classList.toggle('open', open);
         };
-        tabs.forEach((t) => t.addEventListener('click', () => activate(t.dataset.tab)));
-        const tablist = document.querySelector('.ws-tabs');
-        tablist?.addEventListener('keydown', (e) => {
-          if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-          const i = tabs.indexOf(document.activeElement);
-          if (i < 0) return;
-          const next = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length;
-          tabs[next].focus(); tabs[next].click();
-          e.preventDefault();
-        });
+        // Dastlabki holat: tanasi yashirilmagan bo'limlar ochiq.
+        sections.forEach((s) => { const b = s.querySelector('.ws-section-body'); s.classList.toggle('open', b && !b.hidden); });
+        heads.forEach((h) => h.addEventListener('click', () => {
+          const sec = h.closest('.ws-section');
+          if (!sec) return;
+          setOpen(sec, !sec.classList.contains('open'));
+          try { localStorage.setItem(teamKey, sections.filter((s) => s.classList.contains('open')).map((s) => s.dataset.section).join(',')); } catch (_) {}
+        }));
         try {
           const saved = localStorage.getItem(teamKey);
-          if (tabs.some((t) => t.dataset.tab === saved)) activate(saved);
+          if (saved) {
+            const arr = saved.split(',').filter(Boolean);
+            sections.forEach((s) => setOpen(s, arr.includes(s.dataset.section)));
+          }
         } catch (_) {}
       })();
 
@@ -998,12 +1074,13 @@
       // Bosilganda activity panel-ning data-bq qiymatini o'zgartiramiz; CSS shu orqali
       // tegishli guruhdagi accordion-larni ko'rsatadi, qolganlarini yashiradi.
       (() => {
-        const actPanel = document.querySelector('.ws-tab-panel[data-panel="activity"]');
+        const actPanel = document.querySelector('.ws-section[data-section="activity"]');
         if (!actPanel) return;
         const bqBtns = Array.from(actPanel.querySelectorAll('.ws-boshqaruv-nav .subnav-item'));
         if (!bqBtns.length) return;
         const setBq = (bq) => {
-          actPanel.dataset.bq = bq;
+          const actBody = actPanel.querySelector('.ws-section-body');
+          if (actBody) actBody.dataset.bq = bq;
           bqBtns.forEach((b) => b.setAttribute('aria-current', String(b.dataset.bq === bq)));
         };
         bqBtns.forEach((b) => b.addEventListener('click', () => setBq(b.dataset.bq)));
@@ -1107,7 +1184,14 @@
                 const s = r.summary || {};
                 document.getElementById('loadSummary').textContent = 'Jamoa: ' + (s.members || 0) + ' a’zo — ' + (s.overloaded || 0) + ' overloaded, ' + (s.busy || 0) + ' busy';
                 const colorOf = (sig) => sig === 'overloaded' ? '#e5484d' : sig === 'busy' ? '#f59e0b' : '#22c55e';
-                body.innerHTML = '<div class="workspace-message-stack">' + (r.load || []).map((m) => '<div class="workspace-message-item"><strong>' + escapeHtml(m.name) + '</strong> — ' + m.openTasks + ' ochiq, ' + (m.timeLoggedMs / 3600000).toFixed(1) + ' soat, ' + m.presence + ' <span style="color:' + colorOf(m.signal) + '">' + m.signal + '</span></div>').join('') + '</div>';
+                // FIX (Load signal): backend teamMembers da alohida `name` maydoni bo'lmasligi
+                // mumkin, shuning uchun `m.name` bo'sh bo'lib, raw Firebase UID ko'rinadi.
+                // `data.members` ichida `user?.name`/`user?.email` bor — shu yerdan topamiz.
+                const nameOf = (m) => {
+                  const mem = (data.members || []).find((mm) => mm.userId === m.userId);
+                  return (mem && (mem.user?.name || mem.user?.email)) || m.name || m.userId || 'A’zo';
+                };
+                body.innerHTML = '<div class="workspace-message-stack">' + (r.load || []).map((m) => '<div class="workspace-message-item"><strong>' + escapeHtml(nameOf(m)) + '</strong> — ' + m.openTasks + ' ochiq, ' + (m.timeLoggedMs / 3600000).toFixed(1) + ' soat, ' + m.presence + ' <span style="color:' + colorOf(m.signal) + '">' + m.signal + '</span></div>').join('') + '</div>';
               } else if (key === 'webhooks' && body) {
                 loadedAcc.webhooks = true;
                 await renderWebhooks(teamIdT, body);
@@ -1523,6 +1607,10 @@
 
       document.getElementById('resetSecretBtn')?.addEventListener('click', async () => {
         const button = document.getElementById('resetSecretBtn');
+        // Halokatli amal: secret key yangilansa, eski key bilan a'zolar kirib bo'lmaydi.
+        // Shuning uchun tasdiqlash oynasi (professional xavfsizlik).
+        const confirmed = window.confirm('Secret key yangilanadi. Eski key bilan mavjud a\'zolar workspace\'ga kira olmaydi. Davom etasizmi?');
+        if (!confirmed) return;
         button.disabled = true;
         try {
           const key = await MllyCore.resetWorkspaceSecret(data.team.id);

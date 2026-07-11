@@ -12,6 +12,12 @@
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #38bdf8;
+  /* Qo'shimcha dizayn tokenlari (profil/hisobot/admin/team ichida ishlatiladi) */
+  --accent: #6366f1;
+  --surface: #151b2c;
+  --line: #232b42;
+  --surface-sub: #1b2336;
+  --text-muted: #8a93a8;
 }
 
 body.theme-light {
@@ -22,6 +28,11 @@ body.theme-light {
   --border: #d6dde8;
   --text: #1f2937;
   --muted: #66758b;
+  --accent: #6366f1;
+  --surface: #f6f8fc;
+  --line: #d6dde8;
+  --surface-sub: #edf1f6;
+  --text-muted: #66758b;
 }
 
 * { box-sizing: border-box; }
@@ -1346,6 +1357,22 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .ws-tab-panel { display: block; }
 .ws-tab-panel[hidden] { display: none; }
 
+/* ===== Bo'limlar — "ostidan ochiladigan" akkordeon (T-UI) ===== */
+.ws-accordion { display: flex; flex-direction: column; gap: 12px; }
+.ws-section { border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: rgba(21,27,44,0.96); }
+body.theme-light .ws-section { background: rgba(246,248,252,0.96); }
+.ws-section-head {
+  appearance: none; width: 100%; text-align: left; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 16px 20px; background: transparent; border: 0; color: var(--text);
+  font-size: 17px; font-weight: 700; font-family: inherit;
+}
+.ws-section-head:hover { background: var(--panel-2); }
+.ws-section-ico { transition: transform .2s ease; color: var(--muted); font-size: 14px; line-height: 1; }
+.ws-section.open .ws-section-ico { transform: rotate(180deg); }
+.ws-section-body { padding: 4px 20px 22px; }
+.ws-section-body[hidden] { display: none; }
+
 /* Admin sub-nav (vertikal kichik-menyu) */
 .subnav {
   display: flex;
@@ -1424,7 +1451,10 @@ body.theme-light .empty-state { background: rgba(241,245,249,0.6); }
 .ws-boshqaruv-nav .subnav-item { width: auto; flex: 0 0 auto; }
 .ws-tab-panel[data-bq="moliya"] .ws-acc:not([data-group="moliya"]),
 .ws-tab-panel[data-bq="jamoa"] .ws-acc:not([data-group="jamoa"]),
-.ws-tab-panel[data-bq="integratsiya"] .ws-acc:not([data-group="integratsiya"]) { display: none; }
+.ws-tab-panel[data-bq="integratsiya"] .ws-acc:not([data-group="integratsiya"]),
+.ws-section-body[data-bq="moliya"] .ws-acc:not([data-group="moliya"]),
+.ws-section-body[data-bq="jamoa"] .ws-acc:not([data-group="jamoa"]),
+.ws-section-body[data-bq="integratsiya"] .ws-acc:not([data-group="integratsiya"]) { display: none; }
 
 /* ===================== Faza 5: Rol asosida UI yashirish =====================
    .role-<role> sinfi <html> ga qo'shiladi (layout.js tomonidan, authdan keyin).
@@ -1493,3 +1523,26 @@ body.theme-light .landing-copy h1 {
 @media (prefers-reduced-motion: reduce) {
   .landing-showcase { animation: none; }
 }
+
+/* ===== Professional polish (additive) — ClickUp-darajali interaktivlik ===== */
+/* Vazifa kartalari va a'zo qatorlari uchun nozik hover/transition (ko'tarilish effekti). */
+.workspace-task-card { transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.workspace-task-card:hover { transform: translateY(-2px); border-color: rgba(56,189,248,0.35); background: rgba(16,22,36,0.78); box-shadow: 0 14px 30px rgba(2,6,23,0.28); }
+.workspace-list-row { transition: background .15s ease, border-color .15s ease; }
+.workspace-list-row:hover { background: rgba(16,22,36,0.78); border-color: rgba(99,102,241,0.3); }
+body.theme-light .workspace-task-card:hover { background: rgba(248,250,253,0.98); border-color: rgba(99,102,241,0.4); box-shadow: 0 14px 30px rgba(148,163,184,0.16); }
+body.theme-light .workspace-list-row:hover { background: rgba(248,250,253,0.98); border-color: rgba(99,102,241,0.32); }
+
+/* Bo'sh holatlar uchun yanada aniqroq, markazlashgan ko'rinish (icon + sarlavha + matn). */
+.workspace-empty { display: grid; gap: 6px; justify-items: center; padding: 36px 20px; border: 1px dashed var(--border); border-radius: 16px; background: rgba(11,15,26,0.32); }
+.workspace-empty h3 { font-size: 16px; }
+body.theme-light .workspace-empty { background: rgba(241,245,249,0.5); }
+
+/* Juda keng ekranlarda workspace kontentini markazlashtirish (ultra-wide qulayligi). */
+.workspace-app { max-width: 1500px; margin: 0 auto; }
+
+/* Tugma bosilayotganda nozik siqilish effekti (press feedback). */
+.btn:active, .ws-section-head:active, .ws-acc-head:active { transform: translateY(1px); }
+
+/* Toast accessibility: ekran o'qiydiychilar uchun live-region. */
+.toast { z-index: 1200; }

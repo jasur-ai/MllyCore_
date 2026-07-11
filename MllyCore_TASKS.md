@@ -218,3 +218,189 @@ qo'shildi: `.ws-tabs` (workspace bo'lim tablari) va `.empty-state` uchun oq/yeng
 - R4 har yozuvda cache invalidate — saqlanadi.
 - R5 Vercel env — tegilmadi.
 - `api/` (node backend) GA TE GILMADI. Faqat frontend fayllari o'zgartirildi.
+
+---
+
+## Keyingi bosqich — 5-x foydalanuvchi xabarlari (akkordeon + vazifa/a'zo tuzatishlari)
+
+> Foydalanuvchi 4-x tuzatishlardan keyin qo'shimcha aniq muammolarni ko'rsatdi: bo'limlar
+> "ostidan ochiladigan" akkordeon bo'lishi kerakligi, vazifa mas'ulini ko'rsatish/noto'g'riligi,
+> "Mas'ulni o'zgartirish" tugmasi va a'zo rolini (viewer/member) team lead o'zgartira olishi.
+
+### Task 18 — Workspace bo'limlari akkordeonga o'tkazildi ("ostidan ochiladigan")
+**Muammo:** "Ish doskasi / Boshqaruv / Chat / A'zolar" tab'lari burchakda qolib, pastdan
+ochiladigan bo'lishi so'raldi.
+**Qanday tuzatildi:** `team.html` `renderWorkspace()` ichidagi `ws-tabs` + `ws-tab-panels`
+tuzilmasi `ws-accordion` > `ws-section` (sarlavha + tanasi) ko'rinishiga o'zgartirildi.
+Har bir bo'lim sarlavhasini bosganda tanasi pastdan ochiladi/yopiladi; bir nechtasini bir
+vaqtda ochish mumkin. Holat `localStorage` da saqlanadi. Tab almashtirish JS'i akkordeon
+toggle logikasiga almashtirildi; aktivlik sub-nav (`data-bq` guruh filteri) `.ws-section-body`
+ga o'tkazildi (CSS ham yangilandi). Yangi CSS `.ws-accordion / .ws-section / .ws-section-head /
+.ws-section-body` `css/styles.css` ga qo'shildi. Template balans: **145/145** `<div>`.
+
+### Task 19 — Vazifa mas'uli to'g'ri ko'rsatiladi (assignedTo → Mas'ul)
+**Muammo:** Vazifa biriktirilgan a'zoga berilsa-da, "Hali olinmagan" chiqardi va team lead
+o'zi mas'ul bo'lib qolardi; biriktirilgan a'zo vazifani bajara olmasdi.
+**Ildiz sababi:** Backend `createTask` faqat `assignedTo` (UID) saqlaydi; `assignedUserId` /
+`assignedUserName` / `assignmentMode` maydonlarini saqlamaydi. Lekin `renderTasks` aynan
+shu yo'q maydonlardan foydalanardi → noto'g'ri ko'rinish.
+**Qanday tuzatildi:** `renderTasks` da `assignedId = task.assignedTo || task.assignedUserId`,
+`assignedName` a'zolar ro'yxatidan (userId orqali) topiladi, `mode = assignmentMode ||
+(assignedId ? 'direct' : 'open')` hisoblanadi. Mas'ul qatori, `canClaim`, `isAssignedToCurrent`
+va `canSubmit` endi shu qiymatlardan foydalanadi — biriktirilgan a'zo Mas'ul sifatida ko'rsatiladi
+va vazifani bajarishi mumkin.
+
+### Task 20 — Har bir vazifada "Mas'ulni o'zgartirish" tugmasi (faqat team lead)
+**Muammo:** Mas'ulni keyinroq o'zgartirish imkoniyati yo'q edi.
+**Qanday tuzatildi:** `team.html` vazifa kartasida (lead uchun) `memberOptions` bilan
+`<select>` + "Mas'ulni o'zgartirish" tugmasi qo'shildi. Tugma `MllyCore.reassignTask()`
+ni chaqiradi — bu **client-side Firestore `updateDoc`** (`tasks/{id}` dagi `assignedTo` ni
+yangilaydi). Firestore qoidasi (`/tasks` write → `isTeamLead`) team lead'ga ruxsat beradi,
+shuning uchun backendga tegmasdan ishlaydi. O'zgarishdan so'ng workspace avtomatik qayta
+render qilinadi.
+
+### Task 21 — A'zo rolini o'zgartirish (viewer ↔ member), faqat team lead
+**Muammo:** Team lead a'zoning statusini (viewer yoki member) o'zgartira olmasdi.
+**Qanday tuzatildi:** `renderMembers` da (lead uchun, o'zidan va team_lead'a a'zolar uchun
+emas) har bir a'zoga rol `<select>` (Member / Viewer) + "Rolni saqlash" tugmasi qo'shildi.
+Tugma `MllyCore.updateMemberRole()` ni chaqiradi — bu ham **client-side Firestore
+`updateDoc`** (`teamMembers/{teamId_userId}` dagi `role` ni yangilaydi). Firestore qoidasi
+(`/teamMembers` update → `isTeamLead`) team lead'ga ruxsat beradi.
+
+### Task 22 — Bog'liqlik faqat aniq ko'rsatilganidek
+**Muammo:** "Hamma topshiriq bir-biriga bog'lanib qolyapti" degan tasavvur.
+**Qanday tuzatildi:** Tekshirildi — backend `createTask` faqat klient yuborgan `dependsOn`
+ro'yxatini saqlaydi (bo'sh bo'lsa `[]`); hech qanday avtomatik bog'lash yo'q. Shuning uchun
+bog'liqlik faqat team lead `dependsOn` select'da aniq tanlagan vazifalar uchun hosil bo'ladi.
+(`blocked` ham faqat shunda `true` bo'ladi.)
+
+---
+
+## Tekshiruv natijalari (yakuniy — 2-bosqich)
+- Barcha 12 ta HTML: `<div>` balansi **OK**; barcha inline `<script>` lar parse **OK**.
+- `team.html` `renderWorkspace` template: **145/145** `<div>` (akkordeon tuzilmasi bilan).
+- `js/firebase-service.js`: `node --check` **OK** (`reassignTask`, `updateMemberRole` qo'shildi).
+- Barcha o'zgarishlar **additive** (mavjud kod buzilmadi; faqat qo'shildi/qatlamlandi).
+
+## Xavfsizlik (takroriy tasdiq — 2)
+- R1 `mountLayout` bir marta — buzilmadi.
+- R2 `reports.html` faqat ruxsatlilarga — buzilmadi.
+- R3 o'chirishda parol re-auth — buzilmadi.
+- R4 har yozuvda cache invalidate (`reassignTask`/`updateMemberRole` ham `invalidateTeamCache`
+  chaqiradi) — saqlanadi.
+- R5 Vercel env — tegilmadi.
+- `api/` (node backend) GA TE GILMADI. Faqat frontend fayllari o'zgartirildi.
+- Eslatma: Task 20 va 21 dagi yozuvlar **client-side Firestore SDK** orqali bajariladi
+  (maxsus `api/` endpoint'i emas); bu Firestore qoidalari bilan ruxsat etilgan
+  (team lead uchun) va backend fayllariga tegmaydi.
+
+---
+
+## Keyingi bosqich — 6-x foydalanuvchi xabarlari (Load signal xatosi)
+
+> Foydalanuvchi 🔥 Load signal bo'limida a'zolar o'rniga **xom Firebase UID** lar
+> chiqayotganini ko'rsatdi (masalan `VPg7ya8NFMMYKtKKBn3ZazIvysu2 — 0 ochiq…`).
+
+### Task 23 — 🔥 Load signal: xom UID o'rniga a'zo ismi
+**Muammo:** `🔥 Load signal` akkordeonida har bir a'zo xom Firebase UID (28 belgili
+`uid`) sifatida chiqardi; ism ko'rinmasdi.
+**Ildiz sababi:** Backend `handleTeamLoad` (`api/index.js`) `load` massiviga
+`{ userId, name: m.name || uid, ... }` shaklda yozadi. Lekin `teamMembers` hujjatlarida
+aloḥida `name` maydoni bo'lmasligi mumkin, shuning uchun `m.name` `undefined` bo'lib,
+`uid` (xom UID) fallback sifatida ko'rsatilardi.
+**Qanday tuzatildi (faqat UI, backend'ga tezilmadi):** `team.html` dagi `key === 'load'`
+render blokida `escapeHtml(m.name)` o'rniga `data.members` dan `userId` orqali a'zo
+ismini topuvchi `nameOf(m)` yordamchi funksiyasi ishlatildi:
+`(data.members.find(mm => mm.userId === m.userId)?.user?.name || mm.user?.email) || m.name || m.userId || 'A’zo'`.
+`data.members` da `user?.name` / `user?.email` mavjud (Task 19 dagi a'zo-ISM
+lookup bilan bir xil manba), shuning uchun endi **haqiqiy ism** ko'rinadi. Bu
+o'zgarish `api/` ga tegmaydi, faqat frontend render.
+
+---
+
+## Tekshiruv natijalari (yakuniy — 3-bosqich)
+- Barcha 12 ta HTML: `<div>` balansi **OK** (teng); barcha inline `<script>` lar parse **OK**.
+- `team.html` `renderWorkspace` template: **145/145** `<div>` (akkordeon tuzilmasi bilan).
+- `team.html` Load signal render: `nameOf(m)` orqali `data.members` dan ism topiladi
+  (xom UID ko'rsatilmaydi).
+- `js/firebase-service.js`: `node --check` **OK** (`reassignTask`, `updateMemberRole` mavjud).
+- `team.html` da `ws-tab` / `ws-tab-panel` / `data-panel` kabi eski (stale) referencelar
+  **yo'q** (grevp bilan tasdiqlandi).
+- Barcha o'zgarishlar **additive** (mavjud kod buzilmadi; faqat qo'shildi/qatlamlandi).
+
+## Xavfsizlik (takroriy tasdiq — 3)
+- R1 `mountLayout` bir marta — buzilmadi.
+- R2 `reports.html` faqat ruxsatlilarga — buzilmadi.
+- R3 o'chirishda parol re-auth — buzilmadi.
+- R4 har yozuvda cache invalidate (`reassignTask`/`updateMemberRole` ham `invalidateTeamCache`
+  chaqiradi) — saqlanadi.
+- R5 Vercel env — tegilmadi.
+- `api/` (node backend) GA TE GILMADI. Faqat frontend fayllari o'zgartirildi.
+- Eslatma: Task 20 va 21 dagi yozuvlar **client-side Firestore SDK** orqali bajariladi
+  (maxsus `api/` endpoint'i emas); bu Firestore qoidalari bilan ruxsat etilgan
+  (team lead uchun) va backend fayllariga tegmaydi.
+
+---
+
+## Yakuniy bosqich — Professional (ClickUp-darajali) polish
+
+> Foydalanuvchi loyihani "professional tarzda yakunlash"ni so'radi. Tekshiruv
+> davomida bir qator **haqiqiy ko'rinish xatolari** aniqlandi (aniqlanmagan CSS
+> tokenlari tufayli ko'rinmaydigan kartalar/chegaralar) va ular tuzatildi, shuningdek
+> interaktivlik hamda xavfsizlik yakuniy darajaga ko'tarildi. Faqat UI/CSS.
+
+### Task 24 — Aniqlanmagan dizayn tokenlari (ko'rinmaydigan elementlar) tuzatildi
+**Muammo:** `profile.html` "Qo'shimcha sozlamalar" kartalari (`.extra-setting`), 2FA
+secret qutisi va "Cross-WS Overview" kartalari; `reports.html` hisobot paneli va
+`admin.html` "Manager" badge; `team.html` timezone bo'limidagi `<hr>` ajratgichlari
+**ko'rinmas edi** (shaffof fon, ko'rinmaydigan chegara).
+**Ildiz sababi:** Koddan foydalanilgan `--accent`, `--surface`, `--line`,
+`--surface-sub`, `--text-muted` CSS o'zgaruvchilari hech qayerda e'lon qilinmagan
+edi (faqat ishlatilgan). Natijada brauzer ularni `initial` (shaffof) deb hisoblab,
+fon/chegara yo'qolgan.
+**Qanday tuzatildi:** `css/styles.css` ning `:root` va `body.theme-light` ga ushbu
+5 ta token qiymatlari qo'shildi (`--accent` → indigo brend; `--surface` → panel;
+`--line` → border; `--surface-sub` → panel-2; `--text-muted` → muted). Endi barcha
+ushbu elementlar to'g'ri fon/chegara bilan ko'rinadi (qorong'i va kunduzgi rejimda).
+Bu o'zgarish butun loyiha bo'ylab ushbu tokenlardan foydalangan joylarni bir vaqtda
+tuzatadi.
+
+### Task 25 — ClickUp-darajali interaktiv polish
+**Qanday qo'shildi (additive CSS blok):**
+- Vazifa kartalari (`.workspace-task-card`) va a'zo qatorlari (`.workspace-list-row`)
+  uchun nozik **hover/transition** (pastga ko'tarilish + chegara/soya accent) — sichqoncha
+  ustidan o'tganda javob beradigan his-tuyg'u.
+- Bo'sh holatlar (`.workspace-empty`) yanada aniqroq, markazlashgan ko'rinishga keltirildi
+  (dashed chegara + yengil fon).
+- Juda keng ekranlarda (ultra-wide) workspace kontenti `max-width: 1500px` bilan
+  markazlashtirildi.
+- Tugma/sarlavha bosilganda nozik **press** effekti (`transform: translateY(1px)`).
+- Toast ga `z-index` balandligi berildi (boshqa elementlar ustida ishonchli ko'rinadi).
+
+### Task 26 — Halokatli amal uchun tasdiqlash (xavfsizlik)
+**Muammo:** "Secret key reset" tugmasi tasdiqlashsiz darhol ishlagan — tasodifiy
+bosish butun jamoani workspace'ga kira olmay qoldirishi mumkin edi.
+**Qanday tuzatildi:** `team.html` dagi `resetSecretBtn` handler'iga `window.confirm(...)`
+qo'shildi: foydalanuvchi "Eski key bilan a'zolar kira olmaydi" deb ogohlantiriladi va
+faqat tasdiqlasa reset bajariladi. Bekor qilsa — hech narsa o'zgarmaydi.
+
+---
+
+## Tekshiruv natijalari (YAKUNIY — professional polish)
+- Barcha 12 ta HTML: `<div>` balansi **OK** (teng); barcha inline `<script>` lar parse **OK**.
+- `css/styles.css`: qavs balansi **OK** (635/635); yangi tokenlar `:root` va
+  `body.theme-light` da e'lon qilindi; qolgan aniqlanmagan token yo'q
+  (to'liq skan bilan tasdiqlandi).
+- `js/firebase-service.js`: `node --check` **OK**.
+- `team.html`: reset-secret uchun `confirm()` qo'shildi (additive, mavjud handler buzilmadi).
+- Barcha o'zgarishlar **additive** (mavjud kod buzilmadi; faqat qo'shildi/qatlamlandi).
+
+## Xavfsizlik (YAKUNIY tasdiq)
+- R1 `mountLayout` bir marta — buzilmadi.
+- R2 `reports.html` faqat ruxsatlilarga — buzilmadi.
+- R3 o'chirishda parol re-auth — buzilmadi.
+- R4 har yozuvda cache invalidate (`reassignTask`/`updateMemberRole` ham `invalidateTeamCache`
+  chaqiradi) — saqlanadi.
+- R5 Vercel env — tegilmadi.
+- `api/` (node backend) GA TE GILMADI. Faqat frontend fayllari o'zgartirildi.
+- Halokatli amal (secret key reset) endi foydalanuvchi tasdig'i bilan bajariladi.
