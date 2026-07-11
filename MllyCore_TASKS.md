@@ -404,3 +404,44 @@ faqat tasdiqlasa reset bajariladi. Bekor qilsa — hech narsa o'zgarmaydi.
 - R5 Vercel env — tegilmadi.
 - `api/` (node backend) GA TE GILMADI. Faqat frontend fayllari o'zgartirildi.
 - Halokatli amal (secret key reset) endi foydalanuvchi tasdig'i bilan bajariladi.
+
+---
+
+## Qo'shimcha (foydalanuvchi rasmga asoslangan) — Task 27
+
+> Foydalanuvchi rasm yuborib, bo'limlar joylashuvini aniqlik kiritdi: 4 ta bo'lim
+> (Ish doskasi / Boshqaruv / Chat / A'zolar) **yonma-yon (ketma-ket) bitta qatorda**
+> bo'lishi, "ostidan ochiladigan" akkordeon saqlanishi, lekin **sukut bo'yicha qisqa
+> (yopiq)** tursin — vazifa qo'shilganda o'zi katta bo'lib qolmasin; faqat sarlavhaga
+> bossangiz katta ochilsin.
+
+### Task 27 — Bo'limlar yonma-yon tab-qator + sukutda yopiq akkordeon
+**Muammo:** Bo'limlar vertikal (biri pastda biri) joylashgan edi va Ish doskasi
+sukut bo'yicha ochiq (katta) edi; vazifa qo'shilganda ham katta holatda qolardi.
+**Qanday tuzatildi (faqat CSS + 2 ta kichik HTML atributi, JS toggling'iga tegilmadi):**
+- `css/styles.css`: `.ws-accordion` endi **grid** (4 ustun); `.ws-section` ga
+  `display: contents` berildi — shunda har bir bo'limning sarlavhasi va tanasi
+  to'g'ridan-to'g'ri grid elementiga aylanadi. Sarlavhalar (`data-section` bo'yicha)
+  **1-qatorga yonma-yon** joylashtirildi; barcha tanalar esa **2-qatorga, to'liq
+  kenglikda** qo'yildi (yopiqlarining `display:none` bo'lgani uchun faqat bitta ochilgan
+  tana ko'rinadi). Karta chegara/fon stillari `.ws-section` dan `.ws-section-body` ga
+  ko'chirildi (chunki `display:contents` wrapper ko'rinishini yo'qotadi).
+- Sarlavhalar tab ko'rinishiga keltirildi (markazlangan, yumaloq, aktivida gradient +
+  soya); ochilganda `aria-expanded="true"`.
+- `.ws-section-body` hali ham `pastdan ochiladi` (`hidden` → ko'rsatiladi); ichki
+  `.ws-acc` (Boshqaruv akkordeonlari) va sub-nav (`data-bq`) logikasi o'zgarmadi.
+- Sukut bo'yicha **barcha bo'limlar yopiq**: `team.html` da Ish doskasi sarlavhasi
+  `aria-expanded="false"` va uning tanasiga `hidden` qo'shildi (qolgan 3 tasi allaqachon
+  yopiq edi). Natija: sahifa 4 ta yonma-yon tab bilan ochiladi; foydalanuvchi bossagina
+  tegishli bo'lim pastdan katta ochiladi. `localStorage` (`mlly_sec_<teamId>`) avval
+  ochilgan bo'limni eslab qoladi, shuning uchun vazifa qo'shish/render'da holat saqlanadi.
+- Kichik ekranlarda (`max-width: 720px`) grid 1 ustunga o'tib, vertikal akkordeon
+  (sarlavha → tanasi ketma-ket) ko'rinishiga qaytadi.
+- **JS o'zgartirilmadi:** toggling `data-section` orqali ishlaydi, DOM tuzilmasi
+  (`.ws-section` ichida head + body) saqlangan; `display:contents` faqat vizual.
+
+### Tekshiruv (Task 27)
+- `team.html`: `<div>` balansi **OK**; inline `<script>` parse **OK**.
+- `css/styles.css`: qavs balansi **OK** (645/645).
+- Ish doskasi endi `aria-expanded="false"` + tana `hidden` (sukutda yopiq).
+- Barcha o'zgarishlar **additive** (mavjud kod buzilmadi).

@@ -1357,21 +1357,48 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .ws-tab-panel { display: block; }
 .ws-tab-panel[hidden] { display: none; }
 
-/* ===== Bo'limlar — "ostidan ochiladigan" akkordeon (T-UI) ===== */
-.ws-accordion { display: flex; flex-direction: column; gap: 12px; }
-.ws-section { border: 1px solid var(--border); border-radius: 18px; overflow: hidden; background: rgba(21,27,44,0.96); }
-body.theme-light .ws-section { background: rgba(246,248,252,0.96); }
+/* ===== Bo'limlar — yonma-yon (tab qatori) + "ostidan ochiladigan" akkordeon (T-UI) =====
+   Sarlavhalar (Ish doskasi / Boshqaruv / Chat / A'zolar) yonma-yon, bitta qatorda.
+   Tanasi esa pastda, faqat bitta (ochilgan) bo'lim uchun to'liq kenglikda ko'rinadi.
+   Sukut bo'yicha barchasi yopiq (qisqa); sarlavhaga bossangiz katta ochiladi. */
+.ws-accordion { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+/* Wrapper ko'rinmaydi (display:contents) — shunda head/body to'g'ridan-to'g'ri grid boladi */
+.ws-section { display: contents; }
 .ws-section-head {
-  appearance: none; width: 100%; text-align: left; cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  padding: 16px 20px; background: transparent; border: 0; color: var(--text);
-  font-size: 17px; font-weight: 700; font-family: inherit;
+  appearance: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 14px; background: rgba(11,15,26,0.4); border: 1px solid var(--border); border-radius: 12px;
+  color: var(--muted); font-size: 15px; font-weight: 700; font-family: inherit;
+  transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.ws-section-head:hover { background: var(--panel-2); }
-.ws-section-ico { transition: transform .2s ease; color: var(--muted); font-size: 14px; line-height: 1; }
-.ws-section.open .ws-section-ico { transform: rotate(180deg); }
-.ws-section-body { padding: 4px 20px 22px; }
+.ws-section-head:hover { background: var(--panel-2); color: var(--text); }
+.ws-section-head[aria-expanded="true"] {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: #fff; border-color: transparent; box-shadow: 0 8px 20px rgba(99,102,241,0.3);
+}
+.ws-section-head[aria-expanded="true"] .ws-section-ico { color: #fff; }
+.ws-section-ico { transition: transform .2s ease; color: var(--muted); font-size: 13px; line-height: 1; }
+/* Faqat ochilgan bo'lim tanasi pastda, to'liq kenglikda ko'rinadi */
+.ws-section-body {
+  grid-row: 2; grid-column: 1 / -1;
+  border: 1px solid var(--border); border-radius: 18px; overflow: hidden;
+  background: rgba(21,27,44,0.96);
+  padding: 4px 20px 22px;
+}
+body.theme-light .ws-section-body { background: rgba(246,248,252,0.96); }
 .ws-section-body[hidden] { display: none; }
+/* Sarlavhalarni mos ustunlarga joylashtirish (yonma-yon) */
+.ws-section-head[data-section="kanban"] { grid-row: 1; grid-column: 1; }
+.ws-section-head[data-section="activity"] { grid-row: 1; grid-column: 2; }
+.ws-section-head[data-section="chat"] { grid-row: 1; grid-column: 3; }
+.ws-section-head[data-section="members"] { grid-row: 1; grid-column: 4; }
+.ws-section.open .ws-section-ico { transform: rotate(180deg); }
+/* Kichik ekranlarda yonma-yon o'rniga vertikal akkordeon (sarlavha→tanasi ketma-ket) */
+@media (max-width: 720px) {
+  .ws-accordion { grid-template-columns: 1fr; }
+  .ws-section-head { grid-row: auto; grid-column: auto; }
+  .ws-section-body { grid-row: auto; grid-column: auto; }
+}
 
 /* Admin sub-nav (vertikal kichik-menyu) */
 .subnav {
