@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
 :root {
   --bg: #0b0f1a;
   --bg-2: #111827;
@@ -6,14 +7,17 @@
   --border: #232b42;
   --text: #e6e9f2;
   --muted: #8a93a8;
-  --primary: #6366f1;
-  --primary-2: #8b5cf6;
+  --primary: #087afc;
+  --primary-2: #6366f1;
   --success: #10b981;
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #38bdf8;
+  --glow: rgba(8, 122, 252, 0.45);
+  --glow-strong: rgba(8, 122, 252, 0.7);
+  --glow-inset: rgba(44, 176, 255, 0.35);
   /* Qo'shimcha dizayn tokenlari (profil/hisobot/admin/team ichida ishlatiladi) */
-  --accent: #6366f1;
+  --accent: #2cb0ff;
   --surface: #151b2c;
   --line: #232b42;
   --surface-sub: #1b2336;
@@ -28,7 +32,7 @@ body.theme-light {
   --border: #d6dde8;
   --text: #1f2937;
   --muted: #66758b;
-  --accent: #6366f1;
+  --accent: #2cb0ff;
   --surface: #f6f8fc;
   --line: #d6dde8;
   --surface-sub: #edf1f6;
@@ -38,7 +42,7 @@ body.theme-light {
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body {
-  font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  font-family: 'Manrope', 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
   background: radial-gradient(1200px 600px at 10% -10%, rgba(99,102,241,0.15), transparent 60%),
               radial-gradient(900px 500px at 110% 10%, rgba(139,92,246,0.12), transparent 60%),
               var(--bg);
@@ -647,8 +651,8 @@ a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 16px; border-radius: 10px; border: 1px solid transparent; cursor: pointer; font-weight: 600; font-size: 14px; transition: all .15s ease; }
-.btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: white; }
-.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(99,102,241,0.35); }
+.btn-primary { background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: #fff; box-shadow: 0 0 20px var(--glow), inset 0 0 10px var(--glow-inset); }
+.btn-primary:hover { transform: translateY(-1px); box-shadow: 0 0 28px var(--glow-strong), inset 0 0 12px var(--glow-inset); }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--border); }
 .btn-ghost:hover { background: var(--panel-2); }
 .btn.active, .filter.active { background: var(--panel-2); border-color: rgba(99,102,241,0.55); color: var(--text); }
@@ -667,7 +671,7 @@ button { font-family: inherit; }
 .password-field .input { padding-right: 76px; }
 .password-toggle { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); border: 0; background: transparent; color: #a5b4fc; font-size: 12px; cursor: pointer; padding: 6px; }
 
-.card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+.card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 20px; box-shadow: 0 12px 30px rgba(2,6,23,0.22); }
 .card-hover { transition: transform .15s ease, border-color .15s ease; }
 .card-hover:hover { transform: translateY(-2px); border-color: rgba(99,102,241,0.5); }
 
@@ -718,7 +722,7 @@ body.theme-light .modal {
 .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); padding: 14px 10px 6px; }
 .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px; color: var(--text); font-size: 14px; cursor: pointer; }
 .nav-item:hover { background: var(--panel-2); }
-.nav-item.active { background: linear-gradient(135deg, rgba(99,102,241,0.18), rgba(139,92,246,0.12)); border: 1px solid rgba(99,102,241,0.35); }
+.nav-item.active { background: linear-gradient(135deg, rgba(8,122,252,0.18), rgba(99,102,241,0.12)); border: 1px solid rgba(8,122,252,0.4); }
 .nav-item .count { margin-left: auto; background: var(--panel-2); border: 1px solid var(--border); padding: 1px 8px; border-radius: 999px; font-size: 11px; color: var(--muted); }
 .sidebar-user { margin-top: auto; display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--border); }
 .app-theme-toggle {
@@ -800,7 +804,7 @@ body.theme-light .app-theme-toggle {
 }
 
 .stat { display: flex; align-items: center; gap: 14px; }
-.stat-icon { width: 44px; height: 44px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background: rgba(99,102,241,0.15); color: #a5b4fc; }
+.stat-icon { width: 44px; height: 44px; border-radius: 12px; display:flex; align-items:center; justify-content:center; background: rgba(8,122,252,0.15); color: #8cd2ff; }
 .stat-num { font-size: 22px; font-weight: 700; }
 .stat-label { color: var(--muted); font-size: 13px; }
 
@@ -885,7 +889,7 @@ body.theme-light .theme-toggle-btn {
 .workspace-main-stack, .workspace-side-stack, .workspace-rail, .workspace-list, .workspace-action-stack, .workspace-form-grid, .workspace-message-stack { display: grid; gap: 16px; }
 .extra-setting { background: var(--surface-sub); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
 .extra-setting .label { margin-bottom: 0; }
-.workspace-surface { border: 1px solid var(--border); border-radius: 18px; background: rgba(21,27,44,0.96); overflow: hidden; }
+.workspace-surface { border: 1px solid var(--border); border-radius: 20px; background: rgba(21,27,44,0.96); overflow: hidden; box-shadow: 0 0 0 0.5px rgba(8,122,252,0.14), 0 18px 44px rgba(2,6,23,0.30); }
 body.theme-light .workspace-surface { background: rgba(246,248,252,0.96); }
 .workspace-surface.pad { padding: 20px; }
 .workspace-surface-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--border); }
@@ -1351,7 +1355,7 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .ws-tab[aria-selected="true"] {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
   color: #fff;
-  box-shadow: 0 6px 16px rgba(99,102,241,0.3);
+  box-shadow: 0 6px 16px var(--glow);
 }
 .ws-tab:focus-visible { outline: 3px solid var(--info, #38bdf8); outline-offset: 2px; }
 .ws-tab-panel { display: block; }
@@ -1374,7 +1378,7 @@ body.theme-light .ws-tabs { background: rgba(246,248,252,0.85); }
 .ws-section-head:hover { background: var(--panel-2); color: var(--text); }
 .ws-section-head[aria-expanded="true"] {
   background: linear-gradient(135deg, var(--primary), var(--primary-2));
-  color: #fff; border-color: transparent; box-shadow: 0 8px 20px rgba(99,102,241,0.3);
+  color: #fff; border-color: transparent; box-shadow: 0 8px 24px var(--glow);
 }
 .ws-section-head[aria-expanded="true"] .ws-section-ico { color: #fff; }
 .ws-section-ico { transition: transform .2s ease; color: var(--muted); font-size: 13px; line-height: 1; }
@@ -1573,3 +1577,70 @@ body.theme-light .workspace-empty { background: rgba(241,245,249,0.5); }
 
 /* Toast accessibility: ekran o'qiydiychilar uchun live-region. */
 .toast { z-index: 1200; }
+
+/* ===================== Style template ga mos tipografiya =====================
+   Style repodagi dizayn tizimi: sarlavhalar Space Grotesk, matn/UI Manrope.
+   Asosiy brend rangi azure (#087afc) + glow-soyalar, katta radiuslar.
+   Mavjud klasslar saqlanadi — faqat vizual qatlam moslashtirildi. */
+h1, h2, h3, h4, h5,
+.page-title, .workspace-command-title,
+.section-head h2, .section-head h3,
+.auth-panel-card h2, .auth-panel-side h1,
+.landing-section-head h2, .landing-cta-block h2, .landing-security-panel h2,
+.workspace-surface-head h2, .workspace-surface-head h3 {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+/* Kichik ekranlarda juda uzun sarlavhalar qisqaroq bo'lsin */
+@media (max-width: 560px) {
+  h1, .page-title { font-size: clamp(22px, 7vw, 30px); }
+}
+
+/* Kicker / bo'lim yorligi — Style template uslubi (uppercase, letter-spaced, azure) */
+.kicker, .section-kicker {
+  display: inline-block;
+  font-family: 'Manrope', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 10px;
+}
+
+/* Gradient matn (Style template hero uslubi) */
+.gradient-text {
+  background: linear-gradient(109deg, #ffffff 0%, #c7d2fe 45%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+body.theme-light .gradient-text {
+  background: linear-gradient(109deg, #0f172a 0%, #4338ca 55%, #6366f1 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Surface'larda nozik azure glow chegara (Style template signature) */
+.workspace-stat,
+.workspace-record,
+.workspace-rail-card,
+.kanban-col,
+.ws-acc,
+.subnav,
+.admin-panel {
+  box-shadow: 0 0 0 0.5px rgba(8,122,252,0.12), 0 14px 34px rgba(2,6,23,0.22);
+}
+body.theme-light .workspace-stat,
+body.theme-light .workspace-record,
+body.theme-light .workspace-rail-card,
+body.theme-light .kanban-col,
+body.theme-light .ws-acc,
+body.theme-light .subnav,
+body.theme-light .admin-panel {
+  box-shadow: 0 10px 26px rgba(148,163,184,0.14);
+}
+
