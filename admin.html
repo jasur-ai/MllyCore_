@@ -133,6 +133,47 @@
             <div class="workspace-surface" style="margin-top:20px;">
               <div class="workspace-surface-head">
                 <div>
+                  <h2>📅 Hisobot Rejimi</h2>
+                  <div class="workspace-surface-copy">Butun platforma uchun hisobot topshirish rejimini belgilang. Barcha member, team lead va managerlar shu rejimga asoslanadi.</div>
+                </div>
+              </div>
+              <div style="padding:16px;display:grid;gap:10px">
+                <label class="ds-toggle-row" data-active="true" id="reportModeDaily">
+                  <div class="ds-toggle-info">
+                    <span class="ds-toggle-icon">☀️</span>
+                    <div>
+                      <strong>Kunlik hisobot (Daily)</strong>
+                      <span class="text-xs muted">Har kuni a'zolar va leadlar hisobot topshiradi</span>
+                    </div>
+                  </div>
+                  <div class="ds-toggle-switch">
+                    <input type="radio" name="reportPeriodMode" value="daily" class="report-mode-radio" hidden>
+                    <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                  </div>
+                </label>
+                <label class="ds-toggle-row" data-active="false" id="reportModeWeekly">
+                  <div class="ds-toggle-info">
+                    <span class="ds-toggle-icon">🗓️</span>
+                    <div>
+                      <strong>Haftalik hisobot (Weekly)</strong>
+                      <span class="text-xs muted">Haftada bir marta yakuniy hisobot topshiriladi</span>
+                    </div>
+                  </div>
+                  <div class="ds-toggle-switch">
+                    <input type="radio" name="reportPeriodMode" value="weekly" class="report-mode-radio" hidden>
+                    <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                  </div>
+                </label>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+                  <button class="btn btn-primary btn-sm" id="saveReportModeBtn">💾 Rejimni saqlash</button>
+                  <span class="text-sm muted" id="reportModeStatus"></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="workspace-surface" style="margin-top:20px;">
+              <div class="workspace-surface-head">
+                <div>
                   <h2>🎚️ Feature Flags</h2>
                   <div class="workspace-surface-copy">Platforma funksiyalarini boshqarish. Flag yoqilsa — tegishli imkoniyat barcha foydalanuvchilar uchun darhol faollashadi; o'chirilsa — o'chadi. Har bir flag nima qilishini kartochkalarda ko'rasiz. O'zgarishlar "Saqlash" bosilganda qo'llanadi.</div>
                 </div>
@@ -410,6 +451,54 @@
         catch (e) { alert(e.message); }
       };
       loadFeatureFlags();
+
+      // ===== Report Period Mode (Settings) =====
+      (async () => {
+        const modeRadios = Array.from(document.querySelectorAll('.report-mode-radio'));
+        const updateReportModeVisual = () => {
+          modeRadios.forEach((radio) => {
+            const row = radio.closest('.ds-toggle-row');
+            if (row) row.dataset.active = radio.checked ? 'true' : 'false';
+          });
+        };
+        // Load current mode
+        try {
+          const mode = await MllyCore.getReportPeriodMode();
+          const targetRadio = modeRadios.find((r) => r.value === mode);
+          if (targetRadio) {
+            targetRadio.checked = true;
+            updateReportModeVisual();
+          }
+        } catch (_) {}
+        // Click radio → update visual instantly
+        modeRadios.forEach((radio) => {
+          radio.addEventListener('change', updateReportModeVisual);
+        });
+        // Save button
+        document.getElementById('saveReportModeBtn')?.addEventListener('click', async () => {
+          const selected = modeRadios.find((r) => r.checked);
+          if (!selected) return;
+          const btn = document.getElementById('saveReportModeBtn');
+          const status = document.getElementById('reportModeStatus');
+          if (btn) btn.disabled = true;
+          if (status) status.textContent = 'Saqlanmoqda...';
+          try {
+            await MllyCore.setReportPeriodMode(selected.value);
+            if (status) {
+              status.textContent = '✅ Hisobot rejimi saqlandi: ' + (selected.value === 'weekly' ? 'Haftalik' : 'Kunlik');
+              status.style.color = 'var(--success)';
+              setTimeout(() => { status.textContent = ''; }, 3000);
+            }
+          } catch (e) {
+            if (status) {
+              status.textContent = '❌ ' + (e.message || 'Saqlashda xatolik');
+              status.style.color = 'var(--danger)';
+            }
+          } finally {
+            if (btn) btn.disabled = false;
+          }
+        });
+      })();
 
       // ===== T57 System Health + Error Tracking =====
       const escapeHtmlT57 = (v) => String(v || '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[c]));
