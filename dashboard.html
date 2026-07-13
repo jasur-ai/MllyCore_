@@ -34,6 +34,60 @@
       <section class="workspace-overview" id="stats"></section>
       <div id="securityReminder"></div>
 
+      <!-- Manager Dashboard Section (faqat manager roli uchun) -->
+      <section class="workspace-main-stack" id="managerDashboard" style="display:none">
+        <div class="workspace-main-stack">
+          <!-- Manager boshqarayotgan jamoalar -->
+          <div class="workspace-surface" id="mgrTeamsSurface">
+            <div class="workspace-surface-head">
+              <div>
+                <h2>📋 Mas'ul jamoalaringiz</h2>
+                <div class="workspace-surface-copy">Siz biriktirilgan barcha jamoalar va ularning hisobot holati.</div>
+              </div>
+              <div class="workspace-chip-row" id="mgrReportModeBadge">
+                <span class="badge badge-active">Hisobot rejimi: ?</span>
+              </div>
+            </div>
+            <div class="workspace-card-grid cols-2" id="mgrTeamsList"></div>
+          </div>
+
+          <!-- Manager quick actions -->
+          <div class="workspace-layout">
+            <div class="workspace-surface pad">
+              <div class="section-head">
+                <h3>⚡ Tezkor amallar</h3>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap">
+                <a class="btn btn-primary btn-sm" href="reports.html">📋 Hisobotlar paneli</a>
+                <a class="btn btn-secondary btn-sm" href="notifications.html">🔔 Bildirishnomalar</a>
+                <a class="btn btn-tertiary btn-sm" href="profile.html">👤 Profil</a>
+              </div>
+            </div>
+            <div class="workspace-surface pad">
+              <div class="section-head">
+                <h3>📊 Umumiy statistika</h3>
+              </div>
+              <div style="display:grid;gap:10px" id="mgrMiniStats">
+                <div>Yuklanmoqda...</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Manager bildirishnomalar -->
+          <div class="workspace-surface" id="mgrNotifsSurface">
+            <div class="workspace-surface-head">
+              <div>
+                <h3>🔔 So'nggi bildirishnomalar</h3>
+                <div class="workspace-surface-copy">Jamoalardan kelgan activity va hisobot bildirishlari.</div>
+              </div>
+              <a href="notifications.html" class="skeleton-link">Hammasi</a>
+            </div>
+            <div class="workspace-card-grid" id="mgrNotifs"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Member/Lead Dashboard Section (member va team_lead uchun) -->
       <section class="workspace-main-stack" id="memberDashboard">
         <div class="workspace-main-stack">
           <div class="workspace-surface" id="teamsSurface">
@@ -242,16 +296,9 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const profile = window.MLLYCORE_PROFILE;
-      if (profile?.role === 'manager') {
-        location.href = 'reports.html';
-        return;
-      }
-      // FIX (manager dashboard): manager roli uchun 'admin' paneli ko'rsatilmasligi kere
+      // FIX: Manager dashboard — reports.html ga redirect qilinmaydi
       const isAdmin = profile?.role === 'admin';
       const isManager = profile?.role === 'manager';
-
-      // FIX: Manager endi reports.html ga redirect qilinmaydi — dashboard'ni ko'radi
-      // Eski redirect: if (profile?.role === 'manager') { location.href = 'reports.html'; return; }
 
       mountLayout('dashboard', { profile: profile || {}, teams: [], notifications: [] });
 
@@ -260,11 +307,12 @@
       window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
       mountLayout('dashboard', window.APP_CONTEXT);
 
-      // Manager uchun: dashboard title va subtitle ni moslashtirish
+      // Manager uchun: dashboard title ni moslashtirish + member dashboard ni yashirish
       if (isManager) {
-        document.getElementById('welcome').textContent = `Manager panel: Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
-        document.getElementById('dashboardSubtitle').textContent = "Mas'ul jamoalaringizning umumiy holati, so'nggi g'oyalar va bildirishnomalar.";
-        document.getElementById('workspaceRoleHint').textContent = "Manager jamoalarni kuzatadi va hisobotlarni qabul qiladi. Workspace ichki oqimiga aralashmaydi.";
+        document.getElementById('welcome').textContent = `📋 Manager panel: Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
+        document.getElementById('dashboardSubtitle').textContent = "Mas'ul jamoalaringiz, ularning hisobot rejimi va faoliyati haqida to'liq ma'lumot.";
+        document.getElementById('memberDashboard').style.display = 'none';
+        document.getElementById('managerDashboard').style.display = '';
       }
 
       // Admin yoki manager bo'lmasa "Admin only" panelni yashirish
@@ -316,13 +364,28 @@
       let selectedTeamId = null;
       let selectedTeamName = '';
 
-      // FIX (manager stats): manager uchun 'Lead workspace' ko'rsatilmasligi kerak
-      const statsData = [
-        { n: teams.length, l: isAdmin ? "Workspace'lar" : (isManager ? "Mas'ul jamoalar" : "Workspace'larim"), note: isAdmin ? 'Production units' : (isManager ? 'Siz biriktirilgan jamoalar' : 'Siz kirgan joylar') },
-        ...(isManager ? [] : [{ n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: 'Boshqarayotgan oqimlar' }]),
-        { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: isManager ? "Jamoalardagi jami a'zolar" : "Jami ko'rinadigan userlar" },
-        { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
-      ];
+      // Manager assigned teams
+      const assignedIds = Array.isArray(profile?.assignedTeams) ? profile.assignedTeams : [];
+      const assignedNames = Array.isArray(profile?.assignedTeamNames) ? profile.assignedTeamNames : [];
+
+      // Stats: rolega qarab fargli malumot
+      const statsData = [];
+      if (isManager) {
+        const mgrTeamCount = assignedIds.length || 0;
+        const mgrMembersTotal = teams.reduce((sum, t) => sum + (t.membersCount || 0), 0);
+        statsData.push(
+          { n: mgrTeamCount, l: "Mas'ul jamoalar", note: 'Siz biriktirilgan jamoalar' },
+          { n: mgrMembersTotal, l: "Jami a'zolar", note: "Barcha jamoalardagi a'zolar" },
+          { n: unread, l: 'Yangi bildirishnomalar', note: 'Hisobot va activity' },
+        );
+      } else {
+        statsData.push(
+          { n: teams.length, l: "Workspace'larim", note: 'Siz azo bolgan joylar' },
+          { n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: "Boshqarayotgan oqimlar" },
+          { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami koinadigan userlar" },
+          { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
+        );
+      }
       document.getElementById('stats').innerHTML = statsData.map((s) => `
         <div class="workspace-stat">
           <span class="workspace-stat-label">${s.l}</span>
@@ -330,6 +393,88 @@
           <span class="workspace-stat-note">${s.note}</span>
         </div>
       `).join('');
+
+      // Manager Dashboard ni to'ldirish
+      if (isManager) {
+        (async () => {
+          // Report period mode
+          let periodMode = 'daily';
+          try {
+            periodMode = await MllyCore.getReportPeriodMode();
+          } catch (_) {}
+          const periodLabel = periodMode === 'weekly' ? 'Haftalik' : 'Kunlik';
+          const badge = document.querySelector('#mgrReportModeBadge');
+          if (badge) badge.innerHTML = `<span class="badge badge-active">📅 ${periodLabel} hisobot rejimi</span>`;
+
+          // Teams list
+          const list = document.getElementById('mgrTeamsList');
+          if (list) {
+            if (assignedIds.length) {
+              list.innerHTML = assignedIds.map((tid, idx) => {
+                const tName = assignedNames[idx] || 'Komanda';
+                // Team color from index
+                const colors = ['tl-1', 'tl-2', 'tl-3', 'tl-4', 'tl-5'];
+                const color = colors[idx % colors.length];
+                const teamData = teams.find(t => t.id === tid);
+                const members = teamData?.membersCount || '?';
+                return `
+                  <div class="mgr-team-card">
+                    <div class="mgr-team-top">
+                      <div class="team-logo ${color}">${tName.charAt(0).toUpperCase()}</div>
+                      <div class="mgr-team-info">
+                        <strong>${tName}</strong>
+                        <span class="text-xs muted">${members} a'zo · ${periodLabel} hisobot</span>
+                      </div>
+                    </div>
+                    <div class="mgr-team-actions">
+                      <a class="btn btn-primary btn-sm" href="reports.html?teamId=${tid}">📋 Hisobotlar</a>
+                      <a class="btn btn-tertiary btn-sm" href="team.html?id=${tid}">👥 Jamoani korish</a>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            } else {
+              list.innerHTML = `<div class="workspace-empty">
+                <h3>Hech qanday jamoa biriktirilmagan</h3>
+                <p class="muted">Admin sizni jamoalarga mas'ul qilib tayinlashi kerak.</p>
+                <a href="admin.html" class="btn btn-primary btn-sm mt-3">Admin panelga otish</a>
+              </div>`;
+            }
+          }
+
+          // Mini stats
+          const statsEl = document.getElementById('mgrMiniStats');
+          if (statsEl) {
+            const totalMembers = assignedIds.length;
+            statsEl.innerHTML = `
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">📋 Mas'ul jamoalar</span>
+                <span class="mgr-stat-value">${assignedIds.length} ta</span>
+              </div>
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">📅 Hisobot rejimi</span>
+                <span class="mgr-stat-value">${periodLabel}</span>
+              </div>
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">🔔 Kutilmagan bildirishnomalar</span>
+                <span class="mgr-stat-value">${unread} ta</span>
+              </div>
+            `;
+          }
+
+          // Manager notifications
+          const notifsEl = document.getElementById('mgrNotifs');
+          if (notifsEl) {
+            notifsEl.innerHTML = data.notifications.length ? data.notifications.slice(0, 4).map((n) => `
+              <div class="workspace-message-item">
+                <strong>${n.text || n.content}</strong>
+                <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+                <span>${n.type || 'notification'}</span>
+              </div>
+            `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
+          }
+        })();
+      }
 
       if (isAdmin) {
         document.getElementById('memberDashboard').style.display = 'none';

@@ -1747,6 +1747,56 @@ body.theme-light .ds-toggle-row[data-active="true"] .ds-toggle-thumb {
   background: #fff;
 }
 
+/* ===== Manager dashboard cards ===== */
+.mgr-team-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  background: var(--surface);
+  display: grid;
+  gap: 14px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.mgr-team-card:hover {
+  border-color: rgba(99,102,241,0.35);
+  box-shadow: 0 4px 16px rgba(99,102,241,0.08);
+  transform: translateY(-1px);
+}
+.mgr-team-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mgr-team-info strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+.mgr-team-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mgr-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+}
+.mgr-stat-label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.mgr-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 /* Bir martalik sezgir ma'lumot (parol/secret key/2FA backup) — 9-bo'lim qoidasi */
 .modal-secret-value { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
 .modal-secret-value code { flex: 1; padding: 10px 12px; border-radius: 8px; background: var(--bg-2); border: 1px dashed var(--border); font-family: 'JetBrains Mono', monospace; font-size: 13px; word-break: break-all; color: var(--text); }
