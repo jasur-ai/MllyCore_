@@ -1,0 +1,63 @@
+# MllyCore CI/CD — Smoke + T16 test suit
+# Har push va pull_request'da ishga tushadi.
+#
+# Testlar:
+#   test:smoke  → Firebase Emulator (auth + firestore) orqali 8 ta endpoint
+#   test:t16    → Pure Node.js AES-256-GCM kripto testi (emulator talab qilmaydi)
+#
+# Ikkalasi parallel ishlaydi → jami ~40 soniya.
+
+name: MllyCore CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── T16: encrypted file storage (emulator kerak emas) ─────────────────
+  test-t16:
+    name: T16 Encryption
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: MllyCore
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: MllyCore/package-lock.json
+
+      - run: npm ci
+      - run: npm run test:t16
+
+  # ─── Smoke test (Firebase Emulator talab qiladi) ──────────────────────
+  test-smoke:
+    name: Smoke (Emulator)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: MllyCore
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: MllyCore/package-lock.json
+
+      # Firebase Emulator Java 11+ talab qiladi — GitHub ubuntu runner'da bor
+      - name: Check Java (emulator dependency)
+        run: java -version 2>&1 | head -3
+
+      - run: npm ci
+
+      - name: Run smoke test (Firebase emulator)
+        run: npm run test:smoke
