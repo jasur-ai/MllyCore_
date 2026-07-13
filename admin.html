@@ -24,7 +24,7 @@
         </div>
         <div class="workspace-command-tools">
           <a class="btn btn-tertiary" href="dashboard.html">Dashboard</a>
-          <a class="btn btn-primary" href="dashboard.html">+ Workspace yaratish</a>
+          <button class="btn btn-primary" id="openCreateWorkspaceBtn">+ Workspace yaratish</button>
         </div>
       </section>
 
@@ -204,6 +204,33 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="createWorkspaceModal" onclick="if(event.target===this)UTIL.closeModal('createWorkspaceModal')">
+    <div class="modal" style="max-width:520px;">
+      <h3>🚀 Yangi Workspace yaratish</h3>
+      <p class="modal-sub">Admin sifatida yangi workspace va uning team lead'ini tayinlaysiz.</p>
+      <div class="workspace-modal-field">
+        <label class="label">Workspace nomi</label>
+        <input class="input mb-3" id="createWsName" type="text" placeholder="Masalan: Mobile Team">
+        
+        <label class="label">Tavsif</label>
+        <textarea class="textarea mb-3" id="createWsDesc" rows="2" placeholder="Workspace nima bilan shug'ullanadi?"></textarea>
+        
+        <label class="label">Team lead emaili</label>
+        <input class="input mb-3" id="createWsLeadEmail" type="email" placeholder="lead@email.com">
+        
+        <label class="label">Shablon (ixtiyoriy)</label>
+        <select class="select mb-3" id="createWsTemplate">
+          <option value="">Shablonsiz</option>
+        </select>
+      </div>
+      <div class="workspace-modal-error" id="createWsError" style="color:#ef4444;font-size:13px;margin-top:8px;"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('createWorkspaceModal')">Bekor qilish</button>
+        <button class="btn btn-primary" type="button" id="confirmCreateWorkspaceBtn">✨ Workspace yaratish</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="addManagerModal" onclick="if(event.target===this)UTIL.closeModal('addManagerModal')">
     <div class="modal">
       <h3>Yangi Manager tayinlash</h3>
@@ -345,6 +372,50 @@
         `).join('');
       };
       updateAdminStats();
+
+      // ===== Workspace Creation Modal =====
+      document.getElementById('openCreateWorkspaceBtn')?.addEventListener('click', () => {
+        document.getElementById('createWsName').value = '';
+        document.getElementById('createWsDesc').value = '';
+        document.getElementById('createWsLeadEmail').value = '';
+        document.getElementById('createWsError').textContent = '';
+        // Load templates into dropdown
+        const sel = document.getElementById('createWsTemplate');
+        if (sel && sel.options.length <= 1) {
+          MllyCore.getTemplates().then((templates) => {
+            const curVal = sel.value;
+            sel.innerHTML = '<option value="">Shablonsiz</option>' +
+              (templates || []).map((t) => `<option value="${t.id}">${t.name}</option>`).join('');
+            sel.value = curVal;
+          }).catch(() => {});
+        }
+        UTIL.openModal('createWorkspaceModal');
+      });
+
+      document.getElementById('confirmCreateWorkspaceBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('confirmCreateWorkspaceBtn');
+        const name = document.getElementById('createWsName').value.trim();
+        const description = document.getElementById('createWsDesc').value.trim();
+        const leadEmail = document.getElementById('createWsLeadEmail').value.trim();
+        const templateId = document.getElementById('createWsTemplate').value;
+        const err = document.getElementById('createWsError');
+        err.textContent = '';
+
+        if (!name) { err.textContent = 'Workspace nomini kiriting.'; return; }
+        if (!leadEmail) { err.textContent = 'Team lead emailini kiriting.'; return; }
+
+        btn.disabled = true;
+        btn.textContent = 'Yaratilmoqda...';
+        try {
+          const result = await MllyCore.createWorkspace({ name, description, leadEmail, templateId });
+          UTIL.closeModal('createWorkspaceModal');
+          location.reload(); // Refresh to show new workspace in list
+        } catch (error) {
+          err.textContent = error.message || 'Workspace yaratilmadi.';
+          btn.disabled = false;
+          btn.textContent = '✨ Workspace yaratish';
+        }
+      });
 
       // Load Global Analytics
       (async () => {
@@ -919,7 +990,7 @@
           </div>
           <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
         </div>
-      `).join('') : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace dashboard orqali yaratiladi.</p></div>';
+      `).join('') : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace yaratish uchun yuqoridagi <strong>+ Workspace yaratish</strong> tugmasini bosing.</p></div>';
 
       document.querySelectorAll('[data-archive-workspace]').forEach((button) => {
         button.addEventListener('click', async () => {
