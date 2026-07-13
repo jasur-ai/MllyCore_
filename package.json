@@ -4,7 +4,7 @@
   "private": true,
   "description": "MllyCore startup ideas platform frontend with Firebase backend integration.",
   "scripts": {
-    "dev": "firebase emulators:start --only hosting,auth,firestore",
+    "dev": "firebase emulators:start --only hosting,auth,firestore,storage",
     "serve": "firebase emulators:start --only hosting",
     "tw:build": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --minify",
     "tw:watch": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --watch",
@@ -12,7 +12,8 @@
     "backfill:team-summaries": "node scripts/backfill-team-summaries.js",
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:hosting": "firebase deploy --only hosting",
-    "test:smoke": "firebase emulators:exec --only auth,firestore node scripts/smoke-test.js"
+    "test:smoke": "firebase emulators:exec --only auth,firestore node scripts/smoke-test.js",
+    "test:t16": "node scripts/test-t16-storage.js"
   },
   "dependencies": {
     "firebase-admin": "^13.10.0"
