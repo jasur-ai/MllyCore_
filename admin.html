@@ -409,7 +409,32 @@
         try {
           const result = await MllyCore.createWorkspace({ name, description, leadEmail, templateId });
           UTIL.closeModal('createWorkspaceModal');
-          location.reload(); // Refresh to show new workspace in list
+          // Yangi workspace'ni mahalliy ro'yxatga qo'shib, sahifani qayta yuklamasdan ko'rsatish
+          const newTeam = {
+            id: result.teamId,
+            name,
+            description,
+            membersCount: 1,
+            healthScore: 50,
+            status: 'active',
+            leadUserId: null,
+            createdAt: Date.now()
+          };
+          teams.unshift(newTeam);
+          renderWorkspaceList();
+          bindWorkspaceEvents();
+          // Analyze select ni yangilash
+          const sel = document.getElementById('analyzeTeamId');
+          if (sel) {
+            const o = document.createElement('option');
+            o.value = newTeam.id;
+            o.textContent = newTeam.name;
+            sel.insertBefore(o, sel.firstChild.nextSibling);
+          }
+          updateAdminStats();
+          renderManagers();
+          btn.disabled = false;
+          btn.textContent = '✨ Workspace yaratish';
         } catch (error) {
           err.textContent = error.message || 'Workspace yaratilmadi.';
           btn.disabled = false;
@@ -971,110 +996,140 @@
         }
       });
 
-      document.getElementById('workspaceList').innerHTML = teams.length ? `
-        <table style="width:100%;border-collapse:collapse;font-size:13px;">
-          <thead>
-            <tr style="border-bottom:2px solid var(--line);">
-              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;">Workspace nomi</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:100px;">A'zolar</th>
-              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;width:160px;">Team Lead</th>
-              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:80px;">Holat</th>
-              <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--text-muted);white-space:nowrap;width:300px;">Amallar</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${teams.map((team) => `
-              <tr style="border-bottom:1px solid var(--line);transition:background 0.15s;" onmouseenter="this.style.background='var(--surface-sub)'" onmouseleave="this.style.background=''">
-                <td style="padding:12px;font-weight:600;">
-                  ${team.name}
-                  ${team.status === 'archived' ? '<span class="badge" style="background:#475569;color:#fff;font-size:10px;margin-left:6px;">Arxivlangan</span>' : ''}
-                  <div style="font-size:12px;color:var(--text-muted);font-weight:400;margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${team.description || 'Tavsif kiritilmagan'}</div>
-                </td>
-                <td style="padding:12px;text-align:center;">
-                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:700;color:${(team.membersCount || 0) > 0 ? 'var(--accent)' : 'var(--text-muted)'};">
-                    👥 ${team.membersCount || 0}
-                  </span>
-                </td>
-                <td style="padding:12px;">
-                  ${team.leadUserId
-                    ? `<span style="display:inline-flex;align-items:center;gap:4px;">✅ <span>Lead biriktirilgan</span></span>`
-                    : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--text-muted);">⏳ Lead kutilmoqda</span>`
-                  }
-                </td>
-                <td style="padding:12px;text-align:center;">
-                  <span class="badge" style="background:${team.status === 'archived' ? '#475569' : '#22c55e'};color:#fff;font-size:11px;">
-                    ${team.status === 'archived' ? 'Arxiv' : 'Aktiv'}
-                  </span>
-                </td>
-                <td style="padding:12px;text-align:right;white-space:nowrap;">
-                  <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}" style="font-size:11px;padding:4px 10px;">Ruxsatlar</button>
-                  <button class="btn btn-sm" style="background:#475569;color:#fff;font-size:11px;padding:4px 10px;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
-                  <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}" style="font-size:11px;padding:4px 10px;">O'chirish</button>
-                  <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;font-size:11px;padding:4px 10px;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash</button>
-                </td>
+      // ===== Workspace list rendering (qayta ishlatiladigan funksiyalar) =====
+      const renderWorkspaceList = () => {
+        document.getElementById('workspaceList').innerHTML = teams.length ? `
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="border-bottom:2px solid var(--line);">
+                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;">Workspace nomi</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:100px;">A'zolar</th>
+                <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;width:160px;">Team Lead</th>
+                <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:80px;">Holat</th>
+                <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--text-muted);white-space:nowrap;width:300px;">Amallar</th>
               </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      ` : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace yaratish uchun yuqoridagi <strong>+ Workspace yaratish</strong> tugmasini bosing.</p></div>';
+            </thead>
+            <tbody>
+              ${teams.map((team) => `
+                <tr style="border-bottom:1px solid var(--line);transition:background 0.15s;" onmouseenter="this.style.background='var(--surface-sub)'" onmouseleave="this.style.background=''">
+                  <td style="padding:12px;font-weight:600;">
+                    ${team.name}
+                    ${team.status === 'archived' ? '<span class="badge" style="background:#475569;color:#fff;font-size:10px;margin-left:6px;">Arxivlangan</span>' : ''}
+                    <div style="font-size:12px;color:var(--text-muted);font-weight:400;margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${team.description || 'Tavsif kiritilmagan'}</div>
+                  </td>
+                  <td style="padding:12px;text-align:center;">
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:700;color:${(team.membersCount || 0) > 0 ? 'var(--accent)' : 'var(--text-muted)'};">
+                      👥 ${team.membersCount || 0}
+                    </span>
+                  </td>
+                  <td style="padding:12px;">
+                    ${team.leadUserId
+                      ? `<span style="display:inline-flex;align-items:center;gap:4px;">✅ <span>Lead biriktirilgan</span></span>`
+                      : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--text-muted);">⏳ Lead kutilmoqda</span>`
+                    }
+                  </td>
+                  <td style="padding:12px;text-align:center;">
+                    <span class="badge" style="background:${team.status === 'archived' ? '#475569' : '#22c55e'};color:#fff;font-size:11px;">
+                      ${team.status === 'archived' ? 'Arxiv' : 'Aktiv'}
+                    </span>
+                  </td>
+                  <td style="padding:12px;text-align:right;white-space:nowrap;">
+                    <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}" style="font-size:11px;padding:4px 10px;">Ruxsatlar</button>
+                    <button class="btn btn-sm" style="background:#475569;color:#fff;font-size:11px;padding:4px 10px;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
+                    <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}" style="font-size:11px;padding:4px 10px;">O'chirish</button>
+                    <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;font-size:11px;padding:4px 10px;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace yaratish uchun yuqoridagi <strong>+ Workspace yaratish</strong> tugmasini bosing.</p></div>';
+      };
 
-      document.querySelectorAll('[data-archive-workspace]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const teamId = button.dataset.archiveWorkspace;
-          const isRestore = button.textContent.trim() === 'Tiklash';
-          if (!confirm(`"${button.dataset.archiveName}" ${isRestore ? 'tiklansinmi' : 'arxivlansinmi'}?`)) return;
-          try {
-            await MllyCore.archiveWorkspace(teamId, isRestore);
-            location.reload();
-          } catch (err) { alert(err.message); }
+      const bindWorkspaceEvents = () => {
+        document.querySelectorAll('[data-archive-workspace]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const teamId = button.dataset.archiveWorkspace;
+            const isRestore = button.textContent.trim() === 'Tiklash';
+            if (!confirm(`"${button.dataset.archiveName}" ${isRestore ? 'tiklansinmi' : 'arxivlansinmi'}?`)) return;
+            try {
+              await MllyCore.archiveWorkspace(teamId, isRestore);
+              // Mahalliy ro'yxatni yangilash
+              const team = teams.find(t => t.id === teamId);
+              if (team) {
+                team.status = isRestore ? 'active' : 'archived';
+                renderWorkspaceList();
+                bindWorkspaceEvents();
+                updateAdminStats();
+              }
+            } catch (err) { alert(err.message); }
+          });
         });
-      });
 
-      document.querySelectorAll('[data-permissions-workspace]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          await window.openPermissionsModal(button.dataset.permissionsWorkspace, button.dataset.permissionsName);
+        document.querySelectorAll('[data-permissions-workspace]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            await window.openPermissionsModal(button.dataset.permissionsWorkspace, button.dataset.permissionsName);
+          });
         });
-      });
 
-      let selectedTeamId = null;
-      let selectedTeamName = '';
-
-      document.querySelectorAll('[data-delete-workspace]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const teamId = button.dataset.deleteWorkspace;
-          const team = teams.find((item) => item.id === teamId);
-          if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
-          selectedTeamId = teamId;
-          selectedTeamName = team?.name || 'Workspace';
-          document.getElementById('deleteWorkspaceSubtitle').textContent = `${selectedTeamName} o'chirilsa, workspace, member bog'lanishlari, chat va idea yozuvlari bazadan ham o'chadi.`;
-          document.getElementById('deleteWorkspacePassword').value = '';
-          document.getElementById('deleteWorkspaceError').textContent = '';
-          document.getElementById('confirmDeleteWorkspaceBtn').disabled = false;
-          UTIL.openModal('deleteWorkspaceModal');
+        document.querySelectorAll('[data-delete-workspace]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const teamId = button.dataset.deleteWorkspace;
+            const team = teams.find((item) => item.id === teamId);
+            if (!confirm(`${team?.name || 'Workspace'} o'chirilsinmi? Bu amal bazadan ham o'chiradi.`)) return;
+            selectedTeamId = teamId;
+            selectedTeamName = team?.name || 'Workspace';
+            document.getElementById('deleteWorkspaceSubtitle').textContent = `${selectedTeamName} o'chirilsa, workspace, member bog'lanishlari, chat va idea yozuvlari bazadan ham o'chadi.`;
+            document.getElementById('deleteWorkspacePassword').value = '';
+            document.getElementById('deleteWorkspaceError').textContent = '';
+            document.getElementById('confirmDeleteWorkspaceBtn').disabled = false;
+            UTIL.openModal('deleteWorkspaceModal');
+          });
         });
-      });
 
-      document.getElementById('toggleDeleteWorkspacePassword').addEventListener('click', () => {
-        const input = document.getElementById('deleteWorkspacePassword');
-        const toggle = document.getElementById('toggleDeleteWorkspacePassword');
-        const reveal = input.type === 'password';
-        input.type = reveal ? 'text' : 'password';
-        toggle.textContent = reveal ? 'Yashir' : "Ko'rsat";
-      });
-
-      document.querySelectorAll('[data-clone-workspace]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const teamId = button.dataset.cloneWorkspace;
-          const name = window.prompt('Yangi workspace nomi:', (button.dataset.cloneName || 'Workspace') + ' (copy)');
-          if (!name) return;
-          const leadEmail = window.prompt('Team lead email:', '');
-          if (!leadEmail) return;
-          try {
-            const r = await MllyCore.cloneWorkspace({ teamId, name, leadEmail });
-            UTIL.toast('Nusxalandi: ' + r.teamId);
-          } catch (e) { alert(e.message); }
+        document.querySelectorAll('[data-clone-workspace]').forEach((button) => {
+          button.addEventListener('click', async () => {
+            const teamId = button.dataset.cloneWorkspace;
+            const name = window.prompt('Yangi workspace nomi:', (button.dataset.cloneName || 'Workspace') + ' (copy)');
+            if (!name) return;
+            const leadEmail = window.prompt('Team lead email:', '');
+            if (!leadEmail) return;
+            try {
+              const r = await MllyCore.cloneWorkspace({ teamId, name, leadEmail });
+              UTIL.toast('Nusxalandi: ' + r.teamId);
+              // Clone qilingan workspace'ni ham ro'yxatga qo'shamiz
+              const srcTeam = teams.find(t => t.id === teamId);
+              if (srcTeam && r.teamId) {
+                teams.unshift({
+                  id: r.teamId,
+                  name,
+                  description: srcTeam.description || '',
+                  membersCount: 1,
+                  healthScore: 50,
+                  status: 'active',
+                  leadUserId: null,
+                  createdAt: Date.now()
+                });
+                renderWorkspaceList();
+                bindWorkspaceEvents();
+                const sel = document.getElementById('analyzeTeamId');
+                if (sel) {
+                  const o = document.createElement('option');
+                  o.value = r.teamId;
+                  o.textContent = name;
+                  sel.insertBefore(o, sel.firstChild.nextSibling);
+                }
+                updateAdminStats();
+                renderManagers();
+              }
+            } catch (e) { alert(e.message); }
+          });
         });
-      });
+      };
+
+      // Initial render
+      renderWorkspaceList();
+      bindWorkspaceEvents();
 
       document.getElementById('confirmDeleteWorkspaceBtn').addEventListener('click', async () => {
         if (!selectedTeamId) return;
@@ -1085,7 +1140,23 @@
         errorBox.textContent = '';
         try {
           await MllyCore.deleteWorkspace(selectedTeamId, password);
-          location.reload();
+          UTIL.closeModal('deleteWorkspaceModal');
+          // Mahalliy ro'yxatdan o'chirish
+          const idx = teams.findIndex(t => t.id === selectedTeamId);
+          if (idx > -1) teams.splice(idx, 1);
+          renderWorkspaceList();
+          bindWorkspaceEvents();
+          // Analyze select dan o'chirish
+          const sel = document.getElementById('analyzeTeamId');
+          if (sel) {
+            const opt = sel.querySelector(`option[value="${selectedTeamId}"]`);
+            if (opt) opt.remove();
+          }
+          updateAdminStats();
+          renderManagers();
+          selectedTeamId = null;
+          selectedTeamName = '';
+          button.disabled = false;
         } catch (error) {
           errorBox.textContent = error.message || "Workspace o'chirilmadi.";
           button.disabled = false;
