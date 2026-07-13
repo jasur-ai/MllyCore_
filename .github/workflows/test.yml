@@ -6,7 +6,12 @@
 #   test:smoke  → Firebase Emulator (auth + firestore) orqali 8 ta endpoint
 #   test:crud   → Firebase Emulator (auth + firestore) orqali 48 ta CRUD test
 #
-# Hammasi parallel ishlaydi → jami ~50 soniya.
+# Optimizatsiya:
+#   - Firebase Emulator binarylari (~/.cache/firebase/emulators/) cache'da
+#     saqlanadi → emulator downloadni (~15s) o'tkazib yuboradi
+#   - Yangi firebase-tools versiyasida cache avtomatik invalidatsiya qilinadi
+#
+# Hammasi parallel ishlaydi → jami ~40 soniya (emulator binary cached)
 
 name: MllyCore CI
 
@@ -31,7 +36,7 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: MllyCore/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
       - run: npm ci
       - run: npm run test:t16
 
@@ -49,7 +54,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: MllyCore/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
+      - name: Cache Firebase Emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          # Package-lock dagi firebase-tools versiyasi o'zgarsa yangi cache
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
       - name: Check Java (emulator dependency)
         run: java -version 2>&1 | head -3
       - run: npm ci
@@ -70,7 +83,15 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: MllyCore/package-lock.json
+          cache-dependency-path: '**/package-lock.json'
+      - name: Cache Firebase Emulator binaries
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          # Package-lock dagi firebase-tools versiyasi o'zgarsa yangi cache
+          key: ${{ runner.os }}-firebase-emulators-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-firebase-emulators-
       - name: Check Java (emulator dependency)
         run: java -version 2>&1 | head -3
       - run: npm ci
