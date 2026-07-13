@@ -52,7 +52,7 @@
                 </div>
                 <span class="badge">Production control</span>
               </div>
-              <div class="workspace-card-grid cols-2" id="workspaceList"></div>
+              <div style="overflow-x:auto;padding:4px;" id="workspaceList"></div>
             </div>
 
             <div class="workspace-surface" style="margin-top:20px;">
@@ -971,26 +971,52 @@
         }
       });
 
-      document.getElementById('workspaceList').innerHTML = teams.length ? teams.map((team) => `
-        <div class="workspace-record">
-          <div class="workspace-record-top">
-            <div>
-              <h3>${team.name} ${team.status === 'archived' ? '<span class="badge" style="background:#475569;color:#fff;font-size:11px;">Arxivlangan</span>' : ''}</h3>
-              <div class="workspace-inline-meta">
-                <span>${team.membersCount || 0} a'zo</span>
-                <span>${team.leadUserId ? 'Lead biriktirilgan' : 'Lead kutilmoqda'}</span>
-              </div>
-            </div>
-            <div style="display:flex;gap:6px;flex-wrap:wrap;">
-              <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}">Ruxsatlar</button>
-              <button class="btn btn-sm" style="background:#475569;color:#fff;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
-                <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}">O'chirish</button>
-                <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash</button>
-            </div>
-          </div>
-          <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
-        </div>
-      `).join('') : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace yaratish uchun yuqoridagi <strong>+ Workspace yaratish</strong> tugmasini bosing.</p></div>';
+      document.getElementById('workspaceList').innerHTML = teams.length ? `
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead>
+            <tr style="border-bottom:2px solid var(--line);">
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;">Workspace nomi</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:100px;">A'zolar</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-muted);white-space:nowrap;width:160px;">Team Lead</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-muted);white-space:nowrap;width:80px;">Holat</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--text-muted);white-space:nowrap;width:300px;">Amallar</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${teams.map((team) => `
+              <tr style="border-bottom:1px solid var(--line);transition:background 0.15s;" onmouseenter="this.style.background='var(--surface-sub)'" onmouseleave="this.style.background=''">
+                <td style="padding:12px;font-weight:600;">
+                  ${team.name}
+                  ${team.status === 'archived' ? '<span class="badge" style="background:#475569;color:#fff;font-size:10px;margin-left:6px;">Arxivlangan</span>' : ''}
+                  <div style="font-size:12px;color:var(--text-muted);font-weight:400;margin-top:2px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${team.description || 'Tavsif kiritilmagan'}</div>
+                </td>
+                <td style="padding:12px;text-align:center;">
+                  <span style="display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:700;color:${(team.membersCount || 0) > 0 ? 'var(--accent)' : 'var(--text-muted)'};">
+                    👥 ${team.membersCount || 0}
+                  </span>
+                </td>
+                <td style="padding:12px;">
+                  ${team.leadUserId
+                    ? `<span style="display:inline-flex;align-items:center;gap:4px;">✅ <span>Lead biriktirilgan</span></span>`
+                    : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--text-muted);">⏳ Lead kutilmoqda</span>`
+                  }
+                </td>
+                <td style="padding:12px;text-align:center;">
+                  <span class="badge" style="background:${team.status === 'archived' ? '#475569' : '#22c55e'};color:#fff;font-size:11px;">
+                    ${team.status === 'archived' ? 'Arxiv' : 'Aktiv'}
+                  </span>
+                </td>
+                <td style="padding:12px;text-align:right;white-space:nowrap;">
+                  <button class="btn btn-secondary btn-sm" data-permissions-workspace="${team.id}" data-permissions-name="${team.name}" style="font-size:11px;padding:4px 10px;">Ruxsatlar</button>
+                  <button class="btn btn-sm" style="background:#475569;color:#fff;font-size:11px;padding:4px 10px;" data-archive-workspace="${team.id}" data-archive-name="${team.name}">${team.status === 'archived' ? 'Tiklash' : 'Arxivlash'}</button>
+                  <button class="btn btn-danger btn-sm" data-delete-workspace="${team.id}" style="font-size:11px;padding:4px 10px;">O'chirish</button>
+                  <button class="btn btn-sm" style="background:#0ea5e9;color:#fff;font-size:11px;padding:4px 10px;" data-clone-workspace="${team.id}" data-clone-name="${team.name}">Nusxalash</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      ` : '<div class="workspace-empty"><h3>Workspace yoq</h3><p>Yangi workspace yaratish uchun yuqoridagi <strong>+ Workspace yaratish</strong> tugmasini bosing.</p></div>';
 
       document.querySelectorAll('[data-archive-workspace]').forEach((button) => {
         button.addEventListener('click', async () => {
