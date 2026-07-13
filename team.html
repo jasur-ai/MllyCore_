@@ -399,13 +399,16 @@
                 </div>
               ` : ''}
             </div>
-            ${!isViewer && ((mode === 'team') || isAssignedToCurrent || isLead) ? `
+            ${!isViewer ? `
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-              <button class="btn btn-secondary btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
-              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}" title="Faylni shifrlab yuklash (client-side AES-GCM): fayl brauzerda shifrlanadi, server ochiq faylni ko'rmaydi. Shifr kaliti faqat yuklovchiga ko'rsatiladi — qabul qiluvchiga alohida ulashing.">🔒 Fayl biriktirish</button>
-              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}" title="Vazifani GitHub Issuesga yuborish: task title/description GitHub API orqali issue sifatida yaratiladi. Token serverdagi GITHUB_TOKEN env yoki shaxsiy token bilan ishlaydi.">🐙 GitHub'ga</button>
+              ${(((mode === 'team') || (mode === 'open' && isAssignedToCurrent) || (mode === 'direct' && isAssignedToCurrent)) || (isLead && (mode === 'open'))) ? `
+              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}" title="Faylni shifrlab yuklash">🔒 Fayl biriktirish</button>
+              ` : ''}
+              ${(((mode === 'team') || (mode === 'open' && isAssignedToCurrent) || (mode === 'direct' && isAssignedToCurrent)) || (isLead && (mode === 'open'))) ? `
+              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}" title="Vazifani GitHub Issuesga yuborish">🐙 GitHub'ga</button>
+              ` : ''}
               <input type="file" id="file-${task.id}" style="display:none">
-              ${isLead ? `<div class="workspace-task-reassign" style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;">
+              ${isLead ? `<div class="workspace-task-reassign" style="display:flex;gap:6px;align-items:center;flex:1;">
                 <select class="select btn-sm" id="reassignSel-${task.id}" aria-label="Mas'ulni tanlang">${memberOptions(data.members, false)}</select>
                 <button class="btn btn-secondary btn-sm" data-task-reassign="${task.id}">Mas'ulni o'zgartirish</button>
               </div>` : ''}
@@ -511,6 +514,10 @@
           if (!file) return;
           if (fb) fb.textContent = 'Shifrlanmoqda...';
           try {
+            // HTTPS tekshiruvi — crypto.subtle faqat secure context'da ishlaydi
+            if (!window.isSecureContext || !crypto.subtle) {
+              throw new Error('Fayl shifrlash uchun HTTPS (localhost) talab qilinadi. Sayt HTTPS orqali ochilganiga ishonch hosil qiling.');
+            }
             const buf = await file.arrayBuffer();
             const rawKey = crypto.getRandomValues(new Uint8Array(32));
             const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt']);
@@ -519,9 +526,11 @@
             const enc = new Uint8Array(ct);
             const path = `attachments/${data.team.id}/${taskId}/${Date.now()}_${file.name}.enc`;
             await MllyCore.uploadEncryptedFile({ filePath: path, data: enc, contentType: 'application/octet-stream' });
-            const ivB64 = btoa(String.fromCharCode.apply(null, iv));
+            // Uint8Array -> base64 (String.fromCharCode.apply emas, chunki u ba'zi brauzerlarda ishlamaydi)
+            const uint8ToB64 = (u8) => { let s=''; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); };
+            const ivB64 = uint8ToB64(iv);
             await MllyCore.createAttachmentMeta({ teamId: data.team.id, taskId, fileName: file.name, size: file.size, iv: ivB64 });
-            const keyB64 = btoa(String.fromCharCode.apply(null, rawKey));
+            const keyB64 = uint8ToB64(rawKey);
             if (fb) fb.textContent = "✅ Yuklandi. Shifr kaliti (qabul qiluvchiga alohida ulashingiz kerak): " + keyB64;
             UTIL.toast('Fayl shifrlab yuklandi.');
           } catch (error) {

@@ -924,8 +924,32 @@ window.MllyCore = {
       if (cached) return cached;
     }
     const { collection, getDocs, query, where } = state.modules.dbMod;
+    const profile = window.MLLYCORE_PROFILE || {};
     let constraints = [];
-    if (teamId) constraints.push(where('teamId', '==', teamId));
+    if (teamId) {
+      constraints.push(where('teamId', '==', teamId));
+    } else if (profile.role !== 'admin' && profile.role !== 'manager') {
+      // Non-admin/manager users must query by their accessible teams or they'll
+      // get 'Missing or insufficient permissions' from Firestore rules.
+      // Fetch user's team memberships to find accessible team IDs.
+      const uid = (window.MLLYCORE_AUTH_USER || {}).uid;
+      if (uid) {
+        try {
+          const membersSnap = await getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid)));
+          const teamIds = [...new Set(membersSnap.docs.map(d => d.data().teamId).filter(Boolean))];
+          if (teamIds.length > 0) {
+            constraints.push(where('teamId', 'in', teamIds.slice(0, 10))); // Firestore 'in' max 10 values
+          } else {
+            // No teams → return empty array immediately
+            writeCache(cacheKey, []);
+            return [];
+          }
+        } catch (_) {
+          // If memberships query fails, restrict to own reports only
+          constraints.push(where('userId', '==', uid));
+        }
+      }
+    }
     if (type) constraints.push(where('type', '==', type));
     if (userId) constraints.push(where('userId', '==', userId));
     if (targetRole) constraints.push(where('targetRole', '==', targetRole));
