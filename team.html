@@ -212,7 +212,7 @@
       }).catch(() => {});
     }
 
-    function renderMembers(data, currentUserId, isLead) {
+    function renderMembers(data, currentUserId, isLead, isManagerViewer) {
       const target = document.getElementById('membersList');
       if (!target) return;
       target.innerHTML = data.members.map((member) => `
@@ -226,7 +226,7 @@
             <span class="badge ${member.role === 'team_lead' ? 'badge-active' : ''}">${escapeHtml(member.role)}</span>
             ${member.userId === currentUserId ? '<span class="workspace-pill-note">Bu siz</span>' : ''}
           </div>
-          ${isLead && member.userId !== currentUserId && member.role !== 'team_lead' ? `
+          ${isLead && !isManagerViewer && member.userId !== currentUserId && member.role !== 'team_lead' ? `
           <div class="member-role-edit" style="display:flex;gap:6px;margin-top:8px;align-items:center;">
             <select class="select btn-sm" data-member-role="${member.userId}">
               <option value="member" ${member.role === 'member' ? 'selected' : ''}>Member (yozishi mumkin)</option>
@@ -254,7 +254,7 @@
       });
     }
 
-    function renderEntries(data, currentUserId, isLead) {
+    function renderEntries(data, currentUserId, isLead, isManagerViewer) {
       const ideas = data.ideas.filter((entry) => entry.entryType !== 'startup');
       const startups = data.ideas.filter((entry) => entry.entryType === 'startup');
       document.getElementById('ideaStat').textContent = ideas.length;
@@ -275,7 +275,7 @@
             <span class="badge badge-active">${escapeHtml(item.status || 'Startup')}</span>
           </div>
           <p>${escapeHtml(item.description || 'Startup tafsiloti kiritilmagan.')}</p>
-          ${isLead ? `
+          ${isLead && !isManagerViewer ? `
             <div class="workspace-subgrid cols-2 mt-3">
               <select class="select" data-owner-select="${item.id}">
                 <option value="">Mas'ul tanlang</option>
@@ -593,6 +593,7 @@
       const membership = data.members.find((member) => member.userId === currentUserId);
       const isLead = membership?.role === 'team_lead';
       const isViewer = membership?.role === 'viewer';
+      const isManagerViewer = !membership && window.MLLYCORE_PROFILE?.role === 'manager';
       lastWorkspaceRenderKey = workspaceRenderKey(data);
 
       document.getElementById('content').innerHTML = `
@@ -642,7 +643,7 @@
             </button>
             <div class="ws-section-body" data-section="kanban" hidden>
           <div class="workspace-main-stack">
-            ${isLead ? `
+            ${isLead && !isManagerViewer ? `
               <div class="workspace-surface">
                 <div class="workspace-surface-head">
                   <div>
@@ -677,7 +678,7 @@
               </div>
             ` : ''}
 
-            ${!isViewer ? `
+            ${!isViewer && !isManagerViewer ? `
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -714,7 +715,7 @@
                 <span class="badge" id="taskCount">0 ta</span>
               </div>
               <div class="workspace-surface-body compact">
-                ${isLead ? `
+                ${isLead && !isManagerViewer ? `
                   <div class="workspace-form-stack" style="margin-bottom:16px">
                     <div>
                       <label class="label">Topshiriq nomi</label>
@@ -760,9 +761,9 @@
                     </div>
                     <div class="text-sm muted" id="taskCreateFeedback" aria-live="polite"></div>
                   </div>
-                ` : `
+                ` : (!isManagerViewer ? `
                   <div class="workspace-note-bar" style="margin-bottom:16px">Jamoaviy topshiriqqa natija yuklashingiz mumkin. Umumiy topshiriqni esa olib keyin tugatishingiz mumkin.</div>
-                `}
+                ` : '')}
                 <div class="workspace-stack-tight" id="tasksList"></div>
               </div>
             </div>
@@ -809,7 +810,7 @@
             <button type="button" class="subnav-item" data-bq="integratsiya">🔗 Integratsiya &amp; Tizim</button>
           </nav>
           <div class="ws-acc-group">
-                ${isLead ? `
+                ${isLead && !isManagerViewer ? `
                 <div class="ws-acc" data-group="jamoa" data-roles="team_lead,admin">
                   <button type="button" class="ws-acc-head" data-acc="member-mgmt">👥 A'zolarni boshqarish <span class="ws-acc-ico">▸</span></button>
                   <div class="ws-acc-body" id="acc-member-mgmt">
@@ -1070,10 +1071,16 @@
                 </div>
                 <div class="chat">
                   <div class="chat-messages" id="chatMessages"></div>
+                  ${isManagerViewer ? `
+                  <div class="chat-input chat-readonly">
+                    <span class="muted" style="padding:8px 12px;display:block;font-size:13px">💡 Siz kuzatuvchi sifatida chatni o'qishingiz mumkin, lekin yozish uchun a'zo bo'lishingiz kerak.</span>
+                  </div>
+                  ` : `
                   <div class="chat-input">
                     <input class="input" id="chatText" placeholder="Xabar yozing..." aria-label="Chat xabari">
                     <button class="btn btn-primary" id="sendChatBtn">Yuborish</button>
                   </div>
+                  `}
                 </div>
               </div>
             </div>
@@ -1119,9 +1126,9 @@
         </section>
       `;
 
-      renderEntries(data, currentUserId, isLead);
-      renderTasks(data, currentUserId, isLead, membership?.role === 'viewer');
-      renderMembers(data, currentUserId, isLead);
+      renderEntries(data, currentUserId, isLead, isManagerViewer);
+      renderTasks(data, currentUserId, isLead, (membership?.role === 'viewer') || isManagerViewer);
+      renderMembers(data, currentUserId, isLead, isManagerViewer);
       // T9 - Presence: har bir a'zo holatini realtime obuna qilish.
       // FIX (presenceUnsubs cleanup): avvalgi obunalarni to'liq tozalash
       _cleanupPresence();
