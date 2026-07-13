@@ -594,6 +594,10 @@
       } catch (err) {
         showReportsError(err);
       }
+n      // 30 soniyalik avtomatik yangilash
+      MllyCore.startAutoRefresh(async () => {
+        await loadAllReports();
+      }, 30000);
     })();
   </script>
   <script>

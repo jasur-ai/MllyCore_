@@ -1380,6 +1380,10 @@
           button.disabled = false;
         }
       });
+n      // 30 soniyalik avtomatik yangilash
+      MllyCore.startAutoRefresh(async () => {
+        document.getElementById("refreshWorkspaceBtn")?.click();
+      }, 30000);
     })();
   </script>
 

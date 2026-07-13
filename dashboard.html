@@ -573,7 +573,7 @@
         try {
           // Firebase auth backend orqali parolni tekshiradi
           await MllyCore.deleteWorkspace(selectedTeamId, password);
-          location.reload();
+          if (document.visibilityState === "visible") { location.reload() };
         } catch (error) {
           errorBox.textContent = error.message || "Admin paroli noto'g'ri yoki workspace o'chirilmadi.";
           button.disabled = false;
@@ -729,6 +729,13 @@
           button.disabled = false;
         }
       });
+      // 30 soniyalik avtomatik yangilash
+      MllyCore.startAutoRefresh(async () => {
+        try {
+          const freshData = await MllyCore.getDashboardData(user.uid);
+          if (document.visibilityState === "visible") { location.reload() };
+        } catch (_) {}
+      }, 30000);
     })();
   </script>
   <script>

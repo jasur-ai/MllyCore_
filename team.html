@@ -1897,6 +1897,16 @@
       }
       await renderWorkspace(workspaceState, user.uid);
       MllyCore.updatePresence('online').catch(() => {});
+n      // 30 soniyalik avtomatik yangilash
+      MllyCore.startAutoRefresh(async () => {
+        try {
+          const freshData = await MllyCore.getTeamData(workspaceState.team.id);
+          if (freshData) {
+            workspaceState = freshData;
+            await renderWorkspace(workspaceState, user.uid);
+          }
+        } catch (_) {}
+      }, 30000);
     })();
 
     window.addEventListener('beforeunload', function() {
