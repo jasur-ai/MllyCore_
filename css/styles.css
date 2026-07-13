@@ -1646,6 +1646,107 @@ body.theme-light .empty-state { background: rgba(241,245,249,0.6); }
 .error-banner-body strong { color: #fca5a5; }
 .error-banner-body .muted { color: var(--muted); }
 
+/* ===== Dashboard personalizatsiya toggle row ===== */
+.ds-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.ds-toggle-row:hover {
+  border-color: rgba(99,102,241,0.35);
+  box-shadow: 0 1px 6px rgba(99,102,241,0.08);
+}
+.ds-toggle-row[data-active="false"] {
+  opacity: 0.55;
+  background: var(--bg-2);
+  border-color: var(--border);
+}
+.ds-toggle-row[data-active="false"]:hover {
+  opacity: 0.8;
+}
+.ds-toggle-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.ds-toggle-info strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+.ds-toggle-info .text-xs {
+  display: block;
+}
+.ds-toggle-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-sub);
+  border: 1px solid var(--border);
+  font-size: 16px;
+  flex-shrink: 0;
+}
+/* Toggle switch (iOS-style) */
+.ds-toggle-switch {
+  position: relative;
+  flex-shrink: 0;
+}
+.ds-toggle-track {
+  display: block;
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  transition: background 0.2s ease, border-color 0.2s ease;
+  position: relative;
+  cursor: pointer;
+}
+.ds-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.ds-toggle-row[data-active="true"] .ds-toggle-track {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  border-color: transparent;
+}
+.ds-toggle-row[data-active="true"] .ds-toggle-thumb {
+  transform: translateX(18px);
+  background: #fff;
+}
+body.theme-light .ds-toggle-row {
+  background: var(--surface);
+  border-color: var(--border);
+}
+body.theme-light .ds-toggle-row[data-active="false"] {
+  background: var(--bg-2);
+}
+body.theme-light .ds-toggle-thumb {
+  background: #94a3b8;
+}
+body.theme-light .ds-toggle-row[data-active="true"] .ds-toggle-thumb {
+  background: #fff;
+}
+
 /* Bir martalik sezgir ma'lumot (parol/secret key/2FA backup) — 9-bo'lim qoidasi */
 .modal-secret-value { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
 .modal-secret-value code { flex: 1; padding: 10px 12px; border-radius: 8px; background: var(--bg-2); border: 1px dashed var(--border); font-family: 'JetBrains Mono', monospace; font-size: 13px; word-break: break-all; color: var(--text); }

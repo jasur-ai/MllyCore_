@@ -56,15 +56,56 @@
           </div>
 
           <div class="workspace-surface pad" id="personalizationSurface">
-            <div class="section-head"><h3>Personalizatsiya </h3></div>
-            <div class="workspace-surface-copy" id="roleQuickActions">Rolingizga mos tez amallar shu yerda.</div>
-            <p class="muted text-sm" style="margin:10px 0 0">Quyidagi belgilashlar dashbordingizda qaysi bo'limlar (Workspace'lar, G'oyalar, Bildirishnomalar) ko'rinishini boshqaradi. O'zgartirgandan keyin "Saqlash" tugmasini bosing — o'zgarish darhol qo'llanadi.</p>
-            <div class="workspace-form-inline mt-3" id="widgetToggles">
-              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="teams" checked> Workspace'lar</label>
-              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="ideas" checked> G'oyalar</label>
-              <label class="flex items-center gap-2 text-sm"><input type="checkbox" class="widget-toggle" value="notifs" checked> Bildirishnomalar</label>
+            <div class="section-head">
+              <h3>🎨 Personalizatsiya</h3>
             </div>
-            <div class="text-sm muted" id="personalizationStatus"></div>
+            <div class="workspace-surface-copy" id="roleQuickActions" style="margin-bottom:12px">Rolingizga mos tez amallar shu yerda.</div>
+            <p class="muted text-sm" style="margin:0 0 16px">Quyidagi belgilashlar dashbordingizda qaysi bo'limlar ko'rinishini boshqaradi. O'zgartirgandan keyin "Saqlash" tugmasini bosing.</p>
+            <div style="display:grid;gap:10px" id="widgetToggles">
+              <label class="ds-toggle-row" data-active="true">
+                <div class="ds-toggle-info">
+                  <span class="ds-toggle-icon">📋</span>
+                  <div>
+                    <strong>Workspace'lar</strong>
+                    <span class="text-xs muted">Jamoaviy workspace ro'yxati</span>
+                  </div>
+                </div>
+                <div class="ds-toggle-switch">
+                  <input type="checkbox" class="widget-toggle" value="teams" checked hidden>
+                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                </div>
+              </label>
+              <label class="ds-toggle-row" data-active="true">
+                <div class="ds-toggle-info">
+                  <span class="ds-toggle-icon">💡</span>
+                  <div>
+                    <strong>G'oyalar</strong>
+                    <span class="text-xs muted">So'nggi g'oyalar jadvali</span>
+                  </div>
+                </div>
+                <div class="ds-toggle-switch">
+                  <input type="checkbox" class="widget-toggle" value="ideas" checked hidden>
+                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                </div>
+              </label>
+              <label class="ds-toggle-row" data-active="true">
+                <div class="ds-toggle-info">
+                  <span class="ds-toggle-icon">🔔</span>
+                  <div>
+                    <strong>Bildirishnomalar</strong>
+                    <span class="text-xs muted">Activity va ogohlantirishlar</span>
+                  </div>
+                </div>
+                <div class="ds-toggle-switch">
+                  <input type="checkbox" class="widget-toggle" value="notifs" checked hidden>
+                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                </div>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
+              <button class="btn btn-primary btn-sm" id="saveWidgetPrefs">💾 Saqlash</button>
+              <span class="text-sm muted" id="personalizationStatus"></span>
+            </div>
           </div>
 
           <div class="workspace-surface" id="ideasSurface">
@@ -445,6 +486,22 @@
       // T51 — Role-based Dashboard Personalization
       const roleQuick = document.getElementById('roleQuickActions');
       const widgetToggles = Array.from(document.querySelectorAll('.widget-toggle'));
+      const toggleRows = Array.from(document.querySelectorAll('.ds-toggle-row'));
+
+      // Toggle visual update: checkbox holatiga qarab toggle track/thumb ni yangilash
+      const updateToggleVisual = () => {
+        toggleRows.forEach((row) => {
+          const cb = row.querySelector('.widget-toggle');
+          const isChecked = cb && cb.checked;
+          row.dataset.active = isChecked ? 'true' : 'false';
+        });
+      };
+
+      // Checkbox o'zgarganda visualni yangilash (lekin hali saqlanmaydi!)
+      widgetToggles.forEach((cb) => {
+        cb.addEventListener('change', updateToggleVisual);
+      });
+
       const applyHidden = (hidden) => {
         const h = Array.isArray(hidden) ? hidden : [];
         const map = { teams: 'teamsSurface', ideas: 'ideasSurface', notifs: 'notifsSurface' };
@@ -453,31 +510,49 @@
           if (el) el.style.display = h.includes(k) ? 'none' : '';
         });
         widgetToggles.forEach((c) => { c.checked = !h.includes(c.value); });
+        updateToggleVisual();
       };
+
       if (roleQuick) {
         const role = profile?.role || 'member';
         const qa = {
-          admin: "<a class=\"btn btn-primary btn-sm\" href=\"#\" onclick=\"UTIL.openModal('newTeamModal');return false;\">+ Workspace yaratish</a>",
+          admin: "<a class=\"btn btn-tertiary btn-sm\" href=\"#\" onclick=\"UTIL.openModal('newTeamModal');return false;\">+ Workspace yaratish</a>",
           team_lead: "<a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"notifications.html\">Takliflar</a>",
           manager: "<a class=\"btn btn-tertiary btn-sm\" href=\"reports.html\">Hisobotlar</a>",
           member: "<a class=\"btn btn-tertiary btn-sm\" href=\"my-ideas.html\">Mening g'oyalarim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a>"
         };
         roleQuick.innerHTML = 'Rolingiz: <strong>' + role + '</strong> — ' + (qa[role] || qa.member);
       }
+
+      // Saqlangan pref-larni yuklash
       try {
         const prefsRes = await MllyCore.getDashboardPrefs();
         applyHidden(prefsRes.prefs && prefsRes.prefs.hiddenWidgets);
       } catch (_) {}
-      widgetToggles.forEach((c) => {
-        c.addEventListener('change', async () => {
-          const hidden = widgetToggles.filter((x) => !x.checked).map((x) => x.value);
-          const status = document.getElementById('personalizationStatus');
-          if (status) status.textContent = 'Saqlanmoqda...';
-          try {
-            await MllyCore.saveDashboardPrefs({ hiddenWidgets: hidden });
-            if (status) status.textContent = 'Saplandi.';
-          } catch (e) { if (status) status.textContent = e.message; }
-        });
+
+      // "Saqlash" tugmasi — faqat bosilganda saqlaydi
+      document.getElementById('saveWidgetPrefs')?.addEventListener('click', async () => {
+        const hidden = widgetToggles.filter((x) => !x.checked).map((x) => x.value);
+        const status = document.getElementById('personalizationStatus');
+        const btn = document.getElementById('saveWidgetPrefs');
+        if (status) status.textContent = 'Saqlanmoqda...';
+        if (btn) btn.disabled = true;
+        try {
+          await MllyCore.saveDashboardPrefs({ hiddenWidgets: hidden });
+          applyHidden(hidden);
+          if (status) {
+            status.textContent = '✅ Sozlamalar saqlandi!';
+            status.style.color = 'var(--success)';
+            setTimeout(() => { status.textContent = ''; }, 3000);
+          }
+        } catch (e) {
+          if (status) {
+            status.textContent = '❌ ' + (e.message || 'Saqlashda xatolik');
+            status.style.color = 'var(--danger)';
+          }
+        } finally {
+          if (btn) btn.disabled = false;
+        }
       });
 
       document.getElementById('globalSearch').addEventListener('input', (event) => {
