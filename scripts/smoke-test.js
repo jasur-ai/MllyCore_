@@ -165,7 +165,7 @@ async function main() {
 
   // 5) create-task
   if (teamId) {
-    const ct = await callApi('create-task', { teamId, title: 'Smoke task' }, adminToken);
+    const ct = await callApi('create-task', { teamId, title: 'Smoke task' }, adminToken, true);
     check('create-task → 201', ct && ct.status === 201, ct);
     if (ct && ct.taskId) {
       const tk = await db.collection('tasks').doc(ct.taskId).get();
@@ -175,13 +175,13 @@ async function main() {
 
   // 6) send-chat
   if (teamId) {
-    const sc = await callApi('send-chat', { teamId, message: 'salom' }, adminToken);
+    const sc = await callApi('send-chat', { teamId, text: 'salom' }, adminToken, true);
     check('send-chat → 201', sc && sc.status === 201, sc);
   }
 
   // 7) my-overview
   const ov = await callApi('my-overview', {}, adminToken);
-  check('my-overview → teams qaytardi', ov && (ov.teams || ov.workspaces), ov);
+  check('my-overview → overview qaytardi', ov && Array.isArray(ov.overview), ov);
 
   // 8) delete-workspace (admin + 2FA re-auth) — R3
   if (teamId && secret) {
