@@ -24,9 +24,8 @@ on:
 jobs:
   Deploy-Production:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: MllyCore
+    # DIQQAT: Bu repo fayllari root'da joylashgan (MllyCore/ papkasi mavjud EMAS).
+    # Shuning uchun working-directory ishlatilmaydi!
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
