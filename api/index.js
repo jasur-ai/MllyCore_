@@ -427,9 +427,108 @@ async function handleDeleteWorkspace(req, res, db, decoded, user) {
     }
   }
 
+  // Backup all workspace data before deleting (for undo within 5 seconds)
+  const teamSnap = await db.collection('teams').doc(teamId).get();
+  if (!teamSnap.exists) return { status: 404, error: 'Workspace topilmadi.' };
+
+  const [ideasSnap, tasksSnap, membersSnap, chatSnap, submitsSnap, reportsSnap, invitesSnap] = await Promise.all([
+    db.collection('ideas').where('teamId', '==', teamId).get(),
+    db.collection('tasks').where('teamId', '==', teamId).get(),
+    db.collection('teamMembers').where('teamId', '==', teamId).get(),
+    db.collection('chatMessages').where('teamId', '==', teamId).get(),
+    db.collection('taskSubmissions').where('teamId', '==', teamId).get(),
+    db.collection('reports').where('teamId', '==', teamId).get(),
+    db.collection('workspaceInvites').where('teamId', '==', teamId).get(),
+  ]);
+
+  const backup = {
+    team: { id: teamSnap.id, ...teamSnap.data() },
+    ideas: ideasSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    tasks: tasksSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    members: membersSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    chatMessages: chatSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    taskSubmissions: submitsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    reports: reportsSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    workspaceInvites: invitesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
+    deletedAt: Date.now(),
+    deletedBy: decoded.uid,
+  };
+
+  await db.collection('deletedWorkspaces').doc(teamId).set(backup);
   await deleteTeamCascade(db, teamId);
   await audit(db, 'workspace_deleted', { teamId });
-  return { status: 200, success: true, message: 'Workspace o\'chirildi.' };
+  return { status: 200, success: true, message: 'Workspace o\'chirildi.', backupId: teamId };
+}
+
+// Qayta tiklash: o'chirilgan workspace'ni to'liq qayta tiklash (undo)
+async function handleRestoreWorkspace(req, res, db, decoded, user) {
+  const { teamId } = req.body || {};
+  if (!teamId) return { status: 400, error: 'teamId kerak.' };
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+
+  const backupSnap = await db.collection('deletedWorkspaces').doc(teamId).get();
+  if (!backupSnap.exists) return { status: 404, error: 'Backup topilmadi. Qayta tiklash muddati o\'tgan bo\'lishi mumkin.' };
+
+  const backup = backupSnap.data();
+  const now = Date.now();
+  if (now - backup.deletedAt > 7 * 24 * 60 * 60 * 1000) {
+    return { status: 400, error: 'Qayta tiklash muddati (7 kun) o\'tgan.' };
+  }
+
+  const batch = db.batch();
+
+  // Restore team document
+  if (backup.team) {
+    const { id: teamDocId, ...teamData } = backup.team;
+    batch.set(db.collection('teams').doc(teamDocId), teamData);
+  }
+
+  // Restore ideas
+  (backup.ideas || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('ideas').doc(docId), data);
+  });
+
+  // Restore tasks
+  (backup.tasks || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('tasks').doc(docId), data);
+  });
+
+  // Restore members
+  (backup.members || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('teamMembers').doc(docId), data);
+  });
+
+  // Restore chat messages
+  (backup.chatMessages || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('chatMessages').doc(docId), data);
+  });
+
+  // Restore task submissions
+  (backup.taskSubmissions || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('taskSubmissions').doc(docId), data);
+  });
+
+  // Restore reports
+  (backup.reports || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('reports').doc(docId), data);
+  });
+
+  // Restore workspace invites
+  (backup.workspaceInvites || []).forEach((item) => {
+    const { id: docId, ...data } = item;
+    batch.set(db.collection('workspaceInvites').doc(docId), data);
+  });
+
+  await batch.commit();
+  await db.collection('deletedWorkspaces').doc(teamId).delete();
+  await audit(db, 'workspace_restored', { teamId, byUserId: decoded.uid });
+  return { status: 200, success: true, message: 'Workspace tiklandi.' };
 }
 
 async function deleteQueryBatch(db, query) {
@@ -2653,6 +2752,7 @@ module.exports = async (req, res) => {
     else if (action === 'clone-workspace') result = await handleCloneWorkspace(req, res, db, decoded, user);
     else if (action === 'remove-member') result = await handleRemoveMember(req, res, db, decoded, user);
     else if (action === 'assign-team-lead') result = await handleAssignTeamLead(req, res, db, decoded, user);
+    else if (action === 'restore-workspace') result = await handleRestoreWorkspace(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);

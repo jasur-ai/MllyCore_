@@ -1147,6 +1147,15 @@ window.MllyCore = {
     return result;
   },
 
+  async restoreWorkspace(teamId) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/restore-workspace', authUser, { teamId });
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser.uid);
+    invalidateCacheByPrefix(getCacheKey('plugin:stats'));
+    return result;
+  },
+
   async ensureAuthed() {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
