@@ -603,7 +603,7 @@
           </div>
           <div class="workspace-command-tools">
             <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
-            <span class="badge badge-active">${escapeHtml(membership?.role || 'member')}</span>
+            <span class="badge badge-active">${escapeHtml(membership?.role || (window.MLLYCORE_PROFILE?.role === 'manager' ? 'Manager (kuzatuvchi)' : 'member'))}</span>
             ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
             ${data.team.templateId ? `<span class="badge" title="Shablon asosida yaratilgan">📋 Shablon</span>` : ''}
           </div>
