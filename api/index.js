@@ -1924,6 +1924,34 @@ async function handleCloneWorkspace(req, res, db, decoded, user) {
   return { status: 201, success: true, teamId: teamRef.id };
 }
 
+// A'zoni jamoadan olib tashlash (admin/team_lead ruxsati bilan, membersCount kamayadi)
+async function handleRemoveMember(req, res, db, decoded, user) {
+  const { teamId, userId } = req.body || {};
+  if (!teamId || !userId) return { status: 400, error: 'teamId va userId kerak.' };
+  if (user.role !== 'admin') {
+    const m = await getMembership(db, teamId, decoded.uid);
+    if (!m || m.role !== 'team_lead') return { status: 403, error: 'Faqat admin yoki team_lead.' };
+  }
+  if (userId === decoded.uid && user.role !== 'admin') {
+    return { status: 403, error: "O'zingizni jamoadan olib tashlash uchun admin ga murojaat qiling." };
+  }
+  const memDoc = await db.collection('teamMembers').doc(teamId + '_' + userId).get();
+  if (!memDoc.exists) return { status: 404, error: "A'zo topilmadi." };
+  const memData = memDoc.data();
+  if (memData.role === 'team_lead' && user.role !== 'admin') {
+    return { status: 403, error: "Team lead faqat admin tomonidan olib tashlanishi mumkin." };
+  }
+  await db.collection('teamMembers').doc(teamId + '_' + userId).delete();
+  const teamRef = db.collection('teams').doc(teamId);
+  const teamSnap = await teamRef.get();
+  if (teamSnap.exists) {
+    await teamRef.update({ membersCount: Math.max(0, (teamSnap.data().membersCount || 0) - 1) });
+  }
+  await audit(db, 'member_removed', { teamId, removedUserId: userId, byUserId: decoded.uid });
+  emitWebhook(db, teamId, 'member_removed', { removedUserId: userId }).catch(() => {});
+  return { status: 200, success: true, message: "A'zo olib tashlandi." };
+}
+
 /* --------------------------- Router ------------------------------- */
 // Parolni unutish (faqat admin bo'lmaganlar) — authsiz
 async function handleForgotPassword(req, res, db) {
@@ -2550,6 +2578,7 @@ module.exports = async (req, res) => {
     else if (action === 'risk') result = await handleRisk(req, res, db, decoded, user);
     else if (action === 'activity-feed') result = await handleActivityFeed(req, res, db, decoded, user);
     else if (action === 'clone-workspace') result = await handleCloneWorkspace(req, res, db, decoded, user);
+    else if (action === 'remove-member') result = await handleRemoveMember(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);
