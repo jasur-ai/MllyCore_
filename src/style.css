@@ -1,0 +1,115 @@
+/* ==========================================
+   MllyCore Design System v2.0 — Tailwind CSS
+   Source file: run `npm run tw:build` to compile
+   ========================================== */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Base layer — global defaults ===== */
+@layer base {
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+    @apply bg-mlly-bg text-mlly-text min-h-screen;
+  }
+
+  body.theme-light, .theme-light body {
+    @apply bg-light-bg text-light-text;
+  }
+
+  h1, h2, h3, h4, h5,
+  .page-title, .workspace-command-title,
+  .section-head h2, .section-head h3 {
+    font-family: 'Space Grotesk', 'Plus Jakarta Sans', system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+}
+
+/* ===== Components layer — reusable UI patterns ===== */
+@layer components {
+  /* Buttons */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-[10px] rounded-mlly font-semibold text-sm border border-transparent cursor-pointer transition-all duration-150;
+  }
+  .btn-primary {
+    @apply bg-mlly-primary text-white border-transparent;
+    box-shadow: 0 0 20px rgba(47, 129, 247, 0.30), inset 0 0 10px rgba(88, 166, 255, 0.25);
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 28px rgba(47, 129, 247, 0.55), inset 0 0 12px rgba(88, 166, 255, 0.25);
+  }
+  .btn-ghost { @apply bg-transparent border-mlly-border text-mlly-text; }
+  .btn-ghost:hover { @apply bg-mlly-panel-2; }
+  .btn-danger { @apply text-red-300 border-red-400/30; background: rgba(248,81,73,0.12); }
+  .btn-sm { @apply px-[10px] py-[6px] text-xs rounded-mlly-sm; }
+
+  /* Cards */
+  .card {
+    @apply bg-mlly-panel border border-mlly-border rounded-mlly-xl p-5;
+    box-shadow: 0 12px 30px rgba(2,6,23,0.22);
+  }
+
+  /* Inputs */
+  .input, .select, .textarea {
+    @apply w-full px-[14px] py-[11px] rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150;
+  }
+  .input:focus, .select:focus, .textarea:focus {
+    @apply border-mlly-primary;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+  }
+  .label { @apply block text-mlly-muted text-sm font-medium mb-[6px]; }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center gap-[6px] px-[9px] py-[3px] rounded-mlly-full text-xs font-semibold border border-mlly-border bg-mlly-panel-2;
+  }
+  .badge-active { @apply text-green-300 border-green-500/30; background: rgba(63,185,80,0.12); }
+  .badge-planned { @apply text-blue-300 border-blue-400/30; background: rgba(88,166,255,0.12); }
+  .badge-warning { @apply text-yellow-300 border-yellow-600/30; background: rgba(210,153,34,0.12); }
+  .badge-danger  { @apply text-red-300 border-red-400/30; background: rgba(248,81,73,0.12); }
+
+  /* Avatar */
+  .avatar {
+    @apply w-9 h-9 rounded-full flex items-center justify-center font-bold text-white flex-shrink-0;
+    background: linear-gradient(135deg, #7c5cfc, #ec4899);
+  }
+  .avatar-lg { @apply w-14 h-14 text-lg; }
+  .avatar-sm { @apply w-7 h-7 text-xs; }
+
+  /* Workspace surface */
+  .workspace-surface {
+    @apply border border-mlly-border rounded-mlly-3xl overflow-hidden;
+    background: rgba(28,33,40,0.96);
+    box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10), 0 18px 44px rgba(2,6,23,0.30);
+  }
+}
+
+/* ===== Utilities layer — extra helpers ===== */
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(120deg, #f0f6ff 0%, #c4b5fd 45%, #a5b4fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+  .theme-light .text-gradient {
+    background: linear-gradient(109deg, #1f2328 0%, #7c5cfc 55%, #8250df 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+
+  .muted { @apply text-mlly-muted; }
+  .page-title { @apply text-2xl font-bold; }
+  .page-subtitle { @apply text-mlly-muted text-sm mt-1; }
+}

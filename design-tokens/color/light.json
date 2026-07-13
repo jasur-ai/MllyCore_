@@ -1,0 +1,112 @@
+{
+  "color": {
+    "bg": {
+      "value": "#ffffff",
+      "type": "color"
+    },
+    "bg-2": {
+      "value": "#f6f8fa",
+      "type": "color"
+    },
+    "panel": {
+      "value": "#ffffff",
+      "type": "color"
+    },
+    "panel-2": {
+      "value": "#f3f4f6",
+      "type": "color"
+    },
+    "border": {
+      "value": "#d0d7de",
+      "type": "color"
+    },
+    "line": {
+      "value": "{color.border}",
+      "type": "color"
+    },
+    "text": {
+      "value": "#1f2328",
+      "type": "color"
+    },
+    "text-muted": {
+      "value": "{color.muted}",
+      "type": "color"
+    },
+    "muted": {
+      "value": "#656d76",
+      "type": "color"
+    },
+    "primary": {
+      "value": "#0969da",
+      "type": "color"
+    },
+    "primary-2": {
+      "value": "#8250df",
+      "type": "color"
+    },
+    "success": {
+      "value": "#1a7f37",
+      "type": "color"
+    },
+    "warning": {
+      "value": "#9a6700",
+      "type": "color"
+    },
+    "danger": {
+      "value": "#cf222e",
+      "type": "color"
+    },
+    "info": {
+      "value": "#0969da",
+      "type": "color"
+    },
+    "accent": {
+      "value": "{color.info}",
+      "type": "color"
+    },
+    "surface": {
+      "value": "{color.panel}",
+      "type": "color"
+    },
+    "surface-sub": {
+      "value": "{color.panel-2}",
+      "type": "color"
+    }
+  },
+  "gradient": {
+    "brand": {
+      "value": "linear-gradient(135deg, #0969da, #8250df)",
+      "type": "gradient"
+    },
+    "hero-text": {
+      "value": "linear-gradient(109deg, #1f2328 0%, #7c5cfc 55%, #8250df 100%)",
+      "type": "gradient"
+    }
+  },
+  "boxShadow": {
+    "card": {
+      "value": "0px 12px 30px 0px rgba(148, 163, 184, 0.12)",
+      "type": "boxShadow"
+    },
+    "card-hover": {
+      "value": "0px 18px 44px 0px rgba(148, 163, 184, 0.16)",
+      "type": "boxShadow"
+    },
+    "surface": {
+      "value": "0px 18px 42px 0px rgba(148, 163, 184, 0.12)",
+      "type": "boxShadow"
+    },
+    "glow": {
+      "value": "0px 0px 20px 0px rgba(9, 105, 218, 0.20)",
+      "type": "boxShadow"
+    },
+    "glow-strong": {
+      "value": "0px 0px 28px 0px rgba(9, 105, 218, 0.40)",
+      "type": "boxShadow"
+    },
+    "glow-inset": {
+      "value": "inset 0px 0px 10px 0px rgba(9, 105, 218, 0.15)",
+      "type": "boxShadow"
+    }
+  }
+}
