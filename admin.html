@@ -50,7 +50,10 @@
                   <h2>Workspace registry</h2>
                   <div class="workspace-surface-copy">A'zolar soni, team lead tayinlanganligi va delete action.</div>
                 </div>
-                <span class="badge">Production control</span>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <button class="btn btn-sm" id="refreshWorkspaceBtn" title="Ma'lumotlarni qayta yuklash" style="background:var(--surface-sub);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;transition:all 0.15s;">🔄 Yangilash</button>
+                  <span class="badge">Production control</span>
+                </div>
               </div>
               <div style="overflow-x:auto;padding:4px;" id="workspaceList"></div>
             </div>
@@ -1256,6 +1259,53 @@
       // Initial render
       renderWorkspaceList();
       bindWorkspaceEvents();
+
+      // Refresh button — ma'lumotlarni Firestore'dan qayta yuklash
+      document.getElementById('refreshWorkspaceBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('refreshWorkspaceBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '⏳ Yangilanmoqda...';
+        btn.disabled = true;
+        try {
+          const [freshUsers, freshTeams] = await Promise.all([
+            MllyCore.getCollection('users', { forceFresh: true }),
+            MllyCore.getCollection('teams', { forceFresh: true }),
+          ]);
+          // Clear and reload arrays
+          users.length = 0;
+          teams.length = 0;
+          freshUsers.forEach((u) => users.push(u));
+          freshTeams.forEach((t) => teams.push(t));
+          // Re-render everything
+          renderWorkspaceList();
+          bindWorkspaceEvents();
+          // Rebuild analyze select
+          const sel = document.getElementById('analyzeTeamId');
+          if (sel) {
+            sel.innerHTML = '';
+            if (!teams.length) {
+              const o = document.createElement('option');
+              o.value = ''; o.textContent = 'Workspace yo\'q';
+              sel.appendChild(o);
+            } else {
+              teams.forEach((t) => {
+                const o = document.createElement('option');
+                o.value = t.id;
+                o.textContent = t.name || t.id;
+                sel.appendChild(o);
+              });
+            }
+          }
+          updateAdminStats();
+          renderManagers();
+          UTIL.toast('Ma\'lumotlar yangilandi.', 'success');
+        } catch (e) {
+          UTIL.toast('Yangilashda xatolik: ' + (e.message || ''), 'error');
+        } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
+      });
 
       document.getElementById('confirmDeleteWorkspaceBtn').addEventListener('click', async () => {
         if (!selectedTeamId) return;
