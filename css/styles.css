@@ -5,14 +5,15 @@
      Professional SaaS palette
      Dark: warm slate — Light: soft neutral
      Shadow system: layered, consistent light source
+     Normalized contrast: dark not too black, light not too white
      ========================================== */
-  --bg: #0b0f17;
-  --bg-2: #121824;
-  --panel: #1a212e;
-  --panel-2: #222a3a;
-  --border: #2a3344;
-  --text: #e2e8f0;
-  --muted: #8892a0;
+  --bg: #111827;
+  --bg-2: #1a2235;
+  --panel: #1e283a;
+  --panel-2: #26304a;
+  --border: #31405a;
+  --text: #dce3ef;
+  --muted: #8899b0;
   --primary: #3b82f6;
   --primary-2: #8b5cf6;
   --success: #22c55e;
@@ -23,10 +24,10 @@
   --glow-strong: rgba(59, 130, 246, 0.40);
   --glow-inset: rgba(96, 165, 250, 0.18);
   --accent: #60a5fa;
-  --surface: #1a212e;
-  --line: #2a3344;
-  --surface-sub: #222a3a;
-  --text-muted: #8892a0;
+  --surface: #1e283a;
+  --line: #31405a;
+  --surface-sub: #26304a;
+  --text-muted: #8899b0;
   /* Unified shadow tokens — layered, consistent light source */
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.12), 0 1px 1px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 8px rgba(0,0,0,0.10), 0 2px 4px rgba(0,0,0,0.06);
@@ -35,13 +36,13 @@
 }
 
 body.theme-light {
-  --bg: #f8f9fb;
-  --bg-2: #f0f2f5;
-  --panel: #ffffff;
-  --panel-2: #edeff2;
-  --border: #dde1e7;
-  --text: #1e293b;
-  --muted: #64748b;
+  --bg: #edf0f5;
+  --bg-2: #e2e7ef;
+  --panel: #f4f7fc;
+  --panel-2: #dee4ed;
+  --border: #c9d1dd;
+  --text: #2c3a50;
+  --muted: #5d6e8c;
   --primary: #3b82f6;
   --primary-2: #8b5cf6;
   --success: #16a34a;
@@ -52,10 +53,10 @@ body.theme-light {
   --glow-strong: rgba(59, 130, 246, 0.25);
   --glow-inset: rgba(59, 130, 246, 0.08);
   --accent: #3b82f6;
-  --surface: #ffffff;
-  --line: #dde1e7;
-  --surface-sub: #edeff2;
-  --text-muted: #64748b;
+  --surface: #f4f7fc;
+  --line: #c9d1dd;
+  --surface-sub: #dee4ed;
+  --text-muted: #5d6e8c;
   /* Light mode shadows — desaturated, lower opacity */
   --shadow-sm: 0 1px 2px rgba(0,0,0,0.05), 0 1px 1px rgba(0,0,0,0.02);
   --shadow-md: 0 4px 8px rgba(0,0,0,0.04), 0 2px 4px rgba(0,0,0,0.02);

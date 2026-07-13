@@ -1297,9 +1297,7 @@
         const teamIdT = data.team.id;
         const loadedAcc = {};
 
-        window.renderList = (container, title, arr, fmt) => {
-
-        // T46 — Webhook ro'yxatini yuklash, test / o'chirish (delete) amallari
+                // T46 — Webhook ro'yxatini yuklash, test / o'chirish (delete) amallari
         window.renderWebhooks = async (teamId, body) => {
           const status = document.getElementById('webhookStatus');
           const listEl = document.getElementById('webhookList');
@@ -1341,7 +1339,9 @@
             });
           } catch (e) { listEl.textContent = e.message; }
         };
-          container.innerHTML = `<h3 style="margin:8px 0 4px;">${title}</h3>` + (arr && arr.length ? `<div class="workspace-message-stack">${arr.map(fmt).join('')}</div>` : '<div class="muted">Ma’lumot yo’q</div>');
+
+        window.renderList = (container, title, arr, fmt) => {
+          container.innerHTML = `<h3 style=\"margin:8px 0 4px;\">${title}</h3>` + (arr && arr.length ? `<div class=\"workspace-message-stack\">${arr.map(fmt).join('')}</div>` : '<div class=\"muted\">Ma’lumot yo’q</div>');
         };
 
         document.querySelectorAll('.ws-acc-head').forEach((head) => {
