@@ -6,6 +6,7 @@
   <title>Dashboard - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/icons.js"></script>
 </head>
 <body>
   <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
@@ -199,13 +200,32 @@
         location.href = 'reports.html';
         return;
       }
+      // FIX (manager dashboard): manager roli uchun 'admin' paneli ko'rsatilmasligi kere
+      const isAdmin = profile?.role === 'admin';
+      const isManager = profile?.role === 'manager';
+
+      // FIX: Manager endi reports.html ga redirect qilinmaydi — dashboard'ni ko'radi
+      // Eski redirect: if (profile?.role === 'manager') { location.href = 'reports.html'; return; }
+
       mountLayout('dashboard', { profile: profile || {}, teams: [], notifications: [] });
 
       const data = await window.MllyCore.getDashboardData(user.uid);
-      const isAdmin = profile?.role === 'admin';
 
       window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
       mountLayout('dashboard', window.APP_CONTEXT);
+
+      // Manager uchun: dashboard title va subtitle ni moslashtirish
+      if (isManager) {
+        document.getElementById('welcome').textContent = `Manager panel: Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
+        document.getElementById('dashboardSubtitle').textContent = "Mas'ul jamoalaringizning umumiy holati, so'nggi g'oyalar va bildirishnomalar.";
+        document.getElementById('workspaceRoleHint').textContent = "Manager jamoalarni kuzatadi va hisobotlarni qabul qiladi. Workspace ichki oqimiga aralashmaydi.";
+      }
+
+      // Admin yoki manager bo'lmasa "Admin only" panelni yashirish
+      if (!isAdmin) {
+        const panel = document.getElementById('adminOnlyPanel');
+        if (panel) panel.style.display = 'none';
+      }
 
       // T13 - Shablonlarni yuklash (faqat admin)
       if (isAdmin) {
@@ -250,12 +270,14 @@
       let selectedTeamId = null;
       let selectedTeamName = '';
 
-      document.getElementById('stats').innerHTML = [
-        { n: teams.length, l: isAdmin ? "Workspace'lar" : "Workspace'larim", note: isAdmin ? 'Production units' : 'Siz kirgan joylar' },
-        { n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: 'Boshqarayotgan oqimlar' },
-        { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami ko'rinadigan userlar" },
+      // FIX (manager stats): manager uchun 'Lead workspace' ko'rsatilmasligi kerak
+      const statsData = [
+        { n: teams.length, l: isAdmin ? "Workspace'lar" : (isManager ? "Mas'ul jamoalar" : "Workspace'larim"), note: isAdmin ? 'Production units' : (isManager ? 'Siz biriktirilgan jamoalar' : 'Siz kirgan joylar') },
+        ...(isManager ? [] : [{ n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: 'Boshqarayotgan oqimlar' }]),
+        { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: isManager ? "Jamoalardagi jami a'zolar" : "Jami ko'rinadigan userlar" },
         { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
-      ].map((s) => `
+      ];
+      document.getElementById('stats').innerHTML = statsData.map((s) => `
         <div class="workspace-stat">
           <span class="workspace-stat-label">${s.l}</span>
           <span class="workspace-stat-value">${s.n}</span>

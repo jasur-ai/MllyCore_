@@ -6,6 +6,7 @@
   <title>Workspace - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/icons.js"></script>
 </head>
 <body>
   <a href="#content" class="skip-link">Asosiy kontentga o'tish</a>
@@ -52,10 +53,24 @@
     let chatUnsubscribe = null;
     let presenceUnsubs = [];
     let workspaceState = null;
-    let chatSeenSyncPending = false;
     let chatSeenTimer = null;
     let chatSubscribedTeamId = '';
     let lastWorkspaceRenderKey = '';
+    let _presenceVisibilityHandler = null;
+    
+    // FIX (presenceUnsubs cleanup): barcha presence obunalarini xavfsiz tozalash
+    function _cleanupPresence() {
+      if (presenceUnsubs.length) {
+        for (var i = 0; i < presenceUnsubs.length; i++) {
+          try { if (typeof presenceUnsubs[i] === 'function') presenceUnsubs[i](); } catch (_) {}
+        }
+        presenceUnsubs = [];
+      }
+      if (_presenceVisibilityHandler) {
+        document.removeEventListener('visibilitychange', _presenceVisibilityHandler);
+        _presenceVisibilityHandler = null;
+      }
+    }
 
     function setFeedback(id, text, tone = 'error') {
       const node = document.getElementById(id);
@@ -126,35 +141,47 @@
       if (stat) stat.textContent = messages.length;
     }
 
+    // FIX (chatSeen race condition): ketma-ket so'rovlarni queue'ga solamiz
+    // va ularni serial (navbatma-navbat) yuboramiz. Agar ikkinchi so'rov kelsa,
+    // birinchisi bekor qilinadi va faqat eng oxirgisi ishga tushadi.
+    var _chatSeenQueue = [];
+    var _chatSeenProcessing = false;
+
+    async function _processChatSeenQueue() {
+      if (_chatSeenProcessing) return;
+      _chatSeenProcessing = true;
+      while (_chatSeenQueue.length > 0) {
+        var task = _chatSeenQueue.shift();
+        try {
+          await MllyCore.markTeamChatSeen(task.teamId);
+        } catch (_) {}
+      }
+      _chatSeenProcessing = false;
+    }
+
     function canMarkChatSeen() {
-      const chatBox = document.getElementById('chatMessages');
+      var chatBox = document.getElementById('chatMessages');
       if (!chatBox) return false;
-      const rect = chatBox.getBoundingClientRect();
-      const visible = rect.bottom > 100 && rect.top < (window.innerHeight || document.documentElement.clientHeight) - 40;
+      var rect = chatBox.getBoundingClientRect();
+      var visible = rect.bottom > 100 && rect.top < (window.innerHeight || document.documentElement.clientHeight) - 40;
       return document.visibilityState === 'visible' && document.hasFocus() && visible;
     }
 
-    async function syncChatSeen(messages, currentUserId, teamId) {
-      if (chatSeenSyncPending || !teamId || !canMarkChatSeen()) return;
-      const hasUnseen = (messages || []).some((message) => {
-        const seenBy = Array.isArray(message.seenBy) ? message.seenBy : [];
+    function scheduleChatSeen(messages, currentUserId, teamId) {
+      // Queue'ga faqat bitta yozuv: avvalgisini tozalab, eng oxirgisini qo'shamiz
+      if (_chatSeenQueue.length > 0) {
+        _chatSeenQueue = []; // oldingi navbatni bekor qilish
+      }
+      var hasUnseen = (messages || []).some(function(message) {
+        var seenBy = Array.isArray(message.seenBy) ? message.seenBy : [];
         return message.senderUserId !== currentUserId && !seenBy.includes(currentUserId);
       });
-      if (!hasUnseen) return;
-      chatSeenSyncPending = true;
-      try {
-        await MllyCore.markTeamChatSeen(teamId);
-      } catch (_) {
-      } finally {
-        chatSeenSyncPending = false;
-      }
-    }
-
-    function scheduleChatSeen(messages, currentUserId, teamId) {
+      if (!hasUnseen || !teamId || !canMarkChatSeen()) return;
+      
+      _chatSeenQueue.push({ teamId: teamId });
+      // 800ms debounce — bu vaqt ichida yana bir xabar kelsa, queue tozalanadi
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
-      chatSeenTimer = setTimeout(() => {
-        syncChatSeen(messages, currentUserId, teamId);
-      }, 1200);
+      chatSeenTimer = setTimeout(_processChatSeenQueue, 800);
     }
 
     async function markWorkspaceNotificationsSeen(data) {
@@ -297,7 +324,7 @@
       });
     }
 
-    function renderTasks(data, currentUserId, isLead) {
+    function renderTasks(data, currentUserId, isLead, isViewer) {
       const tasks = data.tasks || [];
       const submissions = data.taskSubmissions || [];
       const memberCount = data.members.length || 1;
@@ -317,9 +344,9 @@
           || null;
         const mode = task.assignmentMode || (assignedId ? 'direct' : 'open');
         const isAssignedToCurrent = assignedId === currentUserId;
-        const canClaim = mode === 'open' && !assignedId;
+        const canClaim = !isViewer && mode === 'open' && !assignedId;
         const teamRequired = task.requiredCount || Math.max(1, Math.ceil(memberCount * 0.65));
-        const canSubmit = (
+        const canSubmit = !isViewer && (
           (mode === 'team') ||
           ((mode === 'direct' || mode === 'open') && isAssignedToCurrent)
         ) && !hasSubmitted && task.status !== 'completed';
@@ -367,11 +394,11 @@
                 </div>
               ` : ''}
             </div>
-            ${(mode === 'team') || isAssignedToCurrent || isLead ? `
+            ${!isViewer && ((mode === 'team') || isAssignedToCurrent || isLead) ? `
             <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
               <button class="btn btn-secondary btn-sm" data-task-logtime="${task.id}">⏱ Vaqt qo'shish</button>
-              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}">🔒 Fayl biriktirish</button>
-              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}">🐙 GitHub'ga</button>
+              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}" title="Faylni shifrlab yuklash (client-side AES-GCM): fayl brauzerda shifrlanadi, server ochiq faylni ko'rmaydi. Shifr kaliti faqat yuklovchiga ko'rsatiladi — qabul qiluvchiga alohida ulashing.">🔒 Fayl biriktirish</button>
+              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}" title="Vazifani GitHub Issuesga yuborish: task title/description GitHub API orqali issue sifatida yaratiladi. Token serverdagi GITHUB_TOKEN env yoki shaxsiy token bilan ishlaydi.">🐙 GitHub'ga</button>
               <input type="file" id="file-${task.id}" style="display:none">
               ${isLead ? `<div class="workspace-task-reassign" style="display:flex;gap:6px;align-items:center;width:100%;margin-top:6px;">
                 <select class="select btn-sm" id="reassignSel-${task.id}" aria-label="Mas'ulni tanlang">${memberOptions(data.members, false)}</select>
@@ -560,6 +587,7 @@
     async function renderWorkspace(data, currentUserId) {
       const membership = data.members.find((member) => member.userId === currentUserId);
       const isLead = membership?.role === 'team_lead';
+      const isViewer = membership?.role === 'viewer';
       lastWorkspaceRenderKey = workspaceRenderKey(data);
 
       document.getElementById('content').innerHTML = `
@@ -644,6 +672,7 @@
               </div>
             ` : ''}
 
+            ${!isViewer ? `
             <div class="workspace-surface">
               <div class="workspace-surface-head">
                 <div>
@@ -669,6 +698,7 @@
                 </div>
               </div>
             </div>
+            ` : ''}
 
             <div class="workspace-surface">
               <div class="workspace-surface-head">
@@ -893,6 +923,73 @@
                     <div id="webhookStatus" class="text-sm muted" style="margin-top:8px;"></div>
                   </div>
                 </div>
+                <!-- 🔬 Arxitektura dokumentatsiyasi: T31 GitHub + T16 Fayl shifrlash -->
+                <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,member,admin">
+                  <button type="button" class="ws-acc-head" data-acc="architecture" aria-expanded="false" aria-controls="acc-architecture">🔬 Arxitektura <span class="ws-acc-ico">▸</span></button>
+                  <div class="ws-acc-body" id="acc-architecture">
+                    <div class="ws-acc-body-inner">
+                      <h4 style="margin:0 0 8px;font-size:14px;color:var(--text);">🐙 T31 — GitHub Issues Sync</h4>
+                      <div class="ws-arch-doc">
+                        <p><strong>Nima qiladi:</strong> Vazifani (task) GitHub Issues'ga issue sifatida yaratadi.</p>
+                        <div class="ws-arch-flow">
+                          <span class="ws-arch-step">1. Foydalanuvchi repo va tokenni kiritadi</span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">2. Client → <code>POST /api/sync-github</code> (taskId, repo, token)</span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step"><strong>Server:</strong> taskni Firestore'dan o'qiydi, rollarni tekshiradi</span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step"><strong>Server:</strong> GitHub API'ga so'rov:<br><code>POST https://api.github.com/repos/{repo}/issues</code></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step"><strong>Server:</strong> <code>githubIssueId</code> + <code>issueUrl</code> → task'ga yozadi</span>
+                        </div>
+                        <div class="ws-arch-details">
+                          <span class="ws-arch-tag tag-auth">Auth: <code>GITHUB_TOKEN</code> env yoki shaxsiy token</span>
+                          <span class="ws-arch-tag tag-sec">Xavfsizlik: Token hech qayerda saqlanmaydi</span>
+                          <span class="ws-arch-tag tag-limit">Rate limit: GitHub API 5000 req/soat</span>
+                          <span class="ws-arch-tag tag-sec">Xatolik: 404→repo yo'q, 401→token noto'g'ri, 502→aloqa</span>
+                        </div>
+                      </div>
+
+                      <hr style="border:none;border-top:1px solid var(--line);margin:16px 0;">
+
+                      <h4 style="margin:0 0 8px;font-size:14px;color:var(--text);">🔒 T16 — Shifrlangan fayl biriktirish</h4>
+                      <div class="ws-arch-doc">
+                        <p><strong>Nima qiladi:</strong> Fayl brauzerda AES-256-GCM bilan shifrlanadi, so'ng Firebase Storage'ga yuklanadi. Server <strong>hech qachon</strong> ochiq faylni yoki shifr kalitini ko'rmaydi — zero-trust arxitektura.</p>
+                        <div class="ws-arch-flow">
+                          <span class="ws-arch-step">1. <strong>Client:</strong> Fayl tanlanadi → <code>file.arrayBuffer()</code></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">2. <strong>Client:</strong> AES-256-GCM kaliti (32B) + IV (12B) yaratiladi:<br><code>crypto.getRandomValues()</code></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">3. <strong>Client:</strong> Fayl shifrlanadi:<br><code>crypto.subtle.encrypt({name:'AES-GCM', iv}, key, data)</code></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">4. <strong>Client→Storage:</strong> CIPHERTEXT → Firebase Storage<br><code>uploadBytes(storageRef, enc)</code></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">5. <strong>Client→Server:</strong> Metadata yuboriladi:<br><code>POST /api/create-attachment</code><br><span style="color:var(--text-muted,#8b949e);font-size:12px">faqat: teamId, fileName, size, IV, versionNote<br>★ Kalit (KEY) yuborilmaydi</span></span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step"><strong>Server:</strong> Firestore'ga metadata yozadi:<br><code>attachments/{id} → {fileName, iv, size, version}</code></span>
+                          <span style="padding:6px 0;color:var(--text-muted,#8b949e);font-size:12px;text-align:center">Server fayl byte'larini ko'rmaydi, kalitni ko'rmaydi</span>
+                          <span class="ws-arch-arrow">→</span>
+                          <span class="ws-arch-step">6. <strong>Client:</strong> Shifr kaliti faqat yuklovchiga ko'rsatiladi<br>Qabul qiluvchiga alohida ulashish kerak (Telegram/email)</span>
+                        </div>
+                        <div style="margin-top:12px;background:rgba(47,129,247,0.06);border-radius:12px;padding:12px;border:1px solid rgba(47,129,247,0.12)">
+                          <strong style="font-size:13px">📌 Backend nima qiladi?</strong>
+                          <ul style="margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--text-muted,#8b949e);line-height:1.7">
+                            <li>Fayl byte'larini <strong>ko'rmaydi</strong> (Storage'ga to'g'ridan-to'g'ri client yuklaydi)</li>
+                            <li>Shifr kalitini (KEY) <strong>ko'rmaydi</strong> (faqat yuklovchi biladi)</li>
+                            <li>Faqat <strong>metadata</strong> saqlaydi: fileName, size, IV, version, versiya tarixi</li>
+                            <li>IV (initialization vector) — deshifrlash uchun kerak, lekin kalitsiz foydasiz</li>
+                            <li>Yangi versiya (T54): eski metadata <code>versions[]</code> ga arxivlanadi</li>
+                          </ul>
+                        </div>
+                        <div class="ws-arch-details" style="margin-top:10px">
+                          <span class="ws-arch-tag tag-crypto">Shifrlash: AES-256-GCM (Web Crypto API)</span>
+                          <span class="ws-arch-tag tag-sec">Xavfsizlik: Server ochiq faylni ko'rmaydi (zero-trust)</span>
+                          <span class="ws-arch-tag tag-ver">Versiyalash: T54 — har yangi yuklash eski versiyani saqlab qoladi</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <!-- T47 Idea Lifecycle Analytics accordion -->
                 <div class="ws-acc" data-group="integratsiya" data-roles="team_lead,member,admin">
                   <button type="button" class="ws-acc-head" data-acc="analytics">📊 Idea Analytics <span class="ws-acc-ico">▸</span></button>
@@ -1018,69 +1115,160 @@
       `;
 
       renderEntries(data, currentUserId, isLead);
-      renderTasks(data, currentUserId, isLead);
+      renderTasks(data, currentUserId, isLead, membership?.role === 'viewer');
       renderMembers(data, currentUserId, isLead);
       // T9 - Presence: har bir a'zo holatini realtime obuna qilish.
-      // Eski obunalarni tozalash (har refresh'da yangi obuna yaratilib, xotira sizib chiqmasin — tezlik uchun).
-      presenceUnsubs.forEach((unsub) => { try { unsub(); } catch (_) {} });
-      presenceUnsubs = [];
+      // FIX (presenceUnsubs cleanup): avvalgi obunalarni to'liq tozalash
+      _cleanupPresence();
+      
+      const PRESENCE_STALE_MS = 5 * 60 * 1000; // 5 daqiqa
       if (data.members) {
         data.members.forEach((member) => {
           MllyCore.subscribePresence(member.userId, (p) => {
             const dot = document.getElementById('presence-' + member.userId);
-            if (dot) {
-              const st = (p && p.status) || 'offline';
-              dot.style.background = st === 'online' ? '#22c55e' : st === 'away' ? '#f59e0b' : '#64748b';
-              dot.title = st;
+            if (!dot) return;
+            // Statusni aniqlash
+            let st = (p && p.status) || 'offline';
+            // `updatedAt` bo'yicha stale check
+            if (p) {
+              const lastTs = p.updatedAt;
+              if (typeof lastTs === 'number') {
+                if (Date.now() - lastTs > PRESENCE_STALE_MS) {
+                  st = 'offline';
+                }
+              } else if (lastTs && typeof lastTs.toMillis === 'function') {
+                if (Date.now() - lastTs.toMillis() > PRESENCE_STALE_MS) {
+                  st = 'offline';
+                }
+              }
             }
+            dot.style.background = st === 'online' ? '#22c55e' : st === 'away' ? '#f59e0b' : '#64748b';
+            dot.title = st;
           }).then((unsub) => { if (typeof unsub === 'function') presenceUnsubs.push(unsub); }).catch(() => {});
         });
       }
+      // FIX: visibility change bo'lganda, agar tab visible bo'lsa, fresh presence subscribe qilish
+      _presenceVisibilityHandler = function() {
+        if (document.visibilityState === 'visible' && data.team && data.team.id) {
+          refreshWorkspace(data.team.id, currentUserId);
+        }
+      };
+      document.addEventListener('visibilitychange', _presenceVisibilityHandler);
       renderChat(data.messages || [], currentUserId);
 
-      // T-UI — Bo'limlarni "ostidan ochiladigan" akkordeon qilib o'zgartirdik
-      // (oldingi tab'lar o'rniga). Har bir bo'lim sarlavhasini bosganda uning
-      // tanasi pastdan ochiladi/yopiladi; bir nechtasini bir vaqtda ochish mumkin.
+      // FIX (accordion -> professional TAB pattern): Endi bo'limlar yuqorida
+      // gorizontal tab bar sifatida ko'rinadi, birini bossangiz o'sha panel ochiladi,
+      // qolganlari yopiladi. The ws-section-head elementlari avtomatik ws-tab ga aylanadi.
       (() => {
-        const heads = Array.from(document.querySelectorAll('.ws-section-head'));
-        if (!heads.length) return;
-        const sections = Array.from(document.querySelectorAll('.ws-section'));
+        const accordion = document.querySelector('.ws-accordion');
+        if (!accordion) return;
+        
+        // Agar tab bar allaqachon mavjud bo'lsa, qayta yaratmaymiz
+        if (accordion.querySelector('.ws-tab-bar')) return;
+        
+        const sections = Array.from(accordion.querySelectorAll('.ws-section'));
+        if (!sections.length) return;
         const teamKey = 'mlly_sec_' + (data.team && data.team.id || '');
-        const setOpen = (sec, open) => {
-          const body = sec.querySelector('.ws-section-body');
+        
+        // 1. Tab bar yaratish
+        const tabBar = document.createElement('nav');
+        tabBar.className = 'ws-tab-bar';
+        tabBar.setAttribute('role', 'tablist');
+        tabBar.setAttribute('aria-label', "Workspace bo'limlari");
+        
+        // 2. Har bir section head ni tab ga aylantirish
+        const tabs = [];
+        sections.forEach((sec) => {
           const head = sec.querySelector('.ws-section-head');
-          if (body) body.hidden = !open;
-          if (head) head.setAttribute('aria-expanded', String(open));
-          sec.classList.toggle('open', open);
+          if (!head) return;
+          const tabId = sec.dataset.section || 'tab';
+          
+          // ws-section-head ni ws-tab ga aylantirish
+          head.classList.remove('ws-section-head');
+          head.classList.add('ws-tab');
+          head.setAttribute('role', 'tab');
+          head.setAttribute('aria-controls', 'tabpanel-' + tabId);
+          
+          // ▾ ikonasini olib tashlash (tabs are not accordion)
+          const ico = head.querySelector('.ws-section-ico');
+          if (ico) ico.remove();
+          
+          tabBar.appendChild(head);
+          tabs.push(head);
+        });
+        
+        // 3. Section body larni tabpanel ga aylantirish
+        const panels = [];
+        sections.forEach((sec) => {
+          const body = sec.querySelector('.ws-section-body');
+          if (!body) return;
+          const tabId = sec.dataset.section || 'panel';
+          
+          body.classList.remove('ws-section-body');
+          body.classList.add('ws-tab-panel');
+          body.setAttribute('role', 'tabpanel');
+          body.id = 'tabpanel-' + tabId;
+          body.removeAttribute('hidden');
+          
+          panels.push(body);
+        });
+        
+        // 4. Tab barni accordion boshiga qo'shish
+        accordion.insertBefore(tabBar, accordion.firstChild);
+        
+        // 5. Section o'ramini olib tashlash (faqat panel qoladi)
+        sections.forEach((sec) => {
+          const body = sec.querySelector('.ws-tabpanel');
+          if (body) {
+            sec.parentNode.insertBefore(body, sec);
+          }
+          sec.remove();
+        });
+        
+        // 6. Tab logikasi
+        const setActive = (tab) => {
+          const tabId = tab.dataset.tab || tab.getAttribute('aria-controls')?.replace('tabpanel-', '') || '';
+          tabs.forEach((t) => {
+            const isActive = t === tab;
+            t.setAttribute('aria-selected', String(isActive));
+            t.classList.toggle('active', isActive);
+          });
+          panels.forEach((p) => {
+            const isActive = p.dataset.tab === tabId || p.id === 'tabpanel-' + tabId;
+            p.hidden = !isActive;
+            p.classList.toggle('active', isActive);
+          });
+          try { localStorage.setItem(teamKey, tabId); } catch (_) {}
         };
-        // Dastlabki holat: tanasi yashirilmagan bo'limlar ochiq.
-        sections.forEach((s) => { const b = s.querySelector('.ws-section-body'); s.classList.toggle('open', b && !b.hidden); });
-        heads.forEach((h) => h.addEventListener('click', () => {
-          const sec = h.closest('.ws-section');
-          if (!sec) return;
-          setOpen(sec, !sec.classList.contains('open'));
-          try { localStorage.setItem(teamKey, sections.filter((s) => s.classList.contains('open')).map((s) => s.dataset.section).join(',')); } catch (_) {}
-        }));
+        
+        tabs.forEach((tab) => {
+          tab.addEventListener('click', () => setActive(tab));
+        });
+        
+        // 7. Dastlabki holat
+        let defaultTab = tabs.find((t) => t.dataset.tab === 'kanban');
+        // localStorage dan tiklash
         try {
           const saved = localStorage.getItem(teamKey);
           if (saved) {
-            const arr = saved.split(',').filter(Boolean);
-            sections.forEach((s) => setOpen(s, arr.includes(s.dataset.section)));
+            const savedTab = tabs.find((t) => (t.dataset.tab === saved));
+            if (savedTab) defaultTab = savedTab;
           }
         } catch (_) {}
+        if (defaultTab) setActive(defaultTab);
+        else if (tabs.length) setActive(tabs[0]);
       })();
 
       // Boshqaruv (sobiq "Faoliyat") ichki sub-nav: moliya / jamoa / integratsiya guruhlari.
       // Bosilganda activity panel-ning data-bq qiymatini o'zgartiramiz; CSS shu orqali
       // tegishli guruhdagi accordion-larni ko'rsatadi, qolganlarini yashiradi.
       (() => {
-        const actPanel = document.querySelector('.ws-section[data-section="activity"]');
+        const actPanel = document.querySelector('.ws-tab-panel[data-tab="activity"]');
         if (!actPanel) return;
         const bqBtns = Array.from(actPanel.querySelectorAll('.ws-boshqaruv-nav .subnav-item'));
         if (!bqBtns.length) return;
         const setBq = (bq) => {
-          const actBody = actPanel.querySelector('.ws-section-body');
-          if (actBody) actBody.dataset.bq = bq;
+          actPanel.dataset.bq = bq;
           bqBtns.forEach((b) => b.setAttribute('aria-current', String(b.dataset.bq === bq)));
         };
         bqBtns.forEach((b) => b.addEventListener('click', () => setBq(b.dataset.bq)));
@@ -1384,8 +1572,18 @@
           if (!_cursorsOn) return;
           try {
             cursorLayer.innerHTML = '';
+            const now = Date.now();
+            const CURSOR_STALE_MS = 5 * 60 * 1000; // 5 daqiqa
             cursors.forEach((c) => {
               if (c.userId === window.MLLYCORE_AUTH_USER?.uid) return;
+              // FIX: Kursorni faqat oxirgi 5 daqiqa ichida yangilangan bo'lsa ko'rsat
+              const cursorTime = c.updatedAt;
+              if (cursorTime) {
+                const cursorMs = (typeof cursorTime.toMillis === 'function') ? cursorTime.toMillis() :
+                               (typeof cursorTime === 'number') ? cursorTime :
+                               (typeof cursorTime.seconds === 'number') ? cursorTime.seconds * 1000 : 0;
+                if (cursorMs > 0 && now - cursorMs > CURSOR_STALE_MS) return; // eski kursor → o'tkazib yubor
+              }
               const dot = document.createElement('div');
               dot.className = 'cursor-dot';
               dot.style.left = (c.x || 0) + 'px';
@@ -1678,11 +1876,12 @@
       MllyCore.updatePresence('online').catch(() => {});
     })();
 
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener('beforeunload', function() {
       if (typeof chatUnsubscribe === 'function') chatUnsubscribe();
-      presenceUnsubs.forEach((unsub) => { try { unsub(); } catch (_) {} });
+      _cleanupPresence();
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
-      MllyCore.updatePresence('offline').catch(() => {});
+      _chatSeenQueue = [];
+      // updatePresence('offline') endi firebase-service.js tomonidan avtomatik ishlaydi
     });
 
     window.addEventListener('focus', () => {

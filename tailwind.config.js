@@ -16,11 +16,11 @@ module.exports = {
       colors: {
         mlly: {
           /* Dark Mode (default) */
-          bg:        '#0d1117',
-          'bg-2':    '#151b23',
-          panel:     '#1c2128',
-          'panel-2': '#222831',
-          border:    '#30363d',
+          bg:        '#080b12',
+          'bg-2':    '#111721',
+          panel:     '#19202b',
+          'panel-2': '#212836',
+          border:    '#2d3544',
           text:      '#e6edf3',
           muted:     '#8b949e',
           primary:   '#2f81f7',
@@ -31,9 +31,9 @@ module.exports = {
           info:      '#58a6ff',
           accent:    '#58a6ff',
           'text-muted': '#8b949e',
-          surface:   '#1c2128',
-          line:      '#30363d',
-          'surface-sub': '#222831',
+          surface:   '#19202b',
+          line:      '#2d3544',
+          'surface-sub': '#212836',
           white: {
             DEFAULT: '#ffffff',
             2:  'rgba(255,255,255,0.02)',
@@ -116,8 +116,8 @@ module.exports = {
         'brand-gradient-light':'linear-gradient(135deg, #0969da, #8250df)',
         'hero-text':           'linear-gradient(120deg, #f0f6ff 0%, #c4b5fd 45%, #a5b4fc 100%)',
         'hero-text-light':     'linear-gradient(109deg, #1f2328 0%, #7c5cfc 55%, #8250df 100%)',
-        'landing-bg':          'radial-gradient(700px 340px at 0% 0%, rgba(88, 166, 255, 0.12), transparent 70%), radial-gradient(720px 420px at 100% 0%, rgba(124, 92, 252, 0.12), transparent 72%), linear-gradient(180deg, #0a0e1a 0%, #0d1424 42%, #0f1629 100%)',
-        'app-bg':             'radial-gradient(1100px 550px at 10% -10%, rgba(47,129,247,0.10), transparent 60%), radial-gradient(800px 450px at 110% 10%, rgba(124,92,252,0.08), transparent 60%)',
+        'landing-bg':          'radial-gradient(700px 340px at 0% 0%, rgba(88, 166, 255, 0.06), transparent 70%), radial-gradient(720px 420px at 100% 0%, rgba(124, 92, 252, 0.05), transparent 72%), linear-gradient(180deg, #080b14 0%, #0b0f1a 42%, #0d121e 100%)',
+        'app-bg':             'radial-gradient(1100px 550px at 10% -10%, rgba(47,129,247,0.05), transparent 60%), radial-gradient(800px 450px at 110% 10%, rgba(124,92,252,0.04), transparent 60%)',
       },
       fontSize: {
         'mlly-xs':   '11px',

@@ -1,20 +1,635 @@
 <!DOCTYPE html>
-<html lang="uz">
+<html lang="uz" style="scroll-behavior:smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>MllyCore - Startup workspace platformasi</title>
+  <title>MllyCore — Startup workspace platformasi</title>
+  <meta name="description" content="MllyCore — Admin, Team Lead va Member rollari bilan startup workspace oqimini bitta joyda tartibga soling.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="manifest" href="manifest.webmanifest">
+  <script src="js/icons.js"></script>
+  <style>
+    /* ===== Design Tokens ===== */
+    :root {
+      --landing-max-w: 1240px;
+      --gradient-primary: linear-gradient(135deg, #2f81f7, #7c5cfc);
+      --gradient-hero: linear-gradient(120deg, #f0f6ff 0%, #c4b5fd 42%, #a5b4fc 100%);
+      --glow-blue: rgba(47,129,247,0.15);
+      --glow-purple: rgba(124,92,252,0.12);
+      --surface-card: rgba(12,20,36,0.72);
+      --surface-glass: rgba(8,11,18,0.60);
+    }
+    body.theme-light {
+      --glow-blue: rgba(9,105,218,0.08);
+      --glow-purple: rgba(130,80,223,0.06);
+      --surface-card: rgba(255,255,255,0.85);
+      --surface-glass: rgba(248,250,255,0.82);
+    }
+
+    /* ===== Scroll Progress ===== */
+    #scrollProgress {
+      position: fixed; top: 0; left: 0;
+      height: 2px;
+      background: var(--gradient-primary);
+      z-index: 9999; width: 0%;
+      transition: width 60ms linear;
+    }
+
+    /* ===== Loader ===== */
+    .page-loader {
+      position: fixed; inset: 0; z-index: 99999;
+      background: #080b12;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 20px;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    body.theme-light .page-loader { background: #ffffff; }
+    .page-loader.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+    .loader-ring {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 3px solid rgba(47,129,247,0.12);
+      border-top-color: #2f81f7;
+      animation: loaderSpin 0.8s linear infinite;
+    }
+    @keyframes loaderSpin { to { transform: rotate(360deg); } }
+
+    /* ===== Floating Particles ===== */
+    .particles {
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0;
+      overflow: hidden;
+    }
+    .particle {
+      position: absolute;
+      width: 4px; height: 4px;
+      background: rgba(47,129,247,0.25);
+      border-radius: 50%;
+      animation: particleFloat linear infinite;
+    }
+    @keyframes particleFloat {
+      0% { transform: translateY(100vh) scale(0); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+    }
+
+    /* ===== Navigation (sticky + mobile) ===== */
+    .landing-nav {
+      position: sticky; top: 0; z-index: 100;
+      width: min(var(--landing-max-w), calc(100% - 40px));
+      margin: 0 auto; padding: 18px 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 18px;
+      transition: background 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease, padding 0.3s ease;
+      border-radius: 0 0 18px 18px;
+    }
+    .landing-nav.scrolled {
+      background: var(--surface-glass);
+      backdrop-filter: blur(18px) saturate(1.4);
+      box-shadow: 0 1px 0 rgba(148,163,184,0.10), 0 8px 32px rgba(2,6,23,0.25);
+      padding: 10px 20px;
+      width: min(calc(var(--landing-max-w) - 20px), calc(100% - 28px));
+      border: 1px solid rgba(148,163,184,0.10);
+      margin-top: 8px; border-radius: 16px;
+    }
+    body.theme-light .landing-nav.scrolled {
+      background: rgba(248,250,255,0.88);
+      box-shadow: 0 1px 0 rgba(148,163,184,0.10), 0 8px 32px rgba(148,163,184,0.10);
+    }
+    .nav-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 99;
+      background: rgba(2,6,15,0.6);
+    }
+    .nav-overlay.open { display: block; }
+
+    /* Hamburger */
+    .hamburger {
+      display: none; flex-direction: column; gap: 5px;
+      background: none; border: none; cursor: pointer;
+      padding: 8px; border-radius: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(148,163,184,0.12);
+      position: relative; z-index: 101;
+    }
+    .hamburger span {
+      display: block; width: 22px; height: 2px;
+      background: var(--text, #e6edf3);
+      border-radius: 2px;
+      transition: transform 0.2s ease, opacity 0.2s ease;
+    }
+    .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open span:nth-child(2) { opacity: 0; }
+    .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    body.theme-light .hamburger span { background: #1f2328; }
+
+    /* ===== Hero ===== */
+    .landing-hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.95fr);
+      gap: 40px; align-items: center;
+      padding: 72px 0 44px;
+      position: relative;
+    }
+    .hero-glow-1 {
+      position: absolute; top: -10%; left: -8%;
+      width: 55%; height: 55%;
+      background: radial-gradient(circle at 30% 40%, rgba(47,129,247,0.15), transparent 70%);
+      filter: blur(80px); pointer-events: none; z-index: -1;
+    }
+    .hero-glow-2 {
+      position: absolute; bottom: 5%; right: -5%;
+      width: 40%; height: 40%;
+      background: radial-gradient(circle at 50% 50%, rgba(124,92,252,0.10), transparent 65%);
+      filter: blur(70px); pointer-events: none; z-index: -1;
+    }
+    .hero-float-el {
+      position: absolute;
+      border-radius: 12px;
+      background: rgba(47,129,247,0.06);
+      border: 1px solid rgba(47,129,247,0.12);
+      backdrop-filter: blur(4px);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: var(--muted, #8b949e);
+      animation: floatElement 4s ease-in-out infinite;
+      pointer-events: none;
+    }
+    .hero-float-el:nth-child(2) { top: 12%; right: 8%; animation-delay: -1s; }
+    .hero-float-el:nth-child(3) { bottom: 18%; left: 3%; animation-delay: -2.5s; }
+    @keyframes floatElement {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+
+    .landing-copy h1 {
+      margin: 18px 0;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(48px, 6.2vw, 78px);
+      line-height: 0.99;
+      letter-spacing: -0.025em;
+      max-width: 14ch;
+      background: var(--gradient-hero);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+      animation: heroTextReveal 0.8s cubic-bezier(0.22, 1, 0.36, 1) both 0.15s;
+    }
+    @keyframes heroTextReveal {
+      from { opacity: 0; transform: translateY(20px) scale(0.96); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    body.theme-light .landing-copy h1 {
+      background: linear-gradient(120deg, #1f2328 0%, #8250df 50%, #0969da 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: transparent;
+    }
+    .landing-copy .highlight-text {
+      background: linear-gradient(135deg,#2f81f7,#7c5cfc,#ec4899);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Pill row */
+    .landing-pill-row {
+      display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 6px;
+      animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both 0.05s;
+    }
+    .pill-interactive {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 7px 14px; border-radius: 999px;
+      background: rgba(47,129,247,0.10);
+      border: 1px solid rgba(47,129,247,0.20);
+      color: #79c0ff; font-size: 13px; font-weight: 600;
+      transition: all 0.2s ease, transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+      cursor: default;
+    }
+    .pill-interactive:hover {
+      background: rgba(47,129,247,0.18);
+      border-color: rgba(47,129,247,0.35);
+      transform: translateY(-1px);
+    }
+    body.theme-light .pill-interactive {
+      background: rgba(9,105,218,0.08);
+      border-color: rgba(9,105,218,0.18); color: #0969da;
+    }
+    .pill-dot { width: 7px; height: 7px; border-radius: 50%; background: #3fb950; animation: pulseDot 2s ease-in-out infinite; }
+    @keyframes pulseDot { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:.6; transform:scale(.8); } }
+
+    .landing-lead { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both 0.30s; }
+    .landing-actions { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both 0.40s; }
+    .landing-proof { animation: fadeUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both 0.50s; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(14px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== Proof / Stats Counters ===== */
+    .landing-proof {
+      display: flex; gap: 14px; flex-wrap: wrap; margin-top: 32px;
+    }
+    .landing-proof-item {
+      flex: 1; min-width: 140px;
+      padding: 18px 20px;
+      border-radius: 18px;
+      background: var(--surface-card);
+      border: 1px solid rgba(148,163,184,0.10);
+      backdrop-filter: blur(4px);
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+    .landing-proof-item:hover {
+      transform: translateY(-2px);
+      border-color: rgba(47,129,247,0.20);
+    }
+    .landing-proof-item strong {
+      display: block; font-size: 24px; font-family: 'Space Grotesk', sans-serif;
+      background: var(--gradient-primary);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .landing-proof-item span { color: var(--muted, #8b949e); font-size: 13px; }
+
+    /* ===== Showcase ===== */
+    .landing-showcase {
+      position: relative; perspective: 1200px;
+      animation: showcaseEnter 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.20s both;
+    }
+    @keyframes showcaseEnter {
+      from { opacity:0; transform:translateY(16px) scale(0.96); }
+      to   { opacity:1; transform:translateY(0) scale(1); }
+    }
+    .landing-showcase .landing-window {
+      transform-style: preserve-3d; transition: transform 0.12s ease-out;
+      will-change: transform;
+    }
+    .landing-showcase::before {
+      content: "";
+      position: absolute; inset: -12% -15% auto auto;
+      width: 70%; height: 70%;
+      background: radial-gradient(circle at 50% 50%, rgba(124,92,252,0.20), transparent 70%);
+      filter: blur(72px); z-index: 0; pointer-events: none;
+    }
+    .landing-product-link {
+      cursor: pointer; transition: all 0.2s ease; position: relative;
+    }
+    .landing-product-link::after {
+      content: ''; position: absolute;
+      left: 12px; right: 12px; bottom: 4px; height: 2px;
+      background: var(--gradient-primary);
+      border-radius: 4px; transform: scaleX(0);
+      transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .landing-product-link:hover::after,
+    .landing-product-link.active::after { transform: scaleX(1); }
+
+    /* ===== Reveal Animation ===== */
+    .reveal {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+    .reveal-delay-1 { transition-delay: 0.05s; }
+    .reveal-delay-2 { transition-delay: 0.10s; }
+    .reveal-delay-3 { transition-delay: 0.15s; }
+    .reveal-delay-4 { transition-delay: 0.20s; }
+    .reveal-delay-5 { transition-delay: 0.25s; }
+    .reveal-delay-6 { transition-delay: 0.30s; }
+    .reveal-delay-7 { transition-delay: 0.35s; }
+
+    /* ===== Stat Counter ===== */
+    .stat-counter { display: inline-block; }
+
+    /* ===== Sections ===== */
+    .landing-strip {
+      display: flex; gap: 10px; flex-wrap: wrap; padding: 0 0 24px;
+    }
+    .landing-strip-item {
+      padding: 10px 16px; border-radius: 999px;
+      background: rgba(255,255,255,0.03);
+      color: var(--muted, #8b949e);
+      border: 1px solid rgba(148,163,184,0.10);
+      font-size: 13px; font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .landing-strip-item:hover {
+      background: rgba(47,129,247,0.08);
+      border-color: rgba(47,129,247,0.20);
+      color: #79c0ff;
+    }
+
+    /* Features Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .feature-card {
+      padding: 24px; border-radius: 20px;
+      border: 1px solid rgba(148,163,184,0.10);
+      background: var(--surface-card);
+      backdrop-filter: blur(4px);
+      transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .feature-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(47,129,247,0.20);
+      box-shadow: 0 20px 50px rgba(2,6,23,0.25);
+    }
+    .feature-icon {
+      width: 48px; height: 48px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; margin-bottom: 16px;
+      background: rgba(47,129,247,0.10);
+      border: 1px solid rgba(47,129,247,0.15);
+    }
+    .feature-card h3 { margin: 0 0 8px; font-size: 18px; font-family: 'Space Grotesk', sans-serif; }
+    .feature-card p { margin: 0; color: var(--muted, #8b949e); font-size: 14px; line-height: 1.7; }
+    .feature-tag {
+      display: inline-block; margin-top: 14px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(63,185,80,0.10);
+      border: 1px solid rgba(63,185,80,0.20);
+      color: #7ee787; font-size: 11px; font-weight: 600;
+    }
+
+    /* Workflow — Timeline style */
+    .workflow-timeline {
+      position: relative;
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .workflow-timeline::before {
+      content: '';
+      position: absolute;
+      top: 48px; left: 15%; right: 15%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(47,129,247,0.08), rgba(124,92,252,0.16), rgba(47,129,247,0.08));
+      z-index: 0;
+    }
+    .wf-card {
+      position: relative; z-index: 1;
+      padding: 24px; border-radius: 20px;
+      border: 1px solid rgba(148,163,184,0.10);
+      background: var(--surface-card);
+      backdrop-filter: blur(4px);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+    .wf-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(124,92,252,0.20);
+    }
+    .wf-step {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 44px; height: 44px; border-radius: 14px;
+      background: var(--gradient-primary);
+      color: #fff; font-weight: 800; font-size: 16px;
+      font-family: 'Space Grotesk', sans-serif;
+      margin-bottom: 14px;
+    }
+    .wf-card h3 { margin: 0 0 8px; font-size: 20px; font-family: 'Space Grotesk', sans-serif; }
+    .wf-card p { margin: 0; color: var(--muted, #8b949e); font-size: 14px; line-height: 1.7; }
+
+    /* Role cards */
+    .role-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .role-card {
+      padding: 28px; border-radius: 20px;
+      border: 1px solid rgba(148,163,184,0.10);
+      background: var(--surface-card);
+      backdrop-filter: blur(4px);
+      transition: transform 0.25s ease, border-color 0.25s ease;
+    }
+    .role-card:hover { transform: translateY(-3px); border-color: rgba(47,129,247,0.18); }
+    .role-card.featured {
+      border-color: rgba(124,92,252,0.20);
+      background: linear-gradient(180deg, rgba(124,92,252,0.06), var(--surface-card));
+    }
+    .role-card .role-badge {
+      display: inline-block; padding: 5px 12px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; margin-bottom: 14px;
+    }
+    .role-badge.admin { background: rgba(47,129,247,0.12); color: #79c0ff; border: 1px solid rgba(47,129,247,0.20); }
+    .role-badge.lead { background: rgba(124,92,252,0.12); color: #c4b5fd; border: 1px solid rgba(124,92,252,0.20); }
+    .role-badge.member { background: rgba(210,153,34,0.12); color: #d29922; border: 1px solid rgba(210,153,34,0.20); }
+    .role-card strong { display: block; font-size: 20px; font-family: 'Space Grotesk', sans-serif; margin-bottom: 8px; }
+    .role-card p { color: var(--muted, #8b949e); font-size: 14px; line-height: 1.7; margin: 0; }
+
+    /* ===== FAQ ===== */
+    .faq-list { display: grid; gap: 10px; }
+    .faq-item {
+      border: 1px solid rgba(148,163,184,0.10);
+      border-radius: 16px; overflow: hidden;
+      background: var(--surface-card);
+      backdrop-filter: blur(4px);
+    }
+    .faq-question {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px; background: transparent; border: none;
+      color: var(--text, #e6edf3); font-size: 15px; font-weight: 600;
+      cursor: pointer; text-align: left; font-family: inherit;
+      transition: background 0.15s ease;
+    }
+    .faq-question:hover { background: rgba(47,129,247,0.04); }
+    .faq-question .faq-icon {
+      transition: transform 0.2s ease; color: var(--muted, #8b949e);
+      font-size: 18px; flex-shrink: 0;
+    }
+    .faq-item.open .faq-question .faq-icon { transform: rotate(45deg); }
+    .faq-body {
+      display: none; padding: 0 20px 18px;
+      color: var(--muted, #8b949e); font-size: 14px; line-height: 1.7;
+    }
+    .faq-item.open .faq-body {
+      display: block; animation: faqIn 0.18s ease;
+    }
+    @keyframes faqIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+    /* ===== Footer ===== */
+    .landing-footer {
+      border-top: 1px solid rgba(148,163,184,0.08);
+      padding: 40px 0 28px;
+      margin-top: 20px;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 30px;
+      margin-bottom: 28px;
+    }
+    .footer-col h4 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px; margin: 0 0 14px;
+    }
+    .footer-col p { color: var(--muted, #8b949e); font-size: 13px; line-height: 1.7; margin: 0; }
+    .footer-col a {
+      display: block; color: var(--muted, #8b949e);
+      font-size: 13px; padding: 4px 0;
+      transition: color 0.15s ease;
+    }
+    .footer-col a:hover { color: var(--text, #e6edf3); }
+    .footer-bottom {
+      border-top: 1px solid rgba(148,163,184,0.06);
+      padding-top: 18px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px;
+    }
+    .footer-bottom span { color: var(--muted, #8b949e); font-size: 12px; }
+    .social-links { display: flex; gap: 10px; }
+    .social-links a {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: inline-flex; align-items: center; justify-content: center;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(148,163,184,0.10);
+      color: var(--muted, #8b949e); font-size: 14px;
+      transition: all 0.15s ease; text-decoration: none;
+    }
+    .social-links a:hover {
+      background: rgba(47,129,247,0.10);
+      border-color: rgba(47,129,247,0.20);
+      color: #79c0ff;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 1100px) {
+      .landing-hero,
+      .features-grid,
+      .workflow-timeline,
+      .role-grid { grid-template-columns: 1fr; }
+      .landing-hero { padding: 38px 0 28px; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .workflow-timeline::before { display: none; }
+    }
+    @media (max-width: 840px) {
+      .hamburger { display: flex; }
+      .landing-nav-links,
+      .landing-nav-actions { display: none; }
+      .landing-nav-links.open,
+      .landing-nav-actions.open { display: flex; }
+      .landing-nav-links.open {
+        position: fixed; top: 0; right: 0; z-index: 100;
+        flex-direction: column; width: 280px; height: 100vh;
+        background: var(--surface-glass);
+        backdrop-filter: blur(20px);
+        padding: 80px 24px 24px;
+        border-left: 1px solid rgba(148,163,184,0.10);
+        animation: slideInRight 0.2s ease;
+      }
+      .landing-nav-links.closing {
+        animation: slideOutRight 0.18s ease forwards;
+      }
+      .landing-nav-actions.open {
+        position: fixed; bottom: 24px; right: 24px; z-index: 101;
+        flex-direction: column; width: 232px;
+      }
+      @keyframes slideInRight { from { transform:translateX(100%); } to { transform:translateX(0); } }
+      @keyframes slideOutRight { from { transform:translateX(0); } to { transform:translateX(100%); } }
+      .landing-nav.scrolled .hamburger { background: rgba(255,255,255,0.06); }
+    }
+    @media (max-width: 700px) {
+      .landing-nav.scrolled { padding: 10px 14px; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .features-grid { gap: 12px; }
+      .landing-cta-block { flex-direction: column; align-items: stretch; }
+      .landing-proof { flex-direction: column; }
+      .landing-proof-item { min-width: auto; }
+    }
+
+    /* ===== Magic Buttons ===== */
+    .magnetic-btn {
+      position: relative;
+      transition: transform 0.15s cubic-bezier(0.34,1.56,0.64,1);
+    }
+
+    /* ===== Section Divider ===== */
+    .section-divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(148,163,184,0.10), transparent);
+      margin: 6px 0 20px;
+    }
+
+    /* ===== CTA polish ===== */
+    .landing-cta-block {
+      position: relative; overflow: hidden;
+      padding: 40px 28px;
+    }
+    .landing-cta-block::before {
+      content: '';
+      position: absolute; top: -50%; right: -20%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(47,129,247,0.08), transparent 70%);
+      border-radius: 50%; pointer-events: none;
+    }
+
+    /* ===== Scroll margin ===== */
+    #workflow, #roles, #security, #features, #faq { scroll-margin-top: 100px; }
+
+    /* ===== Landing page base with mesh gradient ===== */
+    .landing-page {
+      position: relative;
+      background:
+        radial-gradient(800px 400px at 0% 0%, rgba(47,129,247,0.05), transparent 72%),
+        radial-gradient(800px 480px at 100% 0%, rgba(124,92,252,0.04), transparent 74%),
+        linear-gradient(180deg, #080b14 0%, #0b0f1a 42%, #0d121e 100%);
+    }
+    body.theme-light .landing-page {
+      background:
+        radial-gradient(800px 400px at 0% 0%, rgba(9,105,218,0.03), transparent 72%),
+        radial-gradient(800px 480px at 100% 0%, rgba(130,80,223,0.02), transparent 74%),
+        linear-gradient(180deg, #f4f6fa 0%, #f8fafc 42%, #f4f7fc 100%);
+    }
+    /* Light mode overrides for cards */
+    body.theme-light .landing-strip-item {
+      background: rgba(255,255,255,0.90);
+      color: #656d76;
+      border-color: rgba(148,163,184,0.14);
+    }
+    body.theme-light .landing-strip-item:hover {
+      background: rgba(9,105,218,0.06);
+      color: #0969da;
+    }
+    body.theme-light .feature-icon { background: rgba(9,105,218,0.08); border-color: rgba(9,105,218,0.15); }
+    body.theme-light .feature-tag { background: rgba(26,127,55,0.08); color: #1a7f37; border-color: rgba(26,127,55,0.18); }
+    body.theme-light .role-badge.admin { background: rgba(9,105,218,0.08); color: #0969da; border-color: rgba(9,105,218,0.18); }
+    body.theme-light .role-badge.lead { background: rgba(130,80,223,0.08); color: #8250df; border-color: rgba(130,80,223,0.18); }
+    body.theme-light .role-badge.member { background: rgba(154,103,0,0.08); color: #9a6700; border-color: rgba(154,103,0,0.18); }
+    body.theme-light .wf-step { background: linear-gradient(135deg, #0969da, #8250df); }
+    body.theme-light .faq-question { color: #1f2328; }
+    body.theme-light .footer-bottom span,
+    body.theme-light .footer-col a { color: #656d76; }
+    body.theme-light .footer-col a:hover { color: #1f2328; }
+    body.theme-light .social-links a { background: rgba(255,255,255,0.90); color: #656d76; }
+    body.theme-light .social-links a:hover { background: rgba(9,105,218,0.06); color: #0969da; }
+  </style>
 </head>
 <body>
-  <a href="#workflow" class="skip-link">Asosiy kontentga o'tish</a>
+  <!-- Loader -->
+  <div class="page-loader" id="pageLoader">
+    <div class="loader-ring"></div>
+  </div>
+
+  <!-- Floating Particles -->
+  <div class="particles" id="particles" aria-hidden="true"></div>
+
+  <!-- Scroll Progress -->
+  <div id="scrollProgress"></div>
+
+  <a href="#features" class="skip-link">Asosiy kontentga o'tish</a>
   <script src="js/theme.js"></script>
+
+  <!-- Mobile nav overlay -->
+  <div class="nav-overlay" id="navOverlay"></div>
+
   <div class="landing-page">
-    <header class="landing-nav">
+    <!-- NAVIGATION -->
+    <header class="landing-nav" id="mainNav">
       <a href="index.html" class="landing-brand">
         <span class="landing-brand-mark"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></span>
         <span>
@@ -22,120 +637,142 @@
           <span class="landing-brand-tag">Startup workspace system</span>
         </span>
       </a>
-      <nav class="landing-nav-links">
+      <nav class="landing-nav-links" id="navLinks" aria-label="Asosiy navigatsiya">
+        <a href="#features">Xususiyatlar</a>
         <a href="#workflow">Workflow</a>
         <a href="#roles">Rollar</a>
-        <a href="#security">Xavfsizlik</a>
+        <a href="#faq">FAQ</a>
       </nav>
-      <div class="landing-nav-actions">
-        <button type="button" class="btn landing-btn-subtle theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()"><span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span><span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span></button>
+      <div class="landing-nav-actions" id="navActions">
+        <button type="button" class="btn landing-btn-subtle theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()" aria-label="Tema almashtirish">
+          <span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span>
+          <span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span>
+        </button>
         <a href="login.html" class="btn btn-secondary">Kirish</a>
         <a href="register.html" class="btn landing-btn-accent">Ro'yxatdan o'tish</a>
       </div>
+      <button class="hamburger" id="hamburger" aria-label="Menyu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </header>
 
     <main class="landing-shell">
-      <section class="landing-hero">
+
+      <!-- ===== HERO ===== -->
+      <section class="landing-hero" id="hero">
+        <div class="hero-glow-1" aria-hidden="true"></div>
+        <div class="hero-glow-2" aria-hidden="true"></div>
+
         <div class="landing-copy">
-          <div class="landing-badge-row">
-            <span class="landing-pill">Admin -> Team lead -> Member</span>
-            <span class="landing-pill landing-pill-muted">Firebase Auth + Firestore</span>
+          <div class="landing-pill-row">
+            <span class="pill-interactive"><span class="pill-dot"></span> 3-rol tizimi</span>
+            <span class="pill-interactive">Firebase Auth + Firestore</span>
+            <span class="pill-interactive">Real-time chat</span>
           </div>
-          <h1>Startup g'oyalarni bitta workspace ichida tartibli boshqaring.</h1>
+          <h1>
+            Startup g'oyalarni bitta<br>
+            <span class="highlight-text">workspace</span> ichida tartibli boshqaring.
+          </h1>
           <p class="landing-lead">
             MllyCore admin uchun workspace boshqaruvi, team lead uchun a'zo va secret key nazorati,
             jamoa uchun esa g'oya, chat va xavfsiz hamkorlik oqimini bitta joyga yig'adi.
           </p>
           <div class="landing-actions">
-            <a href="register.html" class="btn landing-btn-accent">Bepul boshlash</a>
-            <a href="login.html" class="btn btn-secondary">Kirish</a>
+            <a href="register.html" class="btn landing-btn-accent magnetic-btn" style="gap:10px;padding:12px 24px;font-size:15px">
+              Bepul boshlash
+            </a>
+            <a href="login.html" class="btn btn-secondary" style="padding:12px 24px;font-size:15px">Kirish</a>
           </div>
+
           <div class="landing-proof">
             <div class="landing-proof-item">
-              <strong>3 rol</strong>
+              <strong class="stat-counter" data-target="3">0</strong>
               <span>aniq kirish darajasi</span>
             </div>
             <div class="landing-proof-item">
-              <strong>Workspace</strong>
-              <span>private idea muhitlari</span>
+              <strong class="stat-counter" data-target="12">0</strong>
+              <span>workspace boshqaruvi</span>
             </div>
             <div class="landing-proof-item">
-              <strong>Real-time</strong>
-              <span>chat va status oqimi</span>
+              <strong class="stat-counter" data-target="47">0</strong>
+              <span>a'zo sig'imi</span>
             </div>
           </div>
         </div>
 
-        <div class="landing-showcase">
-          <div class="landing-window">
-            <div class="landing-window-bar">
-              <span></span><span></span><span></span>
-            </div>
+        <div class="landing-showcase" id="showcase">
+          <div class="landing-window" id="showcaseWindow">
+            <div class="landing-window-bar"><span></span><span></span><span></span></div>
             <div class="landing-product">
               <aside class="landing-product-sidebar">
                 <div class="landing-product-logo">MllyCore</div>
-                <a class="landing-product-link active">Dashboard</a>
-                <a class="landing-product-link">Workspace'lar</a>
-                <a class="landing-product-link">Chat</a>
-                <a class="landing-product-link">Security</a>
+                <a class="landing-product-link active" data-tab="dashboard" role="tab" aria-selected="true" aria-controls="panel-dashboard" id="tab-dashboard">Dashboard</a>
+                <a class="landing-product-link" data-tab="workspaces" role="tab" aria-selected="false" aria-controls="panel-workspaces" id="tab-workspaces">Workspace'lar</a>
+                <a class="landing-product-link" data-tab="chat" role="tab" aria-selected="false" aria-controls="panel-chat" id="tab-chat">Chat</a>
+                <a class="landing-product-link" data-tab="security" role="tab" aria-selected="false" aria-controls="panel-security" id="tab-security">Security</a>
                 <div class="landing-product-note">Admin ko'rinishi</div>
               </aside>
               <div class="landing-product-main">
-                <div class="landing-product-top">
-                  <div>
-                    <div class="landing-product-label">Workspace operations</div>
-                    <h2>MllyCore Workspace</h2>
+                <div class="tab-panel-content" data-tab="dashboard" role="tabpanel" aria-labelledby="tab-dashboard" id="panel-dashboard">
+                  <div class="landing-product-top">
+                    <div>
+                      <div class="landing-product-label">Workspace operations</div>
+                      <h2>MllyCore Workspace</h2>
+                    </div>
+                    <span class="landing-product-chip">Team lead email required</span>
                   </div>
-                  <span class="landing-product-chip">Team lead email required</span>
+                  <div class="landing-mini-stats">
+                    <div class="landing-mini-stat"><span>Workspace'lar</span><strong>12</strong></div>
+                    <div class="landing-mini-stat"><span>Team leadlar</span><strong>8</strong></div>
+                    <div class="landing-mini-stat"><span>Yangi a'zolar</span><strong>24</strong></div>
+                  </div>
+                  <div class="landing-workspace-grid">
+                    <article class="landing-team-card featured">
+                      <div class="landing-team-card-head">
+                        <div><h3>Growth Lab</h3><p>Lead: sardor@team</p></div>
+                        <span>14 a'zo</span>
+                      </div>
+                      <div class="landing-team-card-body">
+                        <div class="landing-status-line"><span class="landing-dot success"></span>Secret key yangilangan</div>
+                        <div class="landing-status-line"><span class="landing-dot info"></span>3 ta yangi g'oya muhokamada</div>
+                      </div>
+                    </article>
+                    <article class="landing-chat-card">
+                      <div class="landing-chat-head"><strong>Team chat</strong><span>Live</span></div>
+                      <div class="landing-chat-message"><b>Lead</b><p>Yangi member qo'shildi, onboarding boshlansin.</p></div>
+                      <div class="landing-chat-message alt"><b>Member</b><p>MVP scope bo'yicha roadmap tayyor.</p></div>
+                    </article>
+                  </div>
                 </div>
-                <div class="landing-mini-stats">
-                  <div class="landing-mini-stat">
-                    <span>Workspace'lar</span>
-                    <strong>12</strong>
+                <div class="tab-panel-content" data-tab="workspaces" style="display:none" role="tabpanel" aria-labelledby="tab-workspaces" id="panel-workspaces">
+                  <div class="landing-product-top">
+                    <div><div class="landing-product-label">Workspace registry</div><h2>Barcha workspace'lar</h2></div>
                   </div>
-                  <div class="landing-mini-stat">
-                    <span>Team leadlar</span>
-                    <strong>8</strong>
+                  <div class="landing-mini-stats">
+                    <div class="landing-mini-stat"><span>Jami</span><strong>12</strong></div>
+                    <div class="landing-mini-stat"><span>Lead biriktirilgan</span><strong>8</strong></div>
+                    <div class="landing-mini-stat"><span>A'zolar</span><strong>47</strong></div>
                   </div>
-                  <div class="landing-mini-stat">
-                    <span>Yangi a'zolar</span>
-                    <strong>24</strong>
-                  </div>
+                  <div style="padding:10px 0;color:#93a1b8;font-size:13px;line-height:1.7">Admin faqat workspace lifecycle ni boshqaradi — yaratish, team lead tayinlash va o'chirish.</div>
                 </div>
-                <div class="landing-workspace-grid">
-                  <article class="landing-team-card featured">
-                    <div class="landing-team-card-head">
-                      <div>
-                        <h3>Growth Lab</h3>
-                        <p>Lead: sardor@team</p>
-                      </div>
-                      <span>14 a'zo</span>
-                    </div>
-                    <div class="landing-team-card-body">
-                      <div class="landing-status-line">
-                        <span class="landing-dot success"></span>
-                        Secret key yangilangan
-                      </div>
-                      <div class="landing-status-line">
-                        <span class="landing-dot info"></span>
-                        3 ta yangi g'oya muhokamada
-                      </div>
-                    </div>
-                  </article>
-                  <article class="landing-chat-card">
-                    <div class="landing-chat-head">
-                      <strong>Team chat</strong>
-                      <span>Live</span>
-                    </div>
-                    <div class="landing-chat-message">
-                      <b>Lead</b>
-                      <p>Yangi member qo'shildi, onboarding boshlansin.</p>
-                    </div>
-                    <div class="landing-chat-message alt">
-                      <b>Member</b>
-                      <p>MVP scope bo'yicha roadmap tayyor.</p>
-                    </div>
-                  </article>
+                <div class="tab-panel-content" data-tab="chat" style="display:none" role="tabpanel" aria-labelledby="tab-chat" id="panel-chat">
+                  <div class="landing-product-top">
+                    <div><div class="landing-product-label">Team communication</div><h2>Realtime chat</h2></div>
+                    <span class="landing-product-chip" style="background:rgba(63,185,80,0.15);color:#6ee7b7;border-color:rgba(63,185,80,0.25)">Live</span>
+                  </div>
+                  <div class="landing-chat-message" style="margin-top:16px"><b>Lead</b><p>Yangi member qo'shildi, onboarding boshlansin.</p></div>
+                  <div class="landing-chat-message alt"><b>Member</b><p>MVP scope bo'yicha roadmap tayyor.</p></div>
+                  <div class="landing-chat-message"><b>Lead</b><p>Ertaga 10:00 da sync meeting. Barcha tayyor bo'ling.</p></div>
+                </div>
+                <div class="tab-panel-content" data-tab="security" style="display:none" role="tabpanel" aria-labelledby="tab-security" id="panel-security">
+                  <div class="landing-product-top">
+                    <div><div class="landing-product-label">Privacy & Access</div><h2>Security layer</h2></div>
+                  </div>
+                  <div style="display:grid;gap:12px;margin-top:16px">
+                    <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(148,163,184,0.10)"><strong style="display:block;margin-bottom:4px">Email verification</strong><span style="color:#93a1b8;font-size:13px">Tasdiqlanmaguncha kirish yo'q</span></div>
+                    <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(148,163,184,0.10)"><strong style="display:block;margin-bottom:4px">Private workspace</strong><span style="color:#93a1b8;font-size:13px">G'oyalar public qidiruvga chiqmaydi</span></div>
+                    <div style="padding:14px;border-radius:14px;background:rgba(255,255,255,0.03);border:1px solid rgba(148,163,184,0.10)"><strong style="display:block;margin-bottom:4px">Secret key</strong><span style="color:#93a1b8;font-size:13px">Faqat team lead tomonidan boshqariladi</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -143,7 +780,8 @@
         </div>
       </section>
 
-      <section class="landing-strip">
+      <!-- ===== STRIP ===== -->
+      <section class="landing-strip reveal">
         <div class="landing-strip-item">Workspace first architecture</div>
         <div class="landing-strip-item">Role-based access</div>
         <div class="landing-strip-item">Email verification</div>
@@ -151,118 +789,150 @@
         <div class="landing-strip-item">Firebase-backed data</div>
       </section>
 
-      <section class="landing-section" id="workflow">
+      <!-- ===== FEATURES ===== -->
+      <section class="landing-section reveal" id="features">
         <div class="landing-section-head">
-          <span class="landing-kicker">Workflow</span>
-          <h2>MllyCore uslubidagi aniq oqim, lekin startup jamoalariga mos.</h2>
-          <p>
-            Har bir rol o'ziga tegishli ishni ko'radi. Keraksiz ekranlar yo'q, qarorlar va harakatlar
-            bitta joyda turadi.
-          </p>
+          <span class="landing-kicker reveal reveal-delay-1">Xususiyatlar</span>
+          <h2 class="reveal reveal-delay-2">Startup jamoasi uchun kerakli barcha vositalar.</h2>
+          <p class="reveal reveal-delay-3">MllyCore 3 rolga mo'ljallangan — har biri o'ziga tegishli narsani ko'radi.</p>
         </div>
-        <div class="landing-flow-grid">
-          <article class="landing-flow-card">
-            <span class="landing-step">01</span>
+        <div class="features-grid">
+          <article class="feature-card reveal reveal-delay-4">
+            <div class="feature-icon">🏢</div>
+            <h3>Workspace boshqaruvi</h3>
+            <p>Admin workspace yaratadi, leadni tayinlaydi va lifecycle ni nazorat qiladi.</p>
+            <span class="feature-tag">Admin only</span>
+          </article>
+          <article class="feature-card reveal reveal-delay-4">
+            <div class="feature-icon">🔑</div>
+            <h3>Secret key access</h3>
+            <p>Team lead secret keyni boshqaradi. Faqat to'g'ri key bilan workspace ga kirish mumkin.</p>
+            <span class="feature-tag">Lead only</span>
+          </article>
+          <article class="feature-card reveal reveal-delay-5">
+            <div class="feature-icon">💬</div>
+            <h3>Real-time chat</h3>
+            <p>Firestore asosida ishlaydigan chat — xabarlar bir zumda yetib boradi va seen marker bilan.</p>
+            <span class="feature-tag">Barcha rollar</span>
+          </article>
+          <article class="feature-card reveal reveal-delay-5">
+            <div class="feature-icon">📋</div>
+            <h3>G'oya + Task oqimi</h3>
+            <p>Workspace ichida g'oyalar status bilan yuritiladi, vazifalar esa tayinlanadi va kuzatiladi.</p>
+            <span class="feature-tag">Barcha rollar</span>
+          </article>
+          <article class="feature-card reveal reveal-delay-6">
+            <div class="feature-icon">📊</div>
+            <h3>Hisobot tizimi</h3>
+            <p>Member → Lead → Manager oqimi bo'yicha hisobotlar. Approve/disapprove, feedback.</p>
+            <span class="feature-tag">Lead + Manager</span>
+          </article>
+          <article class="feature-card reveal reveal-delay-6">
+            <div class="feature-icon">🔒</div>
+            <h3>Shifrlangan fayllar</h3>
+            <p>Fayllar AES-256-GCM bilan brauzerda shifrlanadi. Server ochiq faylni ko'rmaydi.</p>
+            <span class="feature-tag">E2E encryption</span>
+          </article>
+        </div>
+      </section>
+
+      <div class="section-divider reveal"></div>
+
+      <!-- ===== WORKFLOW ===== -->
+      <section class="landing-section reveal" id="workflow">
+        <div class="landing-section-head">
+          <span class="landing-kicker reveal reveal-delay-1">Ish oqimi</span>
+          <h2 class="reveal reveal-delay-2">MllyCore uslubidagi aniq oqim, startup jamoalariga mos.</h2>
+          <p class="reveal reveal-delay-3">Har bir rol o'ziga tegishli ishni ko'radi. Keraksiz ekranlar yo'q.</p>
+        </div>
+        <div class="workflow-timeline">
+          <article class="wf-card reveal reveal-delay-4">
+            <span class="wf-step">01</span>
             <h3>Admin workspace yaratadi</h3>
             <p>Team lead emailini belgilaydi, workspace ochadi va umumiy statistikani kuzatadi.</p>
           </article>
-          <article class="landing-flow-card">
-            <span class="landing-step">02</span>
+          <article class="wf-card reveal reveal-delay-5">
+            <span class="wf-step">02</span>
             <h3>Team lead jamoani yig'adi</h3>
             <p>A'zolarni email bo'yicha qo'shadi, secret key reset qiladi va ichki tartibni boshqaradi.</p>
           </article>
-          <article class="landing-flow-card">
-            <span class="landing-step">03</span>
+          <article class="wf-card reveal reveal-delay-6">
+            <span class="wf-step">03</span>
             <h3>Jamoa g'oya ustida ishlaydi</h3>
             <p>Chat, status va workspace ichidagi g'oyalar bo'yicha yopiq hamkorlik muhitida ishlaydi.</p>
           </article>
         </div>
       </section>
 
-      <section class="landing-section landing-section-surface" id="roles">
+      <div class="section-divider reveal"></div>
+
+      <!-- ===== ROLES ===== -->
+      <section class="landing-section landing-section-surface reveal" id="roles">
         <div class="landing-section-head compact">
-          <span class="landing-kicker">Role System</span>
-          <h2>Har bir rolga alohida UX.</h2>
+          <span class="landing-kicker reveal reveal-delay-1">Rol tizimi</span>
+          <h2 class="reveal reveal-delay-2">Har bir rolga alohida UX.</h2>
         </div>
-        <div class="landing-role-grid">
-          <article class="landing-role-card">
-            <div class="landing-role-top">
-              <span class="landing-role-badge">Admin</span>
-              <strong>Control view</strong>
-            </div>
-            <p>Faqat statistika, workspace yaratish va workspace o'chirish. Idea yoki member operatsiyasiga aralashmaydi.</p>
-            <ul class="landing-checklist">
-              <li>Workspace yaratish</li>
-              <li>Team lead belgilash</li>
-              <li>Workspace o'chirish</li>
-            </ul>
+        <div class="role-grid">
+          <article class="role-card reveal reveal-delay-3">
+            <span class="role-badge admin">Admin</span>
+            <strong>Control view</strong>
+            <p>Faqat statistika, workspace yaratish va o'chirish. Idea yoki member operatsiyasiga aralashmaydi.</p>
           </article>
-          <article class="landing-role-card featured">
-            <div class="landing-role-top">
-              <span class="landing-role-badge lead">Team lead</span>
-              <strong>Execution view</strong>
-            </div>
-            <p>Workspace ichidagi asosiy operator. A'zolarni qo'shadi, secret key boshqaradi va ichki oqimni yuritadi.</p>
-            <ul class="landing-checklist">
-              <li>A'zo qo'shish</li>
-              <li>Secret key reset</li>
-              <li>Chat va idea oqimi</li>
-            </ul>
+          <article class="role-card featured reveal reveal-delay-4">
+            <span class="role-badge lead">Team lead</span>
+            <strong>Execution view</strong>
+            <p>Workspace ichidagi asosiy operator. A'zolarni qo'shadi, secret key boshqaradi va oqimni yuritadi.</p>
           </article>
-          <article class="landing-role-card">
-            <div class="landing-role-top">
-              <span class="landing-role-badge member">Member</span>
-              <strong>Focused view</strong>
-            </div>
+          <article class="role-card reveal reveal-delay-5">
+            <span class="role-badge member">Member</span>
+            <strong>Focused view</strong>
             <p>Faqat o'zi qo'shilgan workspace ichidagi g'oya, chat va muhokamalarni ko'radi.</p>
-            <ul class="landing-checklist">
-              <li>Private workspace access</li>
-              <li>Idea muhokamasi</li>
-              <li>Chat ishtiroki</li>
-            </ul>
           </article>
         </div>
       </section>
 
-      <section class="landing-section landing-split" id="security">
-        <div class="landing-security-panel">
-          <span class="landing-kicker">Security</span>
-          <h2>Workspace ichidagi ma'lumotlar ommaviy emas.</h2>
-          <p>
-            Email verification, role-based access, Firestore rules va private workspace modeli
-            startup jamoalarga xavfsiz ichki ish maydoni beradi.
-          </p>
-          <div class="landing-security-list">
-            <div>Email tasdiqlanmaguncha kirish yo'q</div>
-            <div>G'oyalar public qidiruvga chiqmaydi</div>
-            <div>Secret key faqat team lead tomonidan boshqariladi</div>
-          </div>
+      <!-- ===== FAQ ===== -->
+      <section class="landing-section reveal" id="faq">
+        <div class="landing-section-head">
+          <span class="landing-kicker reveal reveal-delay-1">FAQ</span>
+          <h2 class="reveal reveal-delay-2">Tez-tez so'raladigan savollar.</h2>
         </div>
-        <div class="landing-module-panel">
-          <div class="landing-module-grid">
-            <div class="landing-module">
-              <span>Workspace</span>
-              <strong>Private teams</strong>
-            </div>
-            <div class="landing-module">
-              <span>Ideas</span>
-              <strong>Status-driven flow</strong>
-            </div>
-            <div class="landing-module">
-              <span>Chat</span>
-              <strong>Realtime updates</strong>
-            </div>
-            <div class="landing-module">
-              <span>Auth</span>
-              <strong>Verified entry</strong>
-            </div>
+        <div class="faq-list">
+          <div class="faq-item reveal reveal-delay-3">
+            <button class="faq-question" aria-expanded="false">
+              Qanday qilib workspace yaratiladi?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-body">Faqat admin workspace yaratadi. Admin panelida "Workspace yaratish" tugmasi orqali nom va team lead emaili kiritiladi. Server team lead uchun avtomatik hisob yaratadi.</div>
+          </div>
+          <div class="faq-item reveal reveal-delay-4">
+            <button class="faq-question" aria-expanded="false">
+              Secret key nima va qanday ishlaydi?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-body">Secret key — workspace ga kirish uchun maxsus kalit. Team lead tomonidan boshqariladi va reset qilinishi mumkin. Yangi a'zo taklifni qabul qilganda secret keyni kiritishi shart.</div>
+          </div>
+          <div class="faq-item reveal reveal-delay-5">
+            <button class="faq-question" aria-expanded="false">
+              Kim hisobotlarni ko'rishi mumkin?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-body">Hisobotlar 4 bosqichli: Member → Team Lead tekshiradi (approve/disapprove) → Team Lead Managerga yuboradi → Manager yakuniy nazorat qiladi. Admin faqat kuzatadi.</div>
+          </div>
+          <div class="faq-item reveal reveal-delay-6">
+            <button class="faq-question" aria-expanded="false">
+              Ma'lumotlar xavfsizmi?
+              <span class="faq-icon">+</span>
+            </button>
+            <div class="faq-body">Ha. Barcha ma'lumotlar Firebase Firestore'da saqlanadi (encrypted at rest). Fayllar AES-256-GCM bilan shifrlanadi, server ochiq faylni ko'rmaydi. Kirish faqat email verified userlar uchun.</div>
           </div>
         </div>
       </section>
 
-      <section class="landing-cta-block">
+      <!-- ===== CTA ===== -->
+      <section class="landing-cta-block reveal">
         <div>
-          <span class="landing-kicker">Ready</span>
+          <span class="landing-kicker">Tayyormisiz?</span>
           <h2>MllyCore bilan startup workspace oqimini tartibga soling.</h2>
           <p>Admin paneldan boshlang, team leadni belgilang va jamoani yopiq muhitda ishga tushiring.</p>
         </div>
@@ -271,13 +941,261 @@
           <a href="login.html" class="btn btn-secondary">Kirish</a>
         </div>
       </section>
+
+      <!-- ===== FOOTER ===== -->
+      <footer class="landing-footer">
+        <div class="footer-grid">
+          <div class="footer-col">
+            <h4>MllyCore</h4>
+            <p>Startup workspace platformasi — Admin, Team Lead va Member rollari bilan g'oyalarni bitta joyda tartibli boshqaring.</p>
+          </div>
+          <div class="footer-col">
+            <h4>Mahsulot</h4>
+            <a href="#features">Xususiyatlar</a>
+            <a href="#workflow">Workflow</a>
+            <a href="#roles">Rollar</a>
+          </div>
+          <div class="footer-col">
+            <h4>Resurslar</h4>
+            <a href="#faq">FAQ</a>
+            <a href="login.html">Kirish</a>
+            <a href="register.html">Ro'yxatdan o'tish</a>
+          </div>
+          <div class="footer-col">
+            <h4>Huquqiy</h4>
+            <a href="#">Maxfiylik siyosati</a>
+            <a href="#">Foydalanish shartlari</a>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <span>&copy; 2026 MllyCore. Barcha huquqlar himoyalangan.</span>
+          <div class="social-links">
+            <a href="#" aria-label="GitHub">🐙</a>
+            <a href="#" aria-label="Telegram">✈️</a>
+            <a href="#" aria-label="Email">✉️</a>
+          </div>
+        </div>
+      </footer>
+
     </main>
   </div>
+
   <script>
-    // T50 — PWA: service worker ro'yxatdan o'tkazish (app-shell offline caching)
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
+    // ─── Page loader ───
+    window.addEventListener('load', function() {
+      var loader = document.getElementById('pageLoader');
+      if (loader) {
+        loader.classList.add('hidden');
+        setTimeout(function() { if (loader.parentNode) loader.parentNode.removeChild(loader); }, 600);
+      }
+    });
+
+    // ─── Floating particles ───
+    (function() {
+      var container = document.getElementById('particles');
+      if (!container) return;
+      for (var i = 0; i < 20; i++) {
+        var p = document.createElement('div');
+        p.className = 'particle';
+        var size = 2 + Math.random() * 4;
+        p.style.width = size + 'px';
+        p.style.height = size + 'px';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.animationDelay = Math.random() * 8 + 's';
+        p.style.animationDuration = (8 + Math.random() * 12) + 's';
+        p.style.opacity = 0.15 + Math.random() * 0.25;
+        container.appendChild(p);
+      }
+    })();
+
+    // ─── Scroll progress (rAF-throttled) ───
+    (function() {
+      var bar = document.getElementById('scrollProgress');
+      var ticking = false;
+      window.addEventListener('scroll', function() {
+        if (!ticking) {
+          requestAnimationFrame(function() {
+            var scrollTop = window.scrollY;
+            var docHeight = document.documentElement.scrollHeight - window.innerHeight;
+            bar.style.width = (docHeight > 0 ? (scrollTop / docHeight) * 100 : 0) + '%';
+            ticking = false;
+          });
+          ticking = true;
+        }
+      });
+    })();
+
+    // ─── Sticky nav + scroll effects ───
+    (function() {
+      var nav = document.getElementById('mainNav');
+      window.addEventListener('scroll', function() {
+        var scrolled = window.scrollY > 60;
+        nav.classList.toggle('scrolled', scrolled);
+      });
+    })();
+
+    // ─── Mobile hamburger menu ───
+    (function() {
+      var hamburger = document.getElementById('hamburger');
+      var navLinks = document.getElementById('navLinks');
+      var navActions = document.getElementById('navActions');
+      var overlay = document.getElementById('navOverlay');
+
+      function closeMenu() {
+        navLinks.classList.add('closing');
+        setTimeout(function() {
+          hamburger.classList.remove('open');
+          hamburger.setAttribute('aria-expanded', 'false');
+          navLinks.classList.remove('open', 'closing');
+          navActions.classList.remove('open');
+          overlay.classList.remove('open');
+        }, 180);
+      }
+
+      hamburger.addEventListener('click', function() {
+        var isOpen = hamburger.classList.contains('open');
+        if (isOpen) { closeMenu(); }
+        else {
+          hamburger.classList.add('open');
+          hamburger.setAttribute('aria-expanded', 'true');
+          navLinks.classList.add('open');
+          navActions.classList.add('open');
+          overlay.classList.add('open');
+        }
+      });
+
+      overlay.addEventListener('click', closeMenu);
+
+      // Close menu on link click
+      navLinks.querySelectorAll('a').forEach(function(a) {
+        a.addEventListener('click', closeMenu);
+      });
+    })();
+
+    // ─── Interactive showcase tabs ───
+    (function() {
+      document.querySelectorAll('.landing-product-link').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          document.querySelectorAll('.landing-product-link').forEach(function(l) {
+            l.classList.remove('active');
+            l.setAttribute('aria-selected', 'false');
+          });
+          document.querySelectorAll('.tab-panel-content').forEach(function(p) { p.style.display = 'none'; });
+          this.classList.add('active');
+          this.setAttribute('aria-selected', 'true');
+          var panel = document.querySelector('.tab-panel-content[data-tab="' + this.dataset.tab + '"]');
+          if (panel) panel.style.removeProperty('display');
+        });
+      });
+    })();
+
+    // ─── 3D Tilt ───
+    (function() {
+      var showcase = document.getElementById('showcase');
+      var win = document.getElementById('showcaseWindow');
+      if (!win || window.innerWidth <= 1100) return;
+      showcase.addEventListener('mousemove', function(e) {
+        var rect = showcase.getBoundingClientRect();
+        var x = e.clientX - rect.left, y = e.clientY - rect.top;
+        var rx = (y - rect.height/2) / (rect.height/2) * -3;
+        var ry = (x - rect.width/2) / (rect.width/2) * 3;
+        win.style.transform = 'rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+      });
+      showcase.addEventListener('mouseleave', function() {
+        win.style.transform = 'rotateX(0deg) rotateY(0deg)';
+      });
+    })();
+
+    // ─── Magnetic buttons ───
+    (function() {
+      document.querySelectorAll('.magnetic-btn').forEach(function(btn) {
+        btn.addEventListener('mousemove', function(e) {
+          var rect = btn.getBoundingClientRect();
+          var x = e.clientX - rect.left - rect.width/2;
+          var y = e.clientY - rect.top - rect.height/2;
+          var strength = 4;
+          btn.style.transform = 'translate(' + (x/rect.width)*strength + 'px, ' + (y/rect.height)*strength + 'px)';
+        });
+        btn.addEventListener('mouseleave', function() {
+          btn.style.transform = '';
+        });
+      });
+    })();
+
+    // ─── Reveal on scroll ───
+    (function() {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.10, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.reveal').forEach(function(el) { observer.observe(el); });
+    })();
+
+    // ─── Counter animation ───
+    (function() {
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          var target = parseInt(el.dataset.target) || 0;
+          var duration = 1200;
+          var startTime = null;
+          var startVal = parseInt(el.textContent) || 0;
+          function animate(now) {
+            if (!startTime) startTime = now;
+            var progress = Math.min((now - startTime) / duration, 1);
+            var eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(startVal + (target - startVal) * eased);
+            if (progress < 1) requestAnimationFrame(animate);
+          }
+          requestAnimationFrame(animate);
+          observer.unobserve(el);
+        });
+      }, { threshold: 0.5 });
+      document.querySelectorAll('.stat-counter').forEach(function(el) { observer.observe(el); });
+    })();
+
+    // ─── FAQ accordion ───
+    (function() {
+      document.querySelectorAll('.faq-question').forEach(function(q) {
+        q.addEventListener('click', function() {
+          var item = this.closest('.faq-item');
+          var isOpen = item.classList.contains('open');
+          // Close all
+          document.querySelectorAll('.faq-item.open').forEach(function(o) {
+            o.classList.remove('open');
+            o.querySelector('.faq-question').setAttribute('aria-expanded', 'false');
+          });
+          if (!isOpen) {
+            item.classList.add('open');
+            this.setAttribute('aria-expanded', 'true');
+          }
+        });
+      });
+    })();
+
+    // ─── Smooth anchor scroll ───
+    (function() {
+      document.querySelectorAll('a[href^="#"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+          var href = this.getAttribute('href');
+          if (href === '#') return;
+          e.preventDefault();
+          var target = document.querySelector(href);
+          if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+      });
+    })();
+
+    // ─── PWA service worker ───
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('sw.js').catch(function() {});
       });
     }
   </script>

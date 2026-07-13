@@ -1,6 +1,11 @@
 // T50 — Offline / PWA mode: app-shell caching service worker.
 // Firebase Firestore offline-first keshlash alohida (firebase-service.js).
 // Bu yerda faqat statik app-shell (HTML/CSS/JS) keshlanadi.
+//
+// FIX (file:// protocol): Service Worker faqat HTTPS yoki localhost da ishlaydi.
+// file:// protokolda SW ro'yxatdan o'tmaydi — bu normal holat.
+// HTML dagi SW registration kodi 'location.protocol === "file:"' check bilan o'ralgan.
+
 const CACHE = 'mllycore-shell-v1';
 const SHELL = [
   'index.html',

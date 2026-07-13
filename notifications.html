@@ -6,6 +6,7 @@
   <title>Bildirishnomalar - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
+  <script src="js/icons.js"></script>
 </head>
 <body>
   <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
@@ -100,8 +101,12 @@
       // FIX (complaint 6): "Team takliflari" bo'limi faqat haqiqatan ham kutilayotgan
       // takliflar bo'lganda ko'rsatiladi. Aks holda (masalan, managerlar uchun bo'sh holatda)
       // keraksiz bo'lim chiqmaydi.
+      // FIX (viewer logic): Admin va manager hech qachon taklif qabul qilmaydi —
+      // shuning uchun ular uchun "Taklif" bo'limi butunlay yashiriladi.
+      const profile = window.MLLYCORE_PROFILE || {};
+      const isAdminManager = profile.role === 'admin' || profile.role === 'manager';
       const _invSec = document.getElementById('invites')?.closest('.workspace-surface');
-      if (_invSec) _invSec.style.display = invites.length ? '' : 'none';
+      if (_invSec) _invSec.style.display = (invites.length && !isAdminManager) ? '' : 'none';
       const unreadN = (data.notifications || []).filter((n) => n.unread || n.isRead === false).length;
       const notifBadge = document.getElementById('notificationCount');
       notifBadge.textContent = unreadN;

@@ -6,7 +6,8 @@
   <title>Hisobotlar - MllyCore</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <style>
+  <script src="js/icons.js"></script>
+<style>
     .report-tabs { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
     .report-tab-btn { padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid transparent; background: transparent; color: var(--muted); }
     .report-tab-btn.active { background: var(--surface-sub); border-color: var(--line); color: var(--text); }
@@ -292,7 +293,14 @@
       // ==========================================
       function renderTeamLeadView(allReports, switcherHtml) {
         const teamIds = teams.map(t => t.id);
-        const memberReports = allReports.filter(r => r.type === 'member_report' && (teamIds.includes(r.teamId) || teams.length === 0));
+        // FIX: Team lead faqat o'z jamoasidagi va 'team_lead' ga target qilingan hisobotlarni ko'rishi kerak.
+        // Eski: `teams.length === 0` bo'lsa HAMMA member_report'larni ko'rsatar edi — bu xato,
+        // chunki lead faqat o'z workspace'idagi a'zolarning hisobotlarini tekshirishi mumkin.
+        const memberReports = allReports.filter(r =>
+          r.type === 'member_report' &&
+          r.targetRole === 'team_lead' &&
+          teamIds.includes(r.teamId)
+        );
         const myProjectReports = allReports.filter(r => r.userId === user.uid && r.type === 'lead_project_report');
         const teamReports = allReports.filter(r => r.userId === user.uid && r.type === 'team_report');
 
@@ -451,7 +459,21 @@
           return `<span class="badge" style="background:var(--surface-sub);border:1px solid var(--line);padding:6px 10px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text);">${escapeHtml(tName)}</span>`;
         }).join('') : '<span class="text-xs muted">Hozircha mas\'ul jamoalar tayinlanmagan</span>';
 
-        const managerReports = allReports.filter(r => r.targetRole === 'manager' && (assignedIds.includes(r.teamId) || assignedIds.length === 0));
+        // FIX (manager filter): assignedIds bo'sh bo'lsa, hech qanday hisobotni ko'rsatmaymiz
+        // Eski: `assignedIds.length === 0` bo'lsa HAMMA reportlarni ko'rsatar edi — bu xato.
+        if (assignedIds.length === 0) {
+          const root = document.getElementById('reportsRoot');
+          root.innerHTML = switcherHtml + `
+            <div class="workspace-surface pad" style="text-align:center;padding:40px;">
+              <h3>Sizga hali hech qanday jamoa biriktirilmagan</h3>
+              <p class="muted">Admin sizni jamoalarga mas'ul qilib tayinlashi kerak. Sozlamalar uchun Admin paneliga murojaat qiling.</p>
+              <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+            </div>
+          `;
+          return;
+        }
+
+        const managerReports = allReports.filter(r => r.targetRole === 'manager' && assignedIds.includes(r.teamId));
         const root = document.getElementById('reportsRoot');
 
         root.innerHTML = switcherHtml + `
@@ -494,7 +516,7 @@
                     ${r.status !== 'disapproved' ? `<button type="button" class="btn btn-danger btn-sm mgr-disapprove" data-id="${r.id}">Disapprove (Rad etish)</button>` : ''}
                   </div>
                 </div>
-              `).join('') : '<div class="workspace-empty text-center py-6"><h3>Hisobotlar yo\'q</h3><p class="muted">Jamoa rahbarlaridan hisobotlar kelmagan.</p></div>'}
+              `).join('') : '<div class="workspace-empty text-center py-6"><h3>Hisobotlar yo\'q</h3><p class="muted">Jamoa rahbarlaridan hisobotlar kelmagan yoki ular allaqachon tasdiqlangan.</p></div>'}
             </div>
           </div>
         `;

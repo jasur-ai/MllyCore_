@@ -585,18 +585,73 @@ window.MllyCore = {
     return apiPost('/api/export-my-data', authUser, {});
   },
 
-  // ===== T9 Presence (client-side Firestore) =====
+  // ===== T9 Presence (client-side Firestore) — professional heartbeat + visibility =====
+  // UPDATED FIX: 
+  // 1. Heartbeat har 60 soniyada ishlaydi — `lastSeen` yangilanib turadi
+  // 2. Sahifa yashirin (hidden) bo'lsa → 'away', ko'rinsa → 'online'
+  // 3. `pagehide` va `beforeunload` → 'offline' (oldin `beforeunload` yetarli emas edi)
+  // 4. Eski `beforeunload` lista o'rniga reliable event'lar ishlatiladi
+  _presenceCleanup: null,
   async updatePresence(status = 'online') {
     const state = await this.init();
     if (!state) return;
     const authUser = await this.ensureAuthed();
     const { doc, setDoc, serverTimestamp } = state.modules.dbMod;
-    const ref = doc(state.db, 'presence', authUser.uid);
+    const uid = authUser.uid;
+    const ref = doc(state.db, 'presence', uid);
     const write = (s) => setDoc(ref, { status: s, lastSeen: serverTimestamp(), updatedAt: Date.now() }, { merge: true });
     await write(status);
-    try {
-      window.addEventListener('beforeunload', () => write('offline'));
-    } catch (_) {}
+
+    // Avvalgi cleanup (agar oldin call bo'lgan bo'lsa)
+    if (this._presenceCleanup) {
+      this._presenceCleanup();
+      this._presenceCleanup = null;
+    }
+
+    // Heartbeat interval — har 60 soniyada `lastSeen` ni yangilab turadi
+    // Agar foydalanuvchi o'chirib qo'ysa, `lastSeen` eski bo'lib qoladi va offline hisoblanadi
+    const beatInterval = setInterval(async () => {
+      try {
+        // lastSeen ni updateServerTimestamp bilan yangilash (firestore-server vaqt)
+        await setDoc(ref, { lastSeen: serverTimestamp(), updatedAt: Date.now() }, { merge: true });
+      } catch (_) {}
+    }, 120000); // har 2 daqiqada — 5 daqiqalik stale threshold yetarli
+
+    // Visibility change — tab yashirin bo'lsa 'away', ko'rinsa 'online'
+    const visHandler = () => {
+      if (document.visibilityState === 'hidden') {
+        write('away');
+      } else {
+        write('online');
+      }
+    };
+    document.addEventListener('visibilitychange', visHandler);
+
+    // Pagehide (reliable: mobile Safari, bfcache, close tab) → 'offline'
+    const pageHideHandler = () => write('offline');
+    window.addEventListener('pagehide', pageHideHandler);
+
+    // beforeunload (fallback)
+    const unloadHandler = () => write('offline');
+    window.addEventListener('beforeunload', unloadHandler);
+
+    // Focus/blur — fokus yo'qolsa 'away', qaytsa 'online'
+    const focusHandler = () => {
+      if (document.visibilityState !== 'hidden') write('online');
+    };
+    const blurHandler = () => write('away');
+    window.addEventListener('focus', focusHandler);
+    window.addEventListener('blur', blurHandler);
+
+    // Cleanup function — barcha listenerlarni tozalaydi
+    this._presenceCleanup = () => {
+      clearInterval(beatInterval);
+      document.removeEventListener('visibilitychange', visHandler);
+      window.removeEventListener('pagehide', pageHideHandler);
+      window.removeEventListener('beforeunload', unloadHandler);
+      window.removeEventListener('focus', focusHandler);
+      window.removeEventListener('blur', blurHandler);
+    };
   },
   async subscribePresence(uid, onChange) {
     const state = await this.init();

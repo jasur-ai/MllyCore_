@@ -1,3 +1,57 @@
+// ===== Loading bar — sahifa navigatsiyasida yuqorida progress chizig'i =====
+(function setupLoadingBar() {
+  if (window.__mllyLoadingBar) return;
+  window.__mllyLoadingBar = true;
+  const bar = document.createElement('div');
+  bar.id = 'mlly-loading-bar';
+  bar.style.cssText = 'position:fixed;top:0;left:0;height:2px;background:linear-gradient(90deg,#2f81f7,#7c5cfc,#58a6ff);z-index:9999;width:0;border-radius:0 2px 2px 0;transition:none;';
+  document.documentElement.appendChild(bar);
+  let timer = null;
+  const start = () => {
+    if (timer) clearTimeout(timer);
+    bar.style.width = '0';
+    bar.style.opacity = '1';
+    // Boshlang'ich sakrash (0 → 25%)
+    requestAnimationFrame(() => { bar.style.transition = 'width 0.6s cubic-bezier(0.22, 1, 0.36, 1)'; bar.style.width = '25%'; });
+    // 2. bosqich (25% → 70%)
+    timer = setTimeout(() => {
+      bar.style.transition = 'width 1.2s cubic-bezier(0.22, 1, 0.36, 1)';
+      bar.style.width = '70%';
+    }, 400);
+  };
+  const finish = () => {
+    if (timer) { clearTimeout(timer); timer = null; }
+    bar.style.transition = 'width 0.3s cubic-bezier(0.22, 1, 0.36, 1)';
+    bar.style.width = '100%';
+    setTimeout(() => {
+      bar.style.transition = 'opacity 0.3s ease';
+      bar.style.opacity = '0';
+      setTimeout(() => { bar.style.width = '0'; }, 350);
+    }, 200);
+  };
+  // Link click'da ishga tushirish (faqat internal navigation)
+  document.addEventListener('click', (e) => {
+    const link = e.target.closest('a[href]');
+    if (!link) return;
+    const href = link.getAttribute('href') || '';
+    if (!href || href.startsWith('http') || href.startsWith('#') || href.startsWith('mailto:') || href.startsWith('javascript:')) return;
+    start();
+  });
+  // Sahifa to'liq yuklanganda tugatish
+  window.addEventListener('load', finish);
+  // Xavfsizlik: agar 8 soniya ichida yuklanmasa, barni avtomatik tugatish
+  setTimeout(finish, 8000);
+  // Agar sahifa allaqachon yuklangan bo'lsa, barni ko'rsatmaymiz (tayyor holat)
+  if (document.readyState === 'complete') {
+    bar.style.display = 'none';
+    return;
+  }
+  // Sahifa yangi yuklanayotgan bo'lsa, DOMContentLoaded da boshlaymiz
+  document.addEventListener('DOMContentLoaded', () => {
+    start();
+  });
+})();
+
 // T57 — Global klient tomoni xatolik kuzatuvi (faqat bir marta o'rnatiladi).
 (function setupErrorTracking() {
   if (window.__mllyErrorTracking) return;
@@ -71,7 +125,10 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   const unread = notifications.filter((n) => n.unread || n.isRead === false).length;
   const isAdmin = profile.role === 'admin';
   const isManager = profile.role === 'manager';
-  const teamLinks = (!isAdmin && !isManager) && teams.map((team) => `
+  // FIX (manager sidebar): Manager o'ziga biriktirilgan jamoalarni sidebar'da ko'rishi kere.
+  // Eski logika: `(!isAdmin && !isManager)` — manager butunlay chetlatilgan edi.
+  // Yangi: isAdmin bo'lmasa, hamma ko'radi (member + team_lead + manager).
+  const teamLinks = (!isAdmin) && teams.map((team) => `
         <a href="team.html?id=${team.id}" class="nav-item">
           <div class="team-logo ${team.color || 'tl-1'}" style="width:26px;height:26px;border-radius:8px;font-size:11px">${team.logo || 'W'}</div>
           <span style="font-size:13px">${team.name}</span>
@@ -167,35 +224,68 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   `;
 };
 
+// FIX (mountLayout re-render): Sidebar/header faqat context o'zgarganda rebuild qilinadi.
+// Oldin: har bir mountLayout chaqiruvida butun sidebar HTML qayta yaratilardi,
+// keyin replaceWith bilan almashtirilardi. Bu DOM da qisqa muddatli flash berardi.
+// Yangi: renderLayout faqat haqiqatda o'zgarish bo'lsa chaqiriladi.
+window.__cachedLayoutKey = '';
+window.__cachedNavHTML = '';
+
+function layoutNeedsUpdate(active, context) {
+  if (!context) return true;
+  var profile = context.profile || window.MLLYCORE_PROFILE || {};
+  var teams = context.teams || [];
+  var notifications = context.notifications || [];
+  var unread = notifications.filter(function(n) { return n.unread || n.isRead === false; }).length;    var key = [
+      active || '',
+      profile.role || '',
+      profile.name || '',
+      profile.username || '',
+      profile.avatar || '',
+    teams.length,
+    unread,
+    teams.slice().sort(function(a,b){return a.id<b.id?-1:1}).map(function(t) { return t.id + ':' + t.name; }).join(',')
+  ].join('|');
+  if (key === window.__cachedLayoutKey && window.__cachedNavHTML) return false;
+  window.__cachedLayoutKey = key;
+  return true;
+}
+
 window.mountLayout = function(active, context) {
   if (context) window.APP_CONTEXT = context;
-  let root = document.getElementById('app');
+  var root = document.getElementById('app');
   if (!root) return;
   
   // First call: app is NOT yet wrapped → build layout WITHOUT destroying root
   if (!root.classList.contains('app')) {
-    const main = root.innerHTML;
-    // Destroy only the inner content, not the root element itself
+    var main = root.innerHTML;
     root.innerHTML = renderLayout(active, context) + '<main class="main">' + main + '</main>';
     root.classList.add('app');
+    window.__cachedNavHTML = renderLayout(active, context);
     // Apply saved theme after layout is built
-    const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
+    var theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
     window.MllyCoreTheme?.apply?.(theme);
   } else {
-    // Subsequent call: app is already wrapped — only update nav + user, skip full re-render
-    const temp = document.createElement('div');
-    temp.innerHTML = renderLayout(active, context);
-    const newHeader = temp.querySelector('.mobile-header');
-    const newSidebar = temp.querySelector('.sidebar');
-    const curHeader = root.querySelector('.mobile-header');
-    const curSidebar = root.querySelector('.sidebar');
-    // Only replace header/sidebar if they exist — no main content flicker
+    // Subsequent call: faqat sidebar/header context o'zgarganda yangilanadi
+    if (!layoutNeedsUpdate(active, context)) return;
+    
+    var temp = document.createElement('div');
+    var newHtml = renderLayout(active, context);
+    window.__cachedNavHTML = newHtml;
+    temp.innerHTML = newHtml;
+    var newHeader = temp.querySelector('.mobile-header');
+    var newSidebar = temp.querySelector('.sidebar');
+    var curHeader = root.querySelector('.mobile-header');
+    var curSidebar = root.querySelector('.sidebar');
+    // Batch replace: ikkalasini bir vaqtda almashtirish
     if (newHeader && curHeader) curHeader.replaceWith(newHeader);
     if (newSidebar && curSidebar) curSidebar.replaceWith(newSidebar);
-    // Update active nav highlighting without re-render
-    root.querySelectorAll('.nav-item').forEach((item) => {
-      const href = item.getAttribute('href') || '';
-      item.classList.toggle('active', href.includes(active));
+    // FIX (nav active): proper filename comparison
+    var activePage = String(active || '').replace(/^\//, '');
+    root.querySelectorAll('.nav-item').forEach(function(item) {
+      var href = item.getAttribute('href') || '';
+      var hrefFile = href.split('/').pop().split('?')[0].split('#')[0];
+      item.classList.toggle('active', hrefFile === activePage || hrefFile.startsWith(activePage));
     });
   }
 

@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="manifest" href="manifest.webmanifest">
+  <script src="js/icons.js"></script>
 </head>
 <body class="auth-page">
   <a href="#loginForm" class="skip-link">Asosiy kontentga o'tish</a>
@@ -162,8 +163,8 @@
     });
   </script>
   <script>
-    // T50 — PWA: service worker ro'yxatdan o'tkazish (app-shell offline caching)
-    if ('serviceWorker' in navigator) {
+    // T50 — PWA: service worker (faqat HTTPS yoki localhost)
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('sw.js').catch(() => {});
       });

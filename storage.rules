@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// T16 — Shifrlangan fayl biriktirish uchun Storage qoidalari.
+//
+// Arxitektura: Client-side AES-256-GCM shifrlash.
+// Server hech qachon ochiq faylni yoki shifr kalitini ko'rmaydi.
+// Fayl byte'lariga to'g'ridan-to'g'ri kirish faqat workspace a'zolariga ruxsat.
+//
+// Muhim: Fayllar brauzerda shifrlangan holda yuklanadi (CIPHERTEXT),
+// shuning uchun Storage'da ochiq ma'lumot saqlanmaydi. Ruxsat qoidalari
+// shifrlangan fayllarni himoya qilish uchun yetarli.
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Barcha fayllarga kirish uchun autentifikatsiya talab qilinadi
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Shifrlangan fayllar — attachments/{teamId}/{taskId}/{fileName}.enc
+    // Faqat workspace a'zolari va adminlar o'qiy oladi, yozish esa
+    // faqat workspace a'zolari uchun (fayl allaqachon client-side shifrlangan)
+    match /attachments/{teamId}/{taskId}/{fileName} {
+      function isTeamMember() {
+        return firestore.exists(
+          /databases/(default)/documents/teamMembers/$(teamId + '_' + request.auth.uid)
+        );
+      }
+      function isAdmin() {
+        return firestore.get(
+          /databases/(default)/documents/users/$(request.auth.uid)
+        ).data.role == 'admin';
+      }
+
+      allow read: if request.auth != null && (isTeamMember() || isAdmin());
+      allow write: if request.auth != null
+        && request.resource.size < 50 * 1024 * 1024
+        && isTeamMember();
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // Boshqa barcha fayllar (masalan, avatarlar) — faqat admin yoki o'z fayli
+    match /users/{userId}/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+  }
+}

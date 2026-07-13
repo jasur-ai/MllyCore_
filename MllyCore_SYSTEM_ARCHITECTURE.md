@@ -334,7 +334,137 @@ node scripts/generate-weekly-digest.js  # T17 ni lokal tekshirish (FIREBASE_SERV
 
 ---
 
-## XV. Handoff — 2026-07-09 UI/UX batch (faktlar)
+## XV. Backend Detallari: T16 (Shifrlangan Fayl) va T31 (GitHub Sync)
+
+### T16 — Shifrlangan Fayl Biriktirish: Client vs Backend
+
+Ushbu funksiya **zero-trust** prinsipi asosida qurilgan: server hech qachon ochiq faylni ko'rmaydi.
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (brauzer)                           │
+├──────────────────────────────────────────────────────────────────────┤
+│ 1. Foydalanuvchi fayl tanlaydi                                     │
+│ 2. file.arrayBuffer() → raw bytes                                 │
+│ 3. crypto.getRandomValues() → 32-byte KEY + 12-byte IV           │
+│ 4. crypto.subtle.importKey('raw', KEY, {name:'AES-GCM'}, ...)     │
+│ 5. crypto.subtle.encrypt({name:'AES-GCM', iv}, key, data)         │
+│    → shifrlangan byte'lar (CIPHERTEXT)                             │
+│ 6. uploadEncryptedFile(CIPHERTEXT → Firebase Storage)              │
+│ 7. createAttachmentMeta({ IV, fileName, size } → Backend API)      │
+│ 8. KEY foydalanuvchiga ko'rsatiladi (qabul qiluvchiga ulashadi)    │
+│    ★ KEY hech qachon serverga yuborilmaydi                         │
+└──────────────────────────────────────────────────────────────────────┘
+                                    │
+                    ┌───────────────┴───────────────┐
+                    ▼                               ▼
+     ┌────────────────────────┐     ┌──────────────────────────┐
+     │   Firebase Storage     │     │   Backend API (POST      │
+     │   /attachments/...enc  │     │   /api/create-attachment)│
+     │   (CIPHERTEXT bytes)   │     ├──────────────────────────┤
+     └────────────────────────┘     │ QABUL QILADI:           │
+                                    │ • teamId, taskId/ideaId  │
+                                    │ • fileName               │
+                                    │ • size (son)             │
+                                    │ • iv (base64, string)    │
+                                    │ • versionNote (ixtiyoriy)│
+                                    │                          │
+                                    │ BAJARADI:                │
+                                    │ 1. Membership tekshiruvi │
+                                    │    (team_lead/member/    │
+                                    │     admin)               │
+                                    │ 2. Mavjud attachment'ni  │
+                                    │    query: (teamId +      │
+                                    │    taskId/ideaId +       │
+                                    │    fileName)             │
+                                    │ 3. Agar mavjud (T54):    │
+                                    │    • oldingi versiyani   │
+                                    │      `versions[]` ga     │
+                                    │      qo'shadi            │
+                                    │    • version++           │
+                                    │ 4. Agar yangi:          │
+                                    │    • Firestore doc       │
+                                    │      yaratadi            │
+                                    │                          │
+                                    │ SAQLAMAYDI:              │
+                                    │ • Fayl byte'larini ❌    │
+                                    │ • Shifr kalitini (KEY)❌ │
+                                    │                          │
+                                    │ QAYTARADI:               │
+                                    │ • attachmentId           │
+                                    │ • version (1,2,3...)     │
+                                    └──────────────────────────┘
+```
+
+**Muhim:** Backend `POST /api/create-attachment` handleri (`handleCreateAttachment`):
+- Fayl byte'larini **ko'rmaydi** (ular to'g'ridan-to'g'ri client → Firebase Storage)
+- Shifr kalitini (KEY) **ko'rmaydi** (faqat yuklovchiga ko'rsatiladi)
+- Faqat metadata saqlaydi: `{teamId, taskId, ideaId, fileName, size, iv, version, versions[], uploadedBy}`
+- `iv` (initialization vector) — faylni DESHIFRLASH uchun kerak, lekin kalitsiz hech narsa ochilmaydi
+
+**T54 Attachment Versioning:** Agar bir xil `(teamId + taskId + fileName)` ga qayta yuklansa:
+- Eski versiya `versions[]` massiviga arxivlanadi
+- `version` maydoni ++ ga oshadi
+- Har bir versiya: `{version, fileName, size, iv, uploadedBy, note, createdAt}`
+
+---
+
+### T31 — GitHub Issues Sync: Backend Flow
+
+```
+┌──────────────┐     ┌──────────────────────────────────────────────┐
+│   CLIENT     │     │              BACKEND (Vercel)                │
+│  (team.html) │     │                                              │
+├──────────────┤     ├──────────────────────────────────────────────┤
+│ Foydalanuvchi│     │ QABUL QILADI:                               │
+│ repo va      │────▶│ • taskId (Firestore task ID)                │
+│ tokenni      │     │ • repo ("user/repo" formatida)               │
+│ kiritadi     │     │ • token (ixtiyoriy — bo'sh bo'lsa           │
+│              │     │   process.env.GITHUB_TOKEN ishlatiladi)      │
+│              │     │                                              │
+│              │     │ BAJARADI:                                    │
+│              │     │ 1. Taskni Firestore'dan o'qiydi              │
+│              │     │    (tasks/{taskId})                          │
+│              │     │ 2. Membership tekshiruvi: team_lead/admin    │
+│              │     │ 3. GitHub token ni tanlaydi:                 │
+│              │     │    a) Agar client token bo'lsa → uni ishlat  │
+│              │     │    b) Aks holda → GITHUB_TOKEN env           │
+│              │     │ 4. POST https://api.github.com/repos/        │
+│              │     │    {repo}/issues                             │
+│              │     │    Body: { title, body }                     │
+│              │     │    Headers: Authorization: token {TOKEN}     │
+│              │     │ 5. GitHub javobini tekshiradi:               │
+│              │     │    • OK → githubIssueId + githubIssueUrl     │
+│              │     │          task'ga yoziladi                    │
+│              │     │    • Error → GitHub xatoligi qaytariladi     │
+│              │     │ 6. issueUrl ni client'ga qaytaradi           │
+│              │     │                                              │
+│              │     │ SAQLAMAYDI:                                  │
+│              │     │ • Token (hech qayerda saqlanmaydi)           │
+│              │     │ • GitHub'dan boshqa ma'lumot                 │
+│              │     │                                              │
+│              │     │ GITHUB_TOKEN env kutilmagan xatoliklar:      │
+│              │     │ • 404 → repo topilmadi ("Not Found")         │
+│              │     │ • 401 → token noto'g'ri ("Bad credentials") │
+│              │     │ • 403 → token ruxsati yetarli emas          │
+│              │     │ • 502 → GitHub ga ulanish muammosi          │
+│              │     │   (DNS/network)                              │
+│              │◀────└──────────────────────────────────────────────┘
+│              │
+│ issueUrl ni  │
+│ task yonida  │
+│ ko'rsatadi   │
+└──────────────┘
+```
+
+**Backend kodi:** `api/index.js` → `handleSyncGithub()` (T31, ~30 qator)
+- Token hech qayerda saqlanmaydi — faqat bitta HTTP so'rov uchun ishlatiladi
+- Agar `GITHUB_TOKEN` env o'rnatilmagan bo'lsa, client token majburiy
+- Rate limit: GitHub API 5000 so'rov/soat (authenticated); 60 so'rov/soat (unauthenticated)
+
+---
+
+## XVI. Handoff — 2026-07-09 UI/UX batch (faktlar)
 
 Quyidagi o'zgarishlar bitta sessiyada, additive tarzda qilindi. Buzilgan narsa yo'q.
 
