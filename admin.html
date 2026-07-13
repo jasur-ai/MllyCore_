@@ -65,7 +65,10 @@
                   <h2>Managerlar va Jamoalar Boshqaruvi</h2>
                   <div class="workspace-surface-copy">Yangi manager tayinlash hamda unga mas'ul komandalarni biriktirish.</div>
                 </div>
-                <button class="btn btn-primary btn-sm" onclick="UTIL.openModal('addManagerModal')">+ Manager qo'shish</button>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <button class="btn btn-primary btn-sm" onclick="UTIL.openModal('addManagerModal')">+ Manager qo'shish</button>
+                  <button class="btn btn-sm" id="refreshManagerBtn" title="Managerlar ro'yxatini yangilash" style="background:var(--surface-sub);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:4px;">🔄 Yangilash</button>
+                </div>
               </div>
               <div id="managerList" style="padding:16px;display:flex;flex-direction:column;gap:12px;"></div>
             </div>
@@ -78,6 +81,7 @@
                   <h2>📊 Global Analytics</h2>
                   <div class="workspace-surface-copy">Platformaning umumiy statistikasi va performance metrikalari.</div>
                 </div>
+                <button class="btn btn-secondary btn-sm" onclick="refreshGlobalAnalytics()">🔄 Yangilash</button>
               </div>
               <div id="globalAnalytics" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
             </div>
@@ -489,8 +493,8 @@
         }
       });
 
-      // Load Global Analytics
-      (async () => {
+      // Load Global Analytics — named function for refresh button
+      window.refreshGlobalAnalytics = async () => {
         try {
           const idToken = await user.getIdToken();
           const response = await fetch('/api/index?action=admin-stats', {
@@ -528,8 +532,9 @@
           }
         } catch (error) {
           console.error('Analytics olishda xatolik:', error);
+          UTIL.toast('Analitika yuklanmadi.', 'error');
         }
-      })();
+      };
 
       // Load Audit Logs
       window.refreshAuditLogs = async () => {
@@ -1264,6 +1269,31 @@
           UTIL.toast(err.message || 'Team lead tayinlanmadi.', 'error');
         }
       };
+
+      // Initialize global analytics on page load
+      refreshGlobalAnalytics();
+
+      // Manager refresh button — re-fetch users va render
+      document.getElementById('refreshManagerBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('refreshManagerBtn');
+        const originalText = btn.textContent;
+        btn.textContent = '⏳';
+        btn.disabled = true;
+        try {
+          const freshUsers = await MllyCore.getCollection('users', { forceFresh: true });
+          users.length = 0;
+          freshUsers.forEach((u) => users.push(u));
+          renderManagers();
+          updateAdminStats();
+          UTIL.updateLastUpdateTime();
+          UTIL.toast('Managerlar yangilandi.', 'success');
+        } catch (e) {
+          UTIL.toast(e.message || 'Yangilanmadi.', 'error');
+        } finally {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }
+      });
 
       // Initial render
       renderWorkspaceList();
