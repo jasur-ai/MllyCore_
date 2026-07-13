@@ -6,17 +6,39 @@
 // file:// protokolda SW ro'yxatdan o'tmaydi — bu normal holat.
 // HTML dagi SW registration kodi 'location.protocol === "file:"' check bilan o'ralgan.
 
-const CACHE = 'mllycore-shell-v1';
+const CACHE = 'mllycore-shell-v2';
 const SHELL = [
+  // HTML pages (PWA app-shell)
   'index.html',
   'login.html',
+  'register.html',
   'dashboard.html',
+  'team.html',
+  'idea.html',
+  'my-ideas.html',
+  'profile.html',
+  'notifications.html',
+  'reports.html',
+  'admin.html',
+  'verify-email.html',
+  // CSS
   'css/styles.css',
+  // JS — Core
   'js/firebase-config.js',
   'js/firebase-service.js',
+  'js/icons.js',
   'js/layout.js',
+  'js/auth-guard.js',
   'js/theme.js',
-  'js/auth-guard.js'
+  // JS — Widgets
+  'js/analytics-widgets.js',
+  // Images (brand)
+  'images/favicon.svg',
+  'images/logo-icon.svg',
+  'images/logo-text.svg',
+  // Images (PWA)
+  'images/icon-192.png',
+  'images/icon-512.png'
 ];
 
 self.addEventListener('install', (event) => {

@@ -158,6 +158,31 @@
     monitor:     '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>',
     graduationCap:'<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
     starHalf:    '<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77V2z"/>',
+
+    // MllyCore Brand
+    mllycore:    '<path d="M3 20V5l6 10 3-6 3 6 6-10v15" stroke-width="2.5"/>',
+    mllycoreFill:'<path d="M3 20V5l6 10 3-6 3 6 6-10v15" fill="currentColor" stroke="none"/>',
+
+    // Workspace & Project Management
+    kanban:      '<line x1="4" y1="3" x2="4" y2="21"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="20" y1="3" x2="20" y2="21"/><rect x="2" y="3" width="4" height="3" rx=".5"/><rect x="10" y="3" width="4" height="6" rx=".5"/><rect x="18" y="3" width="4" height="4" rx=".5"/>',
+    sprint:      '<circle cx="12" cy="12" r="9"/><polyline points="13 8 13 12 16 14"/><path d="M9 3l3-3 3 3"/><polyline points="21 10 22 12 21 14"/>',
+    backlog:     '<rect x="4" y="5" width="16" height="4" rx="1"/><rect x="4" y="12" width="12" height="4" rx="1"/><rect x="4" y="19" width="8" height="4" rx="1"/>',
+    milestone:   '<path d="M4 21V4h14l-3 5 3 5H4"/><circle cx="19" cy="15" r="4"/><polyline points="17 15 19 17 23 13"/>',
+    retros:      '<circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/><path d="M19 16l2 3-3 2"/><path d="M5 16l-2 3 3 2"/>',
+
+    // Team & Communication
+    standup:     '<circle cx="9" cy="7" r="3"/><path d="M3 21v-2a4 4 0 015-3.8"/><circle cx="15" cy="8" r="2.5"/><path d="M12 21v-2.5a5 5 0 016-4.7"/><path d="M21 21v-2a3 3 0 00-1.5-2.6"/>',
+    feedback:    '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/><polygon points="12 7 13.2 9.5 16 9.8 14 11.7 14.5 14.5 12 13.2 9.5 14.5 10 11.7 8 9.8 10.8 9.5 12 7"/>',
+    onboarding:  '<rect x="3" y="3" width="18" height="18" rx="2"/><polyline points="9 12 11 14 15 10"/><line x1="3" y1="8" x2="21" y2="8"/><circle cx="18" cy="18" r="3"/><line x1="18" y1="16.5" x2="18" y2="19.5"/><line x1="16.5" y1="18" x2="19.5" y2="18"/>',
+    notes:       '<path d="M4 21V5a2 2 0 012-2h10l4 4v14a2 2 0 01-2 2H6a2 2 0 01-2-2z"/><polyline points="14 3 14 9 20 9"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="13" y2="18"/>',
+    docs:        '<path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M16 13H8M16 17H8M10 9H8"/>',
+
+    // Strategy & Analytics
+    roadmap:     '<polyline points="2 18 7 12 12 15 22 6"/><circle cx="7" cy="12" r="2"/><circle cx="12" cy="15" r="2"/><circle cx="22" cy="6" r="2"/><line x1="2" y1="4" x2="2" y2="22"/><line x1="22" y1="3" x2="22" y2="22"/>',
+    insights:    '<path d="M10 10a3 3 0 115 0c0 2-3 3-3 5"/><line x1="12" y1="18" x2="12" y2="20"/><path d="M9 20h6"/><polyline points="4 5 8 9 12 6 16 10"/>',
+    teamGoal:    '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5"/><path d="M7 9l-3-3"/><path d="M17 9l3-3"/><path d="M7.5 19.5L6 21"/><path d="M16.5 19.5L18 21"/>',
+    integration: '<rect x="2" y="6" width="8" height="12" rx="1.5"/><rect x="14" y="6" width="8" height="12" rx="1.5"/><path d="M10 12h4"/><circle cx="10" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="15" r="1" fill="currentColor" stroke="none"/>',
+    analytics:   '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/><line x1="3" y1="21" x2="21" y2="21"/>',
   };
 
   // =============================================
@@ -262,13 +287,22 @@
     '🕔': 'clock',       '🕕': 'clock',       '🕖': 'clock',
     '🕗': 'clock',       '🕘': 'clock',       '🕙': 'clock',
     '🕚': 'clock',       '🕛': 'clock',       '📖': 'book',
+    // Workspace & Project Management emoji (unique, no conflicts with original map)
+    '🏗️': 'kanban',    '📓': 'notes',       '🤖': 'integration',
   };
 
   // =============================================
   // RENDER FUNCTIONS
   // =============================================
 
-  /** Render SVG string */
+  /**
+   * Render an icon as an SVG string.
+   *
+   * @param {string} name - Icon key name from the ICONS registry (e.g. 'checkmark', 'user', 'mllycore')
+   * @param {number} [size=16] - Width and height of the SVG in pixels
+   * @param {string} [className=''] - Additional CSS class(es) to append to the SVG element
+   * @returns {string} SVG markup string, or empty string if the icon name is not found
+   */
   function icon(name, size, className) {
     var paths = ICONS[name];
     if (!paths) return '';
@@ -277,7 +311,14 @@
     return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon icon-' + name + ' ' + cls + '">' + paths + '</svg>';
   }
 
-  /** Render SVG DOM element */
+  /**
+   * Render an icon as a real DOM SVG element.
+   *
+   * @param {string} name - Icon key name from the ICONS registry
+   * @param {number} [size=16] - Width and height in pixels
+   * @param {string} [className=''] - Additional CSS class(es)
+   * @returns {SVGSVGElement|null} The SVG DOM element, or null if the icon name is invalid
+   */
   function iconRender(name, size, className) {
     var html = icon(name, size, className);
     if (!html) return null;
@@ -286,29 +327,47 @@
     return div.firstElementChild;
   }
 
-  /** Prepend icon to an element */
+  /**
+   * Prepend an SVG icon as the first child of a DOM element.
+   *
+   * @param {Element|null} el - The target DOM element
+   * @param {string} name - Icon key name
+   * @param {number} [size=16] - Width and height in pixels
+   * @returns {Element|null} The original element for chaining, or null if el was null
+   */
   function iconPrepend(el, name, size) {
     if (!el) return el;
-    var svg = iconRender(name, size || 14);
+    var svg = iconRender(name, size || 16);
     if (svg) el.insertBefore(svg, el.firstChild);
     return el;
   }
 
-  /** Replace emoji in a text string with SVG icon */
+  /**
+   * Replace emoji characters in a text string with inline SVG icons.
+   * Uses a single-pass regex replacement (O(n)) for maximum performance.
+   *
+   * @param {string} text - The input string possibly containing emoji characters
+   * @param {number} [size=16] - Width and height of the replacement icons in pixels
+   * @returns {string} The string with emoji replaced by SVG markup, or the original value if not a string
+   */
+  /** Cache the emoji regex so we build it only once */
+  var _emojiRe = null;
   function iconReplaceText(text, size) {
     if (!text || typeof text !== 'string') return text;
-    size = size || 14;
-    // Sort keys by length (longest first) to handle multi-char emojis
-    var keys = Object.keys(EMOJI_MAP).sort(function (a, b) { return b.length - a.length; });
-    var result = text;
-    for (var i = 0; i < keys.length; i++) {
-      var emoji = keys[i];
-      var iconName = EMOJI_MAP[emoji];
-      if (result.indexOf(emoji) !== -1) {
-        result = result.split(emoji).join(icon(iconName, size));
+    size = size || 16;
+    // Build regex once, then reuse
+    if (!_emojiRe) {
+      var keys = Object.keys(EMOJI_MAP).sort(function (a, b) { return b.length - a.length; });
+      if (!keys.length) return text;
+      var escaped = [];
+      for (var i = 0; i < keys.length; i++) {
+        escaped.push(keys[i].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
       }
+      _emojiRe = new RegExp(escaped.join('|'), 'g');
     }
-    return result;
+    return text.replace(_emojiRe, function (match) {
+      return icon(EMOJI_MAP[match], size);
+    });
   }
 
   // =============================================
@@ -319,9 +378,16 @@
   var _scanning = false; // reentrancy guard
   var _ignoreTags = { SCRIPT: true, STYLE: true, TEXTAREA: true, INPUT: true, SELECT: true, OPTION: true, SVG: true, CODE: true, PRE: true, NOSCRIPT: true };
 
-  /** Walk text nodes, replace emojis with SVG icons */
+  /**
+   * Walk all text nodes within a DOM subtree and replace emoji characters with
+   * inline SVG icons. Skips tags listed in _ignoreTags (SCRIPT, STYLE, SVG, etc.).
+   *
+   * @param {Element|Document} root - The root element or document to scan
+   * @param {number} [size=16] - Width and height of replacement icons in pixels
+   * @returns {void}
+   */
   function scanElement(root, size) {
-    size = size || 14;
+    size = size || 16;
     var walker = document.createTreeWalker(
       root,
       4, // NodeFilter.SHOW_TEXT
@@ -366,7 +432,7 @@
           parts.push(document.createTextNode(remaining.substring(0, bestIdx)));
         }
         // Create SVG element for the emoji
-        var svgEl = iconRender(EMOJI_MAP[bestEmoji], size || 14);
+        var svgEl = iconRender(EMOJI_MAP[bestEmoji], size);
         if (svgEl) {
           svgEl.style.verticalAlign = '-0.15em';
           parts.push(svgEl);
@@ -389,9 +455,15 @@
     }
   }
 
-  /** Full scan: emoji → SVG icon throughout the document */
+  /**
+   * Perform a full-document scan: replace all emoji characters in visible text
+   * nodes within document.body with inline SVG icons.
+   *
+   * @param {number} [size=16] - Width and height of replacement icons in pixels
+   * @returns {void}
+   */
   function scanDocument(size) {
-    scanElement(document.body, size || 14);
+    scanElement(document.body, size || 16);
     _scanned = true;
   }
 
@@ -400,9 +472,17 @@
   // =============================================
 
   var _observer = null;
+  /**
+   * Start a MutationObserver that watches for new DOM nodes being added.
+   * When new content appears, it automatically runs scanElement on the
+   * inserted subtrees (debounced at 50ms) to replace any emoji with icons.
+   *
+   * @param {number} [size=16] - Width and height of replacement icons in pixels
+   * @returns {void}
+   */
   function startObserver(size) {
     if (_observer) return;
-    var obsSize = size || 14;
+    var obsSize = size || 16;
     _observer = new MutationObserver(function (mutations) {
       if (_scanning) return; // skip if scan is in progress
       var roots = [];
@@ -459,11 +539,37 @@
   window.Icon.scan = scanDocument;
   window.Icon.scanElement = scanElement;
 
+  /**
+   * Stop the MutationObserver and clean up resources.
+   * Call this when leaving a page or destroying a component to prevent
+   * memory leaks in single-page applications (SPA).
+   *
+   * @returns {void}
+   */
+  window.Icon.stop = function () {
+    if (_observer) {
+      _observer.disconnect();
+      _observer = null;
+    }
+  };
+
+  /**
+   * Disconnect and restart the observer (useful after dynamic route changes).
+   *
+   * @param {number} [size=16] - Width and height of replacement icons in pixels
+   * @returns {void}
+   */
+  window.Icon.restart = function (size) {
+    if (_observer) { _observer.disconnect(); _observer = null; }
+    scanDocument(size);
+    startObserver(size);
+  };
+
   // Legacy compat: data-icon attribute auto-replace (for manually marked elements)
   document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('[data-icon]').forEach(function (el) {
       var html = el.innerHTML;
-      var replaced = iconReplaceText(html, parseInt(el.dataset.iconSize) || 14);
+      var replaced = iconReplaceText(html, parseInt(el.dataset.iconSize) || 16);
       if (replaced !== html) el.innerHTML = replaced;
     });
   });
