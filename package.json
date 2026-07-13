@@ -13,7 +13,8 @@
     "deploy:rules": "firebase deploy --only firestore:rules,firestore:indexes",
     "deploy:hosting": "firebase deploy --only hosting",
     "test:smoke": "firebase emulators:exec --only auth,firestore node scripts/smoke-test.js",
-    "test:t16": "node scripts/test-t16-storage.js"
+    "test:t16": "node scripts/test-t16-storage.js",
+    "test:crud": "firebase emulators:exec --only auth,firestore \"node scripts/test-crud.js\""
   },
   "dependencies": {
     "firebase-admin": "^13.10.0"

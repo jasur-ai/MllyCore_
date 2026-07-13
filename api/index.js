@@ -899,13 +899,12 @@ async function handleArchiveWorkspace(req, res, db, decoded, user) {
     const m = await getMembership(db, teamId, decoded.uid);
     if (!m || m.role !== 'team_lead') return { status: 403, error: 'Faqat admin yoki team_lead.' };
   }
-  const status = restore ? 'active' : 'archived';
-  const upd = { status, updatedAt: SV() };
+  const wsStatus = restore ? 'active' : 'archived';
+  const upd = { status: wsStatus, updatedAt: SV() };
   if (!restore) { upd.archivedAt = SV(); upd.archivedBy = decoded.uid; }
   await db.collection('teams').doc(teamId).update(upd);
   await audit(db, restore ? 'workspace_restored' : 'workspace_archived', { teamId, byUserId: decoded.uid });
-  invalidateTeamCache(); invalidateDashboardCache();
-  return { status: 200, success: true, status };
+  return { status: 200, success: true, wsStatus: wsStatus };
 }
 
 // T11 - A'zo uchun maxsus ruxsatlar (faqat admin).
