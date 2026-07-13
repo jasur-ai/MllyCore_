@@ -262,6 +262,8 @@ window.mountLayout = function(active, context) {
     root.innerHTML = renderLayout(active, context) + '<main class="main">' + main + '</main>';
     root.classList.add('app');
     window.__cachedNavHTML = renderLayout(active, context);
+    // Emoji → SVG: fresh DOM scan (SPA navda yangi emoji'lar ikonga aylanadi)
+    window.Icon?.restart?.();
     // Apply saved theme after layout is built
     var theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
     window.MllyCoreTheme?.apply?.(theme);
@@ -287,6 +289,8 @@ window.mountLayout = function(active, context) {
       var hrefFile = href.split('/').pop().split('?')[0].split('#')[0];
       item.classList.toggle('active', hrefFile === activePage || hrefFile.startsWith(activePage));
     });
+    // Emoji → SVG: sidebar/header almashtirilganidan keyin DOM ni qayta skanerlash
+    window.Icon?.restart?.();
   }
 
   // T45 — Cmd+K Command Palette (global, faqat bir marta qo'shiladi)
