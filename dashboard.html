@@ -19,8 +19,13 @@
     <div class="workspace-app">
       <section class="workspace-command">
         <div>
-          <h1 class="workspace-command-title" id="welcome">Workspace overview</h1>
-          <p class="workspace-command-copy" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
+          <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+            <div>
+              <h1 class="workspace-command-title" id="welcome">Workspace overview</h1>
+              <p class="workspace-command-copy" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
+            </div>
+            <span id="lastUpdateTime" class="text-xs muted" style="white-space:nowrap;font-size:11px;flex-shrink:0;"></span>
+          </div>
         </div>
         <div class="workspace-command-tools">
           <div class="search" style="display:none">
@@ -331,6 +336,7 @@
         }).catch(() => {});
       }
 
+      document.getElementById('lastUpdateTime').textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
       document.getElementById('dashboardSubtitle').textContent = isAdmin
         ? 'Statistika, workspace yaratish va production boshqaruvi shu yerda.'

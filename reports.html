@@ -35,8 +35,11 @@
     <div class="workspace-app">
       <section class="workspace-command">
         <div>
-          <h1 class="workspace-command-title" id="reportHeaderTitle">Hisobotlar Nazorati</h1>
-          <p class="workspace-command-copy" id="reportHeaderCopy">Jamoa a'zolari, Team Lead va Manager o'rtasidagi hisobot almashinuvi va nazorati.</p>
+          <div>
+            <h1 class="workspace-command-title" id="reportHeaderTitle">Hisobotlar Nazorati</h1>
+            <p class="workspace-command-copy" id="reportHeaderCopy">Jamoa a'zolari, Team Lead va Manager o'rtasidagi hisobot almashinuvi va nazorati.</p>
+            <span id="lastUpdateTime" class="text-xs muted" style="font-size:11px;"></span>
+          </div>
         </div>
         <div class="workspace-command-tools">
           <span class="badge badge-active" id="userRoleBadge">Member</span>
@@ -136,7 +139,9 @@
         </div>`;
       document.getElementById('reportsRetryBtn')?.addEventListener('click', async () => {
         if (statsBox) statsBox.textContent = 'Yuklanmoqda...';
-        try { await loadAllReports(); } catch (e) { showReportsError(e); }
+        try { await loadAllReports();
+        const initTimeEl = document.getElementById('lastUpdateTime');
+        if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' }); } catch (e) { showReportsError(e); }
       });
     }
 
@@ -591,12 +596,18 @@
 
       try {
         await loadAllReports();
+        const initTimeEl = document.getElementById('lastUpdateTime');
+        if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
       } catch (err) {
         showReportsError(err);
       }
 n      // 30 soniyalik avtomatik yangilash
       MllyCore.startAutoRefresh(async () => {
         await loadAllReports();
+        const initTimeEl = document.getElementById('lastUpdateTime');
+        if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+        const el = document.getElementById('lastUpdateTime');
+        if (el) el.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
       }, 30000);
     })();
   </script>

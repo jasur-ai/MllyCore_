@@ -610,6 +610,7 @@
           <div>
             <h1 class="workspace-command-title">${escapeHtml(data.team.name)}</h1>
             <p class="workspace-command-copy">${escapeHtml(data.team.description || 'Workspace ichidagi idea, startup, task va chat oqimi.')}</p>
+            <span id="lastUpdateTime" class="text-xs muted" style="font-size:11px;"></span>
           </div>
           <div class="workspace-command-tools">
             <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
@@ -1851,6 +1852,8 @@
         const cachedKey = workspaceRenderKey(cached);
         if (cachedKey !== lastWorkspaceRenderKey) {
           await renderWorkspace(workspaceState, currentUserId);
+      const lastTimeEl = document.getElementById('lastUpdateTime');
+      if (lastTimeEl) lastTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
         }
       }
 
@@ -1861,6 +1864,8 @@
         const freshKey = workspaceRenderKey(fresh);
         if (freshKey !== lastWorkspaceRenderKey) {
           await renderWorkspace(workspaceState, currentUserId);
+      const lastTimeEl = document.getElementById('lastUpdateTime');
+      if (lastTimeEl) lastTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
         }
       }
     }
@@ -1897,7 +1902,7 @@
       }
       await renderWorkspace(workspaceState, user.uid);
       MllyCore.updatePresence('online').catch(() => {});
-n      // 30 soniyalik avtomatik yangilash
+      // 30 soniyalik avtomatik yangilash
       MllyCore.startAutoRefresh(async () => {
         try {
           const freshData = await MllyCore.getTeamData(workspaceState.team.id);
@@ -1906,6 +1911,8 @@ n      // 30 soniyalik avtomatik yangilash
             await renderWorkspace(workspaceState, user.uid);
           }
         } catch (_) {}
+        const el = document.getElementById('lastUpdateTime');
+        if (el) el.textContent = 'So'nggi yangilanish: ' + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
       }, 30000);
     })();
 

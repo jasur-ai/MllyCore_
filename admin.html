@@ -52,6 +52,7 @@
                 </div>
                 <div style="display:flex;align-items:center;gap:8px;">
                   <button class="btn btn-sm" id="refreshWorkspaceBtn" title="Ma'lumotlarni qayta yuklash" style="background:var(--surface-sub);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:12px;font-weight:600;display:flex;align-items:center;gap:4px;transition:all 0.15s;">🔄 Yangilash</button>
+                  <span id="lastUpdateTime" class="text-xs muted" style="white-space:nowrap;font-size:11px;"></span>
                   <span class="badge">Production control</span>
                 </div>
               </div>
@@ -337,6 +338,14 @@
     window.UTIL = window.UTIL || {
       openModal: (id) => document.getElementById(id)?.classList.add('open'),
       closeModal: (id) => document.getElementById(id)?.classList.remove('open'),
+      updateLastUpdateTime: () => {
+        const el = document.getElementById('lastUpdateTime');
+        if (el) {
+          const now = new Date();
+          const time = now.toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+          el.textContent = `So'nggi yangilanish: ${time}`;
+        }
+      },
       toast: (() => {
         let active = null;
         return (message, type) => {
@@ -1259,6 +1268,7 @@
       // Initial render
       renderWorkspaceList();
       bindWorkspaceEvents();
+      UTIL.updateLastUpdateTime();
 
       // Refresh button — ma'lumotlarni Firestore'dan qayta yuklash
       document.getElementById('refreshWorkspaceBtn')?.addEventListener('click', async () => {
@@ -1301,6 +1311,7 @@
           UTIL.toast('Ma\'lumotlar yangilandi.', 'success');
         } catch (e) {
           UTIL.toast('Yangilashda xatolik: ' + (e.message || ''), 'error');
+          UTIL.updateLastUpdateTime();
         } finally {
           btn.innerHTML = originalText;
           btn.disabled = false;
