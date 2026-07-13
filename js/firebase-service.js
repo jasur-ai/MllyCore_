@@ -190,6 +190,16 @@ window.MllyCore = {
           const teams = teamDocs
             .map((teamDoc) => (teamDoc.exists() ? { id: teamDoc.id, membershipRole: 'manager', ...teamDoc.data() } : null))
             .filter(Boolean);
+          // Member counts for each assigned team (teamMembers docs orqali)
+          const memberCounts = await Promise.all(
+            assignedIds.map((id) =>
+              getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', id)))
+                .then((snap) => ({ teamId: id, count: snap.docs.length }))
+                .catch(() => ({ teamId: id, count: 0 }))
+            )
+          );
+          const countMap = Object.fromEntries(memberCounts.map((m) => [m.teamId, m.count]));
+          teams.forEach((team) => { team.membersCount = countMap[team.id] || 0; });
           payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
         } else {
           const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
