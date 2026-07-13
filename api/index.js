@@ -567,6 +567,35 @@ async function handleStats(req, res, db, decoded, user) {
     const teams = (await db.collection('teams').get()).docs.map((d) => ({ id: d.id, ...d.data() }));
     const totalUsers = (await db.collection('users').get()).size;
     const totalIdeas = (await db.collection('ideas').get()).size;
+
+    // Workspace yaratish statistikasi — oylar bo'yicha
+    const monthNames = ['Yanv', 'Fev', 'Mar', 'Apr', 'May', 'Iyun', 'Iyul', 'Avg', 'Sen', 'Okt', 'Noy', 'Dek'];
+    const now = new Date();
+    const creationByMonth = {};
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      creationByMonth[key] = 0;
+    }
+    teams.forEach((team) => {
+      let ts = team.createdAt;
+      if (!ts) return;
+      if (ts.toMillis) ts = new Date(ts.toMillis());
+      else if (typeof ts === 'number') ts = new Date(ts);
+      else ts = new Date(ts);
+      if (Number.isNaN(ts.getTime())) return;
+      const key = `${ts.getFullYear()}-${String(ts.getMonth() + 1).padStart(2, '0')}`;
+      if (creationByMonth[key] !== undefined) creationByMonth[key]++;
+    });
+    const creationTimeline = Object.entries(creationByMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, count]) => ({
+        month: (() => { const m = parseInt(key.split('-')[1], 10) - 1; return monthNames[m] || key; })(),
+        count,
+        key,
+      }));
+    const totalCreatedThisPeriod = creationTimeline.reduce((s, m) => s + m.count, 0);
+
     return {
       status: 200,
       platform: {
@@ -574,6 +603,10 @@ async function handleStats(req, res, db, decoded, user) {
         totalTeams: teams.length,
         totalIdeas,
         avgHealthScore: teams.length ? Math.round(teams.reduce((s, t) => s + (t.healthScore || 0), 0) / teams.length) : 0,
+        creationStats: {
+          totalCreatedThisPeriod,
+          timeline: creationTimeline,
+        },
       },
     };
   }

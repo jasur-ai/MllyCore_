@@ -452,10 +452,31 @@
           const data = await response.json();
           if (data.platform) {
             const container = document.getElementById('globalAnalytics');
+            const cs = data.platform.creationStats;
+            let creationChart = '';
+            if (cs && cs.timeline && cs.timeline.length) {
+              const maxCount = Math.max(...cs.timeline.map(m => m.count), 1);
+              creationChart = `
+                <div class="stat-card" style="grid-column:1/-1;">
+                  <div style="font-size:15px;font-weight:700;margin-bottom:8px;">📈 Workspace yaratish (so'nggi 6 oy)</div>
+                  <div style="display:flex;gap:6px;align-items:flex-end;height:90px;padding:0 4px;">
+                    ${cs.timeline.map((m, idx) => `
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;">
+                        <span style="font-size:12px;font-weight:700;color:var(--accent);">${m.count}</span>
+                        <div style="width:100%;border-radius:6px 6px 0 0;background:var(--accent);opacity:${0.4 + (m.count / maxCount) * 0.6};height:${Math.max(4, (m.count / maxCount) * 55)}px;transition:all 0.3s;" title="${m.month}: ${m.count} ta"></div>
+                        <span style="font-size:10px;color:var(--text-muted);">${m.month}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                  <div style="font-size:12px;color:var(--text-muted);margin-top:8px;">Jami: ${cs.totalCreatedThisPeriod} ta workspace</div>
+                </div>
+              `;
+            }
             container.innerHTML = `
               ${window.AnalyticsWidgets.renderStatCard('Jami Foydalanuvchilar', data.platform.totalUsers || 0, 'Platformadagi barcha userlar', '👥')}
               ${window.AnalyticsWidgets.renderStatCard('Jami Teamlar', data.platform.totalTeams || 0, 'Aktiv workspace\'lar', '🏢')}
               ${window.AnalyticsWidgets.renderStatCard('O\'rtacha Health Score', data.platform.avgHealthScore || 0, 'Barcha teamlar', '📊')}
+              ${creationChart}
             `;
           }
         } catch (error) {
