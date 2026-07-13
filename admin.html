@@ -333,7 +333,27 @@
   <script>
     window.UTIL = window.UTIL || {
       openModal: (id) => document.getElementById(id)?.classList.add('open'),
-      closeModal: (id) => document.getElementById(id)?.classList.remove('open')
+      closeModal: (id) => document.getElementById(id)?.classList.remove('open'),
+      toast: (() => {
+        let active = null;
+        return (message, type) => {
+          if (active) { active.remove(); active = null; }
+          const el = document.createElement('div');
+          el.className = 'toast';
+          el.style.cssText = 'position:fixed;bottom:24px;right:24px;background:var(--panel);border:1px solid var(--border);padding:12px 16px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.4);z-index:1200;opacity:0;transform:translateY(10px);transition:all .2s;font-size:13px;font-weight:500;max-width:360px;display:flex;align-items:center;gap:8px;';
+          if (type === 'error') el.style.borderColor = '#ef4444';
+          if (type === 'success') el.style.borderColor = '#22c55e';
+          el.innerHTML = (type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : '') + message;
+          document.body.appendChild(el);
+          requestAnimationFrame(() => { el.style.opacity = '1'; el.style.transform = 'translateY(0)'; });
+          active = el;
+          setTimeout(() => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(10px)';
+            setTimeout(() => { el.remove(); if (active === el) active = null; }, 200);
+          }, 4000);
+        };
+      })()
     };
 
     (async () => {
@@ -423,6 +443,7 @@
         try {
           const result = await MllyCore.createWorkspace({ name, description, leadEmail, templateId });
           UTIL.closeModal('createWorkspaceModal');
+          UTIL.toast('Workspace yaratildi: ' + name, 'success');
           // Yangi workspace'ni mahalliy ro'yxatga qo'shib, sahifani qayta yuklamasdan ko'rsatish
           const newTeam = {
             id: result.teamId,
@@ -1091,6 +1112,7 @@
             if (!confirm(`"${button.dataset.archiveName}" ${isRestore ? 'tiklansinmi' : 'arxivlansinmi'}?`)) return;
             try {
               await MllyCore.archiveWorkspace(teamId, isRestore);
+              UTIL.toast(isRestore ? 'Workspace tiklandi.' : 'Workspace arxivlandi.', 'success');
               // Mahalliy ro'yxatni yangilash
               const team = teams.find(t => t.id === teamId);
               if (team) {
@@ -1099,7 +1121,7 @@
                 bindWorkspaceEvents();
                 updateAdminStats();
               }
-            } catch (err) { alert(err.message); }
+            } catch (err) { UTIL.toast(err.message, 'error'); }
           });
         });
 
@@ -1148,7 +1170,7 @@
             if (!leadEmail) return;
             try {
               const r = await MllyCore.cloneWorkspace({ teamId, name, leadEmail });
-              UTIL.toast('Nusxalandi: ' + r.teamId);
+              UTIL.toast('Nusxalandi: ' + name, 'success');
               // Clone qilingan workspace'ni ham ro'yxatga qo'shamiz
               const srcTeam = teams.find(t => t.id === teamId);
               if (srcTeam && r.teamId) {
@@ -1174,7 +1196,7 @@
                 updateAdminStats();
                 renderManagers();
               }
-            } catch (e) { alert(e.message); }
+            } catch (e) { UTIL.toast(e.message, 'error'); }
           });
         });
       };
@@ -1225,8 +1247,9 @@
           renderWorkspaceList();
           bindWorkspaceEvents();
           updateAdminStats();
+          UTIL.toast('Team lead tayinlandi.', 'success');
         } catch (err) {
-          alert(err.message || 'Team lead tayinlanmadi.');
+          UTIL.toast(err.message || 'Team lead tayinlanmadi.', 'error');
         }
       };
 
@@ -1244,6 +1267,7 @@
         try {
           await MllyCore.deleteWorkspace(selectedTeamId, password);
           UTIL.closeModal('deleteWorkspaceModal');
+          UTIL.toast('Workspace o\'chirildi.', 'success');
           // Mahalliy ro'yxatdan o'chirish
           const idx = teams.findIndex(t => t.id === selectedTeamId);
           if (idx > -1) teams.splice(idx, 1);
