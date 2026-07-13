@@ -123,9 +123,9 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   return `
   <header class="mobile-header">
     <a href="dashboard.html" class="brand mobile-brand">
-      <div class="brand-logo">M</div>
+      <div class="brand-logo"><img src="images/logo-icon-small.svg" alt="M" width="23" height="24"></div>
       <div>
-        <div class="brand-name">MllyCore</div>
+        <div class="brand-name"><img src="images/logo-text-small.svg" alt="MllyCore" height="22" style="vertical-align:middle"></div>
         <div class="text-xs muted">Boshqaruv paneli</div>
       </div>
     </a>
@@ -138,9 +138,9 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   <div class="sidebar-backdrop" onclick="document.body.classList.remove('nav-open')"></div>
   <aside class="sidebar">
     <a href="dashboard.html" class="brand">
-      <div class="brand-logo">M</div>
+      <div class="brand-logo"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></div>
       <div>
-        <div class="brand-name">MllyCore</div>
+        <div class="brand-name"><img src="images/logo-text.svg" alt="MllyCore" height="31" style="vertical-align:middle"></div>
         <div class="text-xs muted">${isAdmin ? 'Admin boshqaruvi' : isManager ? 'Manager boshqaruvi' : "G'oyalar platformasi"}</div>
       </div>
     </a>
@@ -169,23 +169,36 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
 
 window.mountLayout = function(active, context) {
   if (context) window.APP_CONTEXT = context;
-  const root = document.getElementById('app');
+  let root = document.getElementById('app');
   if (!root) return;
-  if (root.classList.contains('app')) {
+  
+  // First call: app is NOT yet wrapped → build layout WITHOUT destroying root
+  if (!root.classList.contains('app')) {
+    const main = root.innerHTML;
+    // Destroy only the inner content, not the root element itself
+    root.innerHTML = renderLayout(active, context) + '<main class="main">' + main + '</main>';
+    root.classList.add('app');
+    // Apply saved theme after layout is built
+    const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
+    window.MllyCoreTheme?.apply?.(theme);
+  } else {
+    // Subsequent call: app is already wrapped — only update nav + user, skip full re-render
     const temp = document.createElement('div');
     temp.innerHTML = renderLayout(active, context);
     const newHeader = temp.querySelector('.mobile-header');
     const newSidebar = temp.querySelector('.sidebar');
     const curHeader = root.querySelector('.mobile-header');
     const curSidebar = root.querySelector('.sidebar');
+    // Only replace header/sidebar if they exist — no main content flicker
     if (newHeader && curHeader) curHeader.replaceWith(newHeader);
     if (newSidebar && curSidebar) curSidebar.replaceWith(newSidebar);
-    return;
+    // Update active nav highlighting without re-render
+    root.querySelectorAll('.nav-item').forEach((item) => {
+      const href = item.getAttribute('href') || '';
+      item.classList.toggle('active', href.includes(active));
+    });
   }
-  const main = root.innerHTML;
-  root.outerHTML = `<div class="app" id="app">${renderLayout(active, context)}<main class="main">${main}</main></div>`;
-  const theme = document.documentElement.dataset.theme || localStorage.getItem('mllycore-theme') || 'dark';
-  window.MllyCoreTheme?.apply?.(theme);
+
   // T45 — Cmd+K Command Palette (global, faqat bir marta qo'shiladi)
   if (!window.__cmdPaletteReady) {
     window.__cmdPaletteReady = true;

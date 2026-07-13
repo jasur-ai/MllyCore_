@@ -342,7 +342,7 @@ o'zgarish `api/` ga tegmaydi, faqat frontend render.
 
 ---
 
-## Yakuniy bosqich — Professional (ClickUp-darajali) polish
+## Yakuniy bosqich — Professional (MllyCore darajali) polish
 
 > Foydalanuvchi loyihani "professional tarzda yakunlash"ni so'radi. Tekshiruv
 > davomida bir qator **haqiqiy ko'rinish xatolari** aniqlandi (aniqlanmagan CSS
@@ -365,7 +365,7 @@ ushbu elementlar to'g'ri fon/chegara bilan ko'rinadi (qorong'i va kunduzgi rejim
 Bu o'zgarish butun loyiha bo'ylab ushbu tokenlardan foydalangan joylarni bir vaqtda
 tuzatadi.
 
-### Task 25 — ClickUp-darajali interaktiv polish
+### Task 25 — MllyCore darajali interaktiv polish
 **Qanday qo'shildi (additive CSS blok):**
 - Vazifa kartalari (`.workspace-task-card`) va a'zo qatorlari (`.workspace-list-row`)
   uchun nozik **hover/transition** (pastga ko'tarilish + chegara/soya accent) — sichqoncha

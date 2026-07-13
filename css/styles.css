@@ -1514,7 +1514,75 @@ html.role-viewer [data-roles-exclude~="viewer"] { display: none !important; }
   .admin-layout > .subnav { flex: 1 1 100%; position: static; }
 }
 
-/* ===== Landing hero — ClickUp-grade elevation (additive) ===== */
+/* ===================== Page transitions (smooth, no flicker) ===================== */
+/* Each authenticated page fades in smoothly.
+   Using 'backwards' fill so the page stays visible if JS is slow. */
+.app, .auth-shell-pro, .landing-page, .auth-page {
+  animation: pageEnter 0.3s ease-out backwards;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app, .auth-shell-pro, .landing-page, .auth-page { animation: none; }
+}
+
+/* Sidebar menu slide animation */
+.nav-open .sidebar {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.nav-open .sidebar-backdrop {
+  animation: backdropIn 0.2s ease both;
+}
+@keyframes backdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Content panels fade in (staggered but minimal delay for natural feel) */
+.workspace-app {
+  animation: panelEnter 0.35s ease-out backwards;
+}
+@keyframes panelEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-app { animation: none; }
+}
+
+/* Toast enters from bottom */
+.toast {
+  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Menu panel */
+.menu.open {
+  animation: menuSlide 0.14s ease both;
+}
+@keyframes menuSlide {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Modal backdrop */
+.modal-backdrop.open {
+  animation: modalBackdropIn 0.16s ease both;
+}
+@keyframes modalBackdropIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modal-backdrop.open .modal {
+  animation: modalSlideIn 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes modalSlideIn {
+  from { opacity: 0; transform: translateY(-10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ===== Landing hero — Professional-grade elevation ===== */
 .landing-copy h1 {
   font-size: clamp(48px, 6.2vw, 78px);
   line-height: 0.99;
@@ -1555,7 +1623,7 @@ body.theme-light .landing-copy h1 {
   .landing-showcase { animation: none; }
 }
 
-/* ===== Professional polish (additive) — ClickUp-darajali interaktivlik ===== */
+/* ===== Professional polish — MllyCore darajali interaktivlik ===== */
 /* Vazifa kartalari va a'zo qatorlari uchun nozik hover/transition (ko'tarilish effekti). */
 .workspace-task-card { transition: transform .15s ease, border-color .15s ease, background .15s ease, box-shadow .15s ease; }
 .workspace-task-card:hover { transform: translateY(-2px); border-color: rgba(56,189,248,0.35); background: rgba(16,22,36,0.78); box-shadow: 0 14px 30px rgba(2,6,23,0.28); }
@@ -1631,8 +1699,9 @@ body.theme-light .gradient-text {
 .kanban-col,
 .ws-acc,
 .subnav,
-.admin-panel {
-  box-shadow: 0 0 0 0.5px rgba(8,122,252,0.12), 0 14px 34px rgba(2,6,23,0.22);
+.admin-panel,
+.workspace-surface {
+  box-shadow: 0 0 0 0.5px rgba(8,122,252,0.10), 0 14px 34px rgba(2,6,23,0.22);
 }
 body.theme-light .workspace-stat,
 body.theme-light .workspace-record,
@@ -1640,7 +1709,116 @@ body.theme-light .workspace-rail-card,
 body.theme-light .kanban-col,
 body.theme-light .ws-acc,
 body.theme-light .subnav,
-body.theme-light .admin-panel {
+body.theme-light .admin-panel,
+body.theme-light .workspace-surface {
   box-shadow: 0 10px 26px rgba(148,163,184,0.14);
+}
+
+/* Enhanced button hover (Style_suggestion refined feedback) */
+.btn-primary:hover {
+  box-shadow: 0 0 28px var(--glow-strong), inset 0 0 12px var(--glow-inset), 0 4px 12px rgba(8,122,252,0.2);
+}
+.btn-primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 0 16px var(--glow), inset 0 0 6px var(--glow-inset);
+}
+.btn-secondary {
+  transition: all 0.12s ease;
+}
+.btn-secondary:hover {
+  border-color: rgba(99,102,241,0.4);
+  box-shadow: 0 4px 12px rgba(99,102,241,0.08);
+}
+
+/* Card elevation refinement */
+.card {
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.card:hover {
+  box-shadow: 0 18px 40px rgba(2,6,23,0.30);
+}
+
+/* Workspace surface hover polish */
+.workspace-surface {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.workspace-surface:hover {
+  border-color: rgba(99,102,241,0.18);
+}
+
+/* Smoother scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+body.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,0.3);
+}
+body.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148,163,184,0.5);
+}
+
+/* Brand logo styling (overrides original .brand-logo size to fit SVG) */
+.brand-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  padding: 4px;
+}
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.landing-brand-mark, .auth-panel-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #2cb0ff, #6be69b);
+  padding: 6px;
+}
+.landing-brand-mark img, .auth-panel-mark img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Brand name (logo text) styling */
+.brand-name img {
+  filter: brightness(0) invert(1);
+  height: 22px;
+  vertical-align: middle;
+}
+body.theme-light .brand-name img {
+  filter: brightness(0);
+}
+body.theme-light .brand-name {
+  color: #182132;
+}
+.landing-brand-name img, .auth-panel-name img {
+  height: 24px;
+  vertical-align: middle;
+  filter: brightness(0) invert(1);
+}
+body.theme-light .landing-brand-name img,
+body.theme-light .auth-panel-name img {
+  filter: brightness(0);
 }
 
