@@ -1139,6 +1139,14 @@ window.MllyCore = {
     return result;
   },
 
+  async assignTeamLead({ teamId, userId }) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/assign-team-lead', authUser, { teamId, userId });
+    invalidateTeamCache(teamId);
+    invalidateDashboardCache(authUser.uid);
+    return result;
+  },
+
   async ensureAuthed() {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');

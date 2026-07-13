@@ -1985,6 +1985,46 @@ async function handleRemoveMember(req, res, db, decoded, user) {
   return { status: 200, success: true, message: "A'zo olib tashlandi." };
 }
 
+// Admin tomonidan team lead tayinlash (workspace'ga lead biriktirish)
+async function handleAssignTeamLead(req, res, db, decoded, user) {
+  const { teamId, userId } = req.body || {};
+  if (!teamId || !userId) return { status: 400, error: 'teamId va userId kerak.' };
+  if (user.role !== 'admin') return { status: 403, error: 'Faqat admin.' };
+
+  const teamRef = db.collection('teams').doc(teamId);
+  const teamSnap = await teamRef.get();
+  if (!teamSnap.exists) return { status: 404, error: 'Workspace topilmadi.' };
+
+  const userSnap = await db.collection('users').doc(userId).get();
+  if (!userSnap.exists) return { status: 404, error: 'Foydalanuvchi topilmadi.' };
+
+  // Check if user is already a member
+  const memRef = db.collection('teamMembers').doc(teamId + '_' + userId);
+  const memSnap = await memRef.get();
+
+  if (memSnap.exists) {
+    // Update role to team_lead
+    await memRef.update({ role: 'team_lead' });
+  } else {
+    // Create teamMember entry
+    await memRef.set({
+      teamId,
+      userId,
+      role: 'team_lead',
+      joinedAt: SV(),
+    });
+    // Increment membersCount
+    await teamRef.update({ membersCount: (teamSnap.data().membersCount || 0) + 1 });
+  }
+
+  // Update team leadUserId
+  await teamRef.update({ leadUserId: userId, updatedAt: SV() });
+
+  await audit(db, 'team_lead_assigned', { teamId, userId, byUserId: decoded.uid });
+  emitWebhook(db, teamId, 'team_lead_assigned', { userId }).catch(() => {});
+  return { status: 200, success: true, message: 'Team lead tayinlandi.' };
+}
+
 /* --------------------------- Router ------------------------------- */
 // Parolni unutish (faqat admin bo'lmaganlar) — authsiz
 async function handleForgotPassword(req, res, db) {
@@ -2612,6 +2652,7 @@ module.exports = async (req, res) => {
     else if (action === 'activity-feed') result = await handleActivityFeed(req, res, db, decoded, user);
     else if (action === 'clone-workspace') result = await handleCloneWorkspace(req, res, db, decoded, user);
     else if (action === 'remove-member') result = await handleRemoveMember(req, res, db, decoded, user);
+    else if (action === 'assign-team-lead') result = await handleAssignTeamLead(req, res, db, decoded, user);
     else result = { status: 400, error: `Noto'g'ri endpoint: ${action}` };
 
     res.status(result.status || 200).json(result);

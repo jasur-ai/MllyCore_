@@ -298,6 +298,20 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="assignLeadModal" onclick="if(event.target===this)UTIL.closeModal('assignLeadModal')">
+    <div class="modal" style="max-width:440px;">
+      <h3 id="assignLeadModalTitle">👤 Team Lead tayinlash</h3>
+      <p class="modal-sub" id="assignLeadModalSub">Workspace uchun team lead tanlang.</p>
+      <div style="margin-bottom:12px;">
+        <input class="input" id="assignLeadSearch" type="text" placeholder="Foydalanuvchi qidirish..." oninput="filterAssignLeadUsers()">
+      </div>
+      <div id="assignLeadUserList" style="max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:4px;"></div>
+      <div class="modal-actions" style="margin-top:12px;">
+        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('assignLeadModal')">Bekor qilish</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-backdrop" id="permissionsModal" onclick="if(event.target===this)UTIL.closeModal('permissionsModal')">
     <div class="modal" style="max-width:480px;">
       <h3 id="permissionsModalTitle">A'zo ruxsatlari</h3>
@@ -1046,7 +1060,9 @@
                   <td style="padding:12px;">
                     ${team.leadUserId
                       ? `<span style="display:inline-flex;align-items:center;gap:4px;">✅ <span>Lead biriktirilgan</span></span>`
-                      : `<span style="display:inline-flex;align-items:center;gap:4px;color:var(--text-muted);">⏳ Lead kutilmoqda</span>`
+                      : `<span style="display:inline-flex;align-items:center;gap:4px;">
+                          <button class="btn btn-sm assign-lead-btn" data-team-id="${team.id}" data-team-name="${team.name}" style="background:var(--accent);color:#fff;font-size:11px;padding:2px 10px;border:none;border-radius:6px;cursor:pointer;font-weight:600;">+ Tayinlash</button>
+                        </span>`
                     }
                   </td>
                   <td style="padding:12px;text-align:center;">
@@ -1108,6 +1124,21 @@
           });
         });
 
+        document.querySelectorAll('.assign-lead-btn').forEach((button) => {
+          button.addEventListener('click', () => {
+            const teamId = button.dataset.teamId;
+            const teamName = button.dataset.teamName;
+            const team = teams.find(t => t.id === teamId);
+            if (!team) return;
+            window.assignLeadTarget = { id: teamId, name: teamName };
+            document.getElementById('assignLeadModalTitle').textContent = `👤 Team Lead tayinlash — ${teamName}`;
+            document.getElementById('assignLeadModalSub').textContent = `${teamName} workspace'iga team lead sifatida foydalanuvchi tanlang.`;
+            document.getElementById('assignLeadSearch').value = '';
+            window.filterAssignLeadUsers();
+            UTIL.openModal('assignLeadModal');
+          });
+        });
+
         document.querySelectorAll('[data-clone-workspace]').forEach((button) => {
           button.addEventListener('click', async () => {
             const teamId = button.dataset.cloneWorkspace;
@@ -1146,6 +1177,57 @@
             } catch (e) { alert(e.message); }
           });
         });
+      };
+
+      // ===== Team Lead assignment =====
+      window.assignLeadTarget = null;
+
+      window.filterAssignLeadUsers = () => {
+        const q = (document.getElementById('assignLeadSearch')?.value || '').toLowerCase();
+        const container = document.getElementById('assignLeadUserList');
+        if (!container) return;
+        const filtered = users.filter(u => {
+          const name = (u.name || u.email || '').toLowerCase();
+          const email = (u.email || '').toLowerCase();
+          return name.includes(q) || email.includes(q);
+        });
+        if (!filtered.length) {
+          container.innerHTML = '<div class="muted" style="padding:12px;text-align:center;">Foydalanuvchi topilmadi.</div>';
+          return;
+        }
+        container.innerHTML = filtered.map(u => {
+          const roleLabel = u.role === 'admin' ? 'Admin' : u.role === 'manager' ? 'Manager' : u.role === 'team_lead' ? 'Lead' : 'Member';
+          return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;cursor:pointer;transition:background 0.15s;border:1px solid var(--line);"
+                      onmouseenter="this.style.background='var(--surface-sub)'" onmouseleave="this.style.background=''"
+                      onclick="pickAssignLeadUser('${u.id}')">
+              <div style="width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">${(u.name || u.email || 'U')[0].toUpperCase()}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:13px;">${u.name || 'Nomsiz'}</div>
+                <div style="font-size:11px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.email || ''}</div>
+              </div>
+              <span class="badge" style="background:var(--surface-sub);color:var(--text-muted);font-size:10px;">${roleLabel}</span>
+            </div>`;
+        }).join('');
+      };
+
+      window.pickAssignLeadUser = async (userId) => {
+        const target = window.assignLeadTarget;
+        if (!target || !userId) return;
+        const userObj = users.find(u => u.id === userId);
+        if (!confirm(`Rostdan ham "${userObj?.name || userObj?.email || 'User'}" ni "${target.name}" workspace'iga team lead qilib tayinlaysizmi?`)) return;
+        UTIL.closeModal('assignLeadModal');
+        try {
+          await MllyCore.assignTeamLead({ teamId: target.id, userId });
+          const team = teams.find(t => t.id === target.id);
+          if (team) {
+            team.leadUserId = userId;
+          }
+          renderWorkspaceList();
+          bindWorkspaceEvents();
+          updateAdminStats();
+        } catch (err) {
+          alert(err.message || 'Team lead tayinlanmadi.');
+        }
       };
 
       // Initial render
