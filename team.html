@@ -1190,6 +1190,7 @@
           head.classList.add('ws-tab');
           head.setAttribute('role', 'tab');
           head.setAttribute('aria-controls', 'tabpanel-' + tabId);
+          head.dataset.tab = tabId;
           
           // ▾ ikonasini olib tashlash (tabs are not accordion)
           const ico = head.querySelector('.ws-section-ico');
@@ -1209,6 +1210,7 @@
           body.classList.remove('ws-section-body');
           body.classList.add('ws-tab-panel');
           body.setAttribute('role', 'tabpanel');
+          body.dataset.tab = tabId;
           body.id = 'tabpanel-' + tabId;
           body.removeAttribute('hidden');
           
@@ -1265,7 +1267,7 @@
       // Bosilganda activity panel-ning data-bq qiymatini o'zgartiramiz; CSS shu orqali
       // tegishli guruhdagi accordion-larni ko'rsatadi, qolganlarini yashiradi.
       (() => {
-        const actPanel = document.querySelector('.ws-tab-panel[data-tab="activity"]');
+        const actPanel = document.getElementById('tabpanel-activity');
         if (!actPanel) return;
         const bqBtns = Array.from(actPanel.querySelectorAll('.ws-boshqaruv-nav .subnav-item'));
         if (!bqBtns.length) return;
