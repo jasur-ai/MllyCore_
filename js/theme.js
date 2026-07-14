@@ -1,16 +1,15 @@
 (function initTheme() {
-  const storageKey = 'mllycore-theme';
+  var storageKey = 'mllycore-theme';
 
   function apply(theme) {
-    const nextTheme = theme === 'light' ? 'light' : 'dark';
-    const nextClass = nextTheme === 'light' ? 'theme-light' : 'theme-dark';
+    var nextTheme = theme === 'light' ? 'light' : 'dark';
+    var nextClass = nextTheme === 'light' ? 'theme-light' : 'theme-dark';
 
     // Current classni body dan real vaqtda o'qish (prevTheme ni nextTheme dan chiqarmaymiz!)
-    const prevClass = document.body.classList.contains('theme-light') ? 'theme-light' : 'theme-dark';
+    var prevClass = document.body.classList.contains('theme-light') ? 'theme-light' : 'theme-dark';
 
-    // CSS transition-larni vaqtincha o'chirish (chaqmoq/flash effektini oldini olish)
-    document.documentElement.style.setProperty('transition', 'none');
-    document.documentElement.style.setProperty('animation', 'none');
+    // Butun body dagi barcha CSS transition va animationlarni vaqtincha o'chirish
+    document.body.classList.add('disable-transitions');
 
     // Bir atomik operatsiyada class almashtirish — hech qachon classsiz qolmaydi
     if (document.body.classList.contains(prevClass)) {
@@ -21,31 +20,33 @@
     }
 
     // localStorage va dataset
-    localStorage.setItem(storageKey, nextTheme);
+    try { localStorage.setItem(storageKey, nextTheme); } catch (_) {}
     document.documentElement.dataset.theme = nextTheme;
 
     // Toggle tugmalarini yangilash
-    document.querySelectorAll('[data-theme-toggle]').forEach((node) => {
-      const nextTitle = nextTheme === 'light' ? 'Dark mode' : 'Light mode';
-      node.setAttribute('title', nextTitle);
-      node.setAttribute('aria-label', nextTitle);
-    });
+    var toggles = document.querySelectorAll('[data-theme-toggle]');
+    for (var i = 0; i < toggles.length; i++) {
+      var nextTitle = nextTheme === 'light' ? 'Dark mode' : 'Light mode';
+      toggles[i].setAttribute('title', nextTitle);
+      toggles[i].setAttribute('aria-label', nextTitle);
+    }
 
     // Transition'larni qayta yoqish (keyingi frame'da)
-    requestAnimationFrame(() => {
-      document.documentElement.style.removeProperty('transition');
-      document.documentElement.style.removeProperty('animation');
+    requestAnimationFrame(function () {
+      document.body.classList.remove('disable-transitions');
     });
   }
 
   window.MllyCoreTheme = {
-    apply,
-    toggle() {
-      const current = localStorage.getItem(storageKey) || 'dark';
+    apply: apply,
+    toggle: function () {
+      var current = 'dark';
+      try { current = localStorage.getItem(storageKey) || 'dark'; } catch (_) {}
       apply(current === 'dark' ? 'light' : 'dark');
     }
   };
 
-  const saved = localStorage.getItem(storageKey) || 'dark';
+  var saved = 'dark';
+  try { saved = localStorage.getItem(storageKey) || 'dark'; } catch (_) {}
   apply(saved);
 })();

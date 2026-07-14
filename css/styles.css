@@ -713,6 +713,13 @@ body.theme-light .auth-helper {
 html.auth-required body { visibility: hidden; }
 html.auth-required.auth-ready body { visibility: visible; }
 
+/* Chaquq/flash oldini olish — transitionlarni vaqtincha o'chirish */
+body.disable-transitions,
+body.disable-transitions * {
+  transition: none !important;
+  animation: none !important;
+}
+
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; }
 

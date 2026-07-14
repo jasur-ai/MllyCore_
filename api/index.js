@@ -216,6 +216,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
   });
 
   // Workspace yaratilgani haqida barcha manager'larga bildirishnoma yuborish
+  // VA ularning assignedTeams ro'yxatiga yangi workspace'ni qo'shish (avtomatik kuzatish)
   try {
     const managerSnap = await db.collection('users').where('role', '==', 'manager').get();
     const teamName = name.trim();
@@ -223,6 +224,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
       const batch = db.batch();
       managerSnap.docs.forEach((mgrDoc) => {
         const mgrId = mgrDoc.id;
+        // Bildirishnoma
         const notifRef = db.collection('notifications').doc();
         batch.set(notifRef, {
           userId: mgrId,
@@ -234,6 +236,12 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
           isRead: false,
           relatedEntityId: teamRef.id,
           createdAt: SV(),
+        });
+        // Workspace'ni managerning assignedTeams ro'yxatiga qo'shish
+        const mgrRef = db.collection('users').doc(mgrId);
+        batch.update(mgrRef, {
+          assignedTeams: admin.firestore.FieldValue.arrayUnion(teamRef.id),
+          assignedTeamNames: admin.firestore.FieldValue.arrayUnion(teamName),
         });
       });
       await batch.commit();

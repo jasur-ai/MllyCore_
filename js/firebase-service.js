@@ -203,7 +203,12 @@ window.MllyCore = {
           const teams = teamDocs
             .map((teamDoc) => (teamDoc.exists() ? { id: teamDoc.id, membershipRole: 'manager', ...teamDoc.data() } : null))
             .filter(Boolean);
-          payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
+          // Managerlar ham bildirishnomalarni ko'rishi kerak!
+          const notificationSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid)));
+          const notifications = notificationSnap.docs
+            .map((item) => ({ id: item.id, ...item.data() }))
+            .sort(sortByCreatedAtDesc);
+          payload = { teams, ideas: [], notifications, pendingInvites: [] };
         } else {
           const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
             getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))),
