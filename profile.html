@@ -80,29 +80,40 @@
             </div>
 
             <aside class="workspace-side-stack">
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px;display:flex;align-items:center;gap:8px;">🔑 Parolni yangilash</h3>
-                <p class="muted text-sm" style="margin:0 0 14px">Team lead uchun boshlang'ich parol email bilan bir xil bo'lishi mumkin. Uni shu yerda almashtiring.</p>
+              <div class="workspace-surface pad" style="position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-20px;right:-20px;font-size:80px;opacity:0.06;pointer-events:none;user-select:none;">🔑</div>
+                <h3 style="margin:0 0 12px;display:flex;align-items:center;gap:8px;font-size:15px;">🔑 Parolni yangilash</h3>
+                <p class="muted text-sm" style="margin:0 0 14px;line-height:1.6;">Hisobingiz xavfsizligi uchun parolingizni muntazam yangilab turing. <span style="color:var(--accent);">Kamida 6 ta belgi</span> dan iborat bo'lishi kerak.</p>
                 <div class="workspace-form-stack">
-                  <div>
-                    <label class="label">Hozirgi parol</label>
-                    <input class="input" id="currentPassword" type="password" autocomplete="current-password" placeholder="Joriy parolni kiriting">
+                  <div class="input-group" style="display:flex;flex-direction:column;gap:4px;">
+                    <label class="label" style="font-size:12px;opacity:0.8;">Hozirgi parol</label>
+                    <div style="position:relative;">
+                      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;font-size:14px;pointer-events:none;">🔒</span>
+                      <input class="input" id="currentPassword" type="password" autocomplete="current-password" placeholder="Joriy parolni kiriting" style="padding-left:36px;">
+                    </div>
                   </div>
-                  <div>
-                    <label class="label">Yangi parol</label>
-                    <input class="input" id="newPassword" type="password" autocomplete="new-password" placeholder="Kamida 6 belgi">
+                  <div class="input-group" style="display:flex;flex-direction:column;gap:4px;">
+                    <label class="label" style="font-size:12px;opacity:0.8;">Yangi parol</label>
+                    <div style="position:relative;">
+                      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;font-size:14px;pointer-events:none;">🔐</span>
+                      <input class="input" id="newPassword" type="password" autocomplete="new-password" placeholder="Kamida 6 belgi" style="padding-left:36px;">
+                    </div>
                   </div>
-                  <div>
-                    <label class="label">Yangi parolni takrorlang</label>
-                    <input class="input" id="confirmPassword" type="password" autocomplete="new-password" placeholder="Yangi parolni qayta kiriting">
+                  <div class="input-group" style="display:flex;flex-direction:column;gap:4px;">
+                    <label class="label" style="font-size:12px;opacity:0.8;">Yangi parolni takrorlang</label>
+                    <div style="position:relative;">
+                      <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);opacity:0.4;font-size:14px;pointer-events:none;">🔐</span>
+                      <input class="input" id="confirmPassword" type="password" autocomplete="new-password" placeholder="Yangi parolni qayta kiriting" style="padding-left:36px;">
+                    </div>
                   </div>
-                  <button class="btn btn-primary w-full" id="changePasswordBtn">Parolni almashtirish</button>
-                  <button class="btn btn-tertiary w-full" id="resetPasswordBtn">📧 Email orqali link yuborish</button>
+                  <button class="btn btn-primary w-full" id="changePasswordBtn" style="margin-top:4px;">Parolni almashtirish</button>
+                  <button class="btn btn-tertiary w-full" id="resetPasswordBtn" style="font-size:13px;">📧 Email orqali link yuborish</button>
                 </div>
               </div>
-              <div class="workspace-surface pad" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.18);">
-                <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:6px;">🛡️ Xavfsizlik eslatmasi</h3>
-                <p class="muted text-sm" style="margin:0">Email orqali link Firebase Authentication tomonidan yuboriladi. Profil o'zgarishlari barcha sessiyalarda qayta yuklanadi.</p>
+              <div class="workspace-surface pad" style="background:linear-gradient(135deg, rgba(59,130,246,0.08), rgba(99,102,241,0.04));border-color:rgba(59,130,246,0.2);position:relative;overflow:hidden;">
+                <div style="position:absolute;top:-10px;right:-10px;font-size:50px;opacity:0.08;pointer-events:none;user-select:none;">🛡️</div>
+                <h3 style="margin:0 0 6px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--accent);">🛡️ Xavfsizlik eslatmasi</h3>
+                <p class="muted text-sm" style="margin:0;line-height:1.6;font-size:12px;">Email orqali parolni tiklash linki <strong>Firebase Authentication</strong> tomonidan xavfsiz tarzda yuboriladi. Profil o'zgarishlari barcha sessiyalarda qayta yuklanadi.</p>
               </div>
             </aside>
           </div>
@@ -444,7 +455,11 @@
           const users = await MllyCore.getCollection('users');
           const me = users.find((u) => u.id === user.uid);
           if (me) {
-            if (me.telegramChatId) document.getElementById('telegramChatId').value = me.telegramChatId;
+            if (me.telegramChatId) {
+              document.getElementById('telegramChatId').value = me.telegramChatId;
+              document.getElementById('telegramLinkStatus').textContent = '✅ Ulangan';
+              document.getElementById('telegramLinkStatus').className = 'badge badge-active';
+            }
             if (Array.isArray(me.skills)) document.getElementById('skillsInput').value = me.skills.join(', ');
             if (me.locale) document.getElementById('localeSelect').value = me.locale;
           }
@@ -452,7 +467,7 @@
         document.getElementById('linkTelegramBtn')?.addEventListener('click', async () => {
           const v = document.getElementById('telegramChatId').value.trim();
           if (!v) return UTIL.toast('Chat ID kiriting');
-          try { await MllyCore.linkTelegram(v); UTIL.toast('Telegram ulandi'); } catch (e) { UTIL.toast(e.message); }
+          try { await MllyCore.linkTelegram(v); document.getElementById('telegramLinkStatus').textContent = '✅ Ulangan'; document.getElementById('telegramLinkStatus').className = 'badge badge-active'; UTIL.toast('Telegram ulandi'); } catch (e) { UTIL.toast(e.message); }
         });
         document.getElementById('generateTelegramCodeBtn')?.addEventListener('click', async function() {
           const btn = this;
@@ -471,7 +486,7 @@
               value.textContent = data.code;
               display.style.display = 'block';
               try { await navigator.clipboard.writeText(data.code); } catch (_) {}
-              UTIL.toast('Kod yaratildi va nusxalandi! Telegram\'da @MllyCoreBot ga /start ' + data.code + ' yozing.');
+              UTIL.toast('Kod yaratildi va nusxalandi! Telegram botga /start ' + data.code + ' yozing.');
             } else {
               UTIL.toast(data.error || 'Kod olishda xatolik');
             }
