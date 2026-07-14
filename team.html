@@ -1846,7 +1846,7 @@
     }
 
     async function refreshWorkspace(teamId, currentUserId) {
-      const cached = await MllyCore.getTeamData(teamId);
+      const cached = await MllyCore.getTeamData(teamId).catch(() => null);
       if (cached) {
         workspaceState = cached;
         const cachedKey = workspaceRenderKey(cached);
@@ -1891,7 +1891,7 @@
       MllyCore.syncTeamTasks(teamId).catch(() => {});
       const [dashboard, initialWorkspace] = await Promise.all([
         MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(() => cachedDash),
-        teamId ? MllyCore.getTeamData(teamId) : Promise.resolve(null)
+        teamId ? MllyCore.getTeamData(teamId).catch(() => null) : Promise.resolve(null)
       ]);
       mountLayout('', { profile, teams: dashboard.teams || [], notifications: dashboard.notifications || [] });
       window.APP_CONTEXT = { profile, teams: dashboard.teams, notifications: dashboard.notifications };
@@ -1900,10 +1900,10 @@
         document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
         return;
       }
-      await renderWorkspace(workspaceState, user.uid);
+      try { await renderWorkspace(workspaceState, user.uid); } catch (e) { document.getElementById("content").innerHTML = "<div class=\"workspace-empty\"><h3>Xatolik yuz berdi</h3><p>Sahifani qayta yuklang.</p></div>"; console.error("Render xatosi:", e); return; }
       MllyCore.updatePresence('online').catch(() => {});
       // 30 soniyalik avtomatik yangilash
-      MllyCore.startAutoRefresh(async () => {
+      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
         try {
           const freshData = await MllyCore.getTeamData(workspaceState.team.id);
           if (freshData) {
@@ -1921,6 +1921,7 @@
       _cleanupPresence();
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
       _chatSeenQueue = [];
+        MllyCore.stopAutoRefresh(_autoRefreshId);
       // updatePresence('offline') endi firebase-service.js tomonidan avtomatik ishlaydi
     });
 

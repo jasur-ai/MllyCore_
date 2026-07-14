@@ -42,8 +42,8 @@
 
       const ideaId = qs('id');
       const [dashboard, idea] = await Promise.all([
-        MllyCore.getDashboardData(user.uid),
-        MllyCore.getIdeaById(ideaId)
+        MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] })),
+        MllyCore.getIdeaById(ideaId).catch(() => null)
       ]);
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
       if (!idea) {

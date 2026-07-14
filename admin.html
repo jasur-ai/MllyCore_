@@ -1422,9 +1422,10 @@
         }
       });
 n      // 30 soniyalik avtomatik yangilash
-      MllyCore.startAutoRefresh(async () => {
+      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
         document.getElementById("refreshWorkspaceBtn")?.click();
       }, 30000);
+      window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
     })();
   </script>
 

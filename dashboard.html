@@ -307,7 +307,7 @@
 
       mountLayout('dashboard', { profile: profile || {}, teams: [], notifications: [] });
 
-      const data = await window.MllyCore.getDashboardData(user.uid);
+      const data = await window.MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
 
       window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
       mountLayout('dashboard', window.APP_CONTEXT);
@@ -579,7 +579,11 @@
         try {
           // Firebase auth backend orqali parolni tekshiradi
           await MllyCore.deleteWorkspace(selectedTeamId, password);
-          if (document.visibilityState === "visible") { location.reload() };
+          // Dinamik o'chirish — sahifa reload qilinmaydi
+          const deletedCard = document.querySelector(`[data-admin-delete="${selectedTeamId}"]`)?.closest('.workspace-record');
+          if (deletedCard) deletedCard.remove();
+          UTIL.closeModal('deleteWorkspaceModal');
+          UTIL.toast(`"${selectedTeamName}" o'chirildi.`);
         } catch (error) {
           errorBox.textContent = error.message || "Admin paroli noto'g'ri yoki workspace o'chirilmadi.";
           button.disabled = false;
@@ -735,13 +739,21 @@
           button.disabled = false;
         }
       });
-      // 30 soniyalik avtomatik yangilash
-      MllyCore.startAutoRefresh(async () => {
+      // 30 soniyalik avtomatik yangilanish — sahifa reload qilmaydi, faqat timestamp yangilanadi
+      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
+        const ts = document.getElementById('lastUpdateTime');
+        if (ts) {
+          ts.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+        }
         try {
-          const freshData = await MllyCore.getDashboardData(user.uid);
-          if (document.visibilityState === "visible") { location.reload() };
+          const freshData = await MllyCore.getDashboardData(user.uid, { forceFresh: true });
+          if (freshData && document.visibilityState === 'visible') {
+            window.APP_CONTEXT = { profile, teams: freshData.teams, notifications: freshData.notifications };
+            mountLayout('dashboard', window.APP_CONTEXT);
+          }
         } catch (_) {}
-      }, 30000);
+      }, 60000);
+      window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
     })();
   </script>
   <script>

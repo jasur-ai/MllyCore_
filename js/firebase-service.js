@@ -1547,6 +1547,28 @@ window.MllyCore = {
     return apiPost('/api/list-schedules', authUser, { teamId });
   },
 
+  // ===== Auto-refresh utility =====
+  _refreshIntervals: [],
+  startAutoRefresh(fn, intervalMs = 30000) {
+    if (typeof fn !== 'function') return;
+    const id = setInterval(() => {
+      try { fn(); } catch (_) { /* auto-refresh xatoligi — jim qoladi */ }
+    }, intervalMs);
+    this._refreshIntervals.push(id);
+    return id;
+  },
+  stopAutoRefresh(id) {
+    if (id) {
+      const idx = this._refreshIntervals.indexOf(id);
+      if (idx > -1) this._refreshIntervals.splice(idx, 1);
+      clearInterval(id);
+    }
+  },
+  stopAllAutoRefresh() {
+    this._refreshIntervals.forEach(id => clearInterval(id));
+    this._refreshIntervals = [];
+  },
+
   // ===== T57 API Health / Error Tracking =====
   async getHealth() {
     const authUser = await this.ensureAuthed();

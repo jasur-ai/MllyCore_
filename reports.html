@@ -150,7 +150,7 @@
       if (!user) return;
 
       const profile = window.MLLYCORE_PROFILE;
-      const data = await window.MllyCore.getDashboardData(user.uid);
+      const data = await window.MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
       const teams = data?.teams || [];
       const role = profile?.role || 'member';
 
@@ -601,14 +601,15 @@
       } catch (err) {
         showReportsError(err);
       }
-n      // 30 soniyalik avtomatik yangilash
-      MllyCore.startAutoRefresh(async () => {
+      // 30 soniyalik avtomatik yangilash
+      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
         await loadAllReports();
         const initTimeEl = document.getElementById('lastUpdateTime');
         if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
         const el = document.getElementById('lastUpdateTime');
         if (el) el.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
       }, 30000);
+      window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
     })();
   </script>
   <script>

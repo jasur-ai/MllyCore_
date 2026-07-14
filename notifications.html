@@ -201,7 +201,7 @@
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
-      const data = await MllyCore.getDashboardData(user.uid);
+      const data = await MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
       mountLayout('notif', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
       renderNotificationPage(data);
 

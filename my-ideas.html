@@ -98,8 +98,8 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const [data, personalIdeas] = await Promise.all([
-        MllyCore.getDashboardData(user.uid, { includeIdeas: true }),
-        MllyCore.getPersonalIdeas()
+        MllyCore.getDashboardData(user.uid, { includeIdeas: true }).catch(() => ({ teams: [], ideas: [], notifications: [] })),
+        MllyCore.getPersonalIdeas().catch(() => [])
       ]);
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
 
@@ -146,7 +146,39 @@
           });
           message.className = 'text-sm muted feedback-success';
           message.textContent = "Shaxsiy g'oya saqlandi.";
-          location.reload();
+          // Dinamik yangilash — sahifa reload qilinmaydi
+          document.getElementById('personalIdeaTitle').value = '';
+          document.getElementById('personalIdeaDescription').value = '';
+          setTimeout(() => { message.textContent = ''; }, 3000);
+          const [freshData, freshPersonalIdeas] = await Promise.all([
+            MllyCore.getDashboardData(user.uid, { includeIdeas: true }),
+            MllyCore.getPersonalIdeas()
+          ]);
+          if (freshPersonalIdeas) {
+            const container = document.getElementById('personalIdeas');
+            document.getElementById('personalIdeaCount').textContent = freshPersonalIdeas.length;
+            if (container) {
+              const teams = (freshData?.teams || data?.teams || []);
+              container.innerHTML = freshPersonalIdeas.length ? freshPersonalIdeas.map((idea) => `
+                <div class="workspace-record">
+                  <div class="workspace-record-top">
+                    <h3>${escapeHtml(idea.title)}</h3>
+                    <span class="badge">Private</span>
+                  </div>
+                  <p>${escapeHtml(idea.description || 'Tavsif kiritilmagan.')}</p>
+                  <div class="workspace-subgrid cols-2 mt-3">
+                    <select class="select" data-team-select="${idea.id}">
+                      <option value="">Workspace tanlang</option>
+                      ${teams.map((team) => `<option value="${team.id}">${escapeHtml(team.name)}</option>`).join('')}
+                    </select>
+                    <button class="btn btn-secondary" data-import-idea="${idea.id}">Teamga import</button>
+                  </div>
+                </div>
+              `).join('') : "<div class=\"workspace-empty\"><h3>Shaxsiy g'oya yo'q</h3><p>Birinchi shaxsiy g'oyangizni yarating.</p></div>";
+              Array.from(container.querySelectorAll('[data-import-idea]')).forEach((b) => setupImportButton(b));
+            }
+          }
+          button.disabled = false;
         } catch (error) {
           message.className = 'text-sm muted feedback-error';
           message.textContent = error.message || "Shaxsiy g'oya saqlanmadi.";
@@ -154,7 +186,7 @@
         }
       });
 
-      document.querySelectorAll('[data-import-idea]').forEach((button) => {
+      function setupImportButton(button) {
         button.addEventListener('click', async () => {
           const ideaId = button.dataset.importIdea;
           const teamId = document.querySelector(`[data-team-select="${ideaId}"]`)?.value;
@@ -165,13 +197,23 @@
           button.disabled = true;
           try {
             await MllyCore.importPersonalIdea({ personalIdeaId: ideaId, teamId });
-            location.reload();
+            // Dinamik yangilash — sahifa reload qilinmaydi
+            const card = button.closest('.workspace-record');
+            if (card) card.remove();
+            const countEl = document.getElementById('personalIdeaCount');
+            const container = document.getElementById('personalIdeas');
+            const current = parseInt(countEl?.textContent || '0', 10);
+            if (countEl) countEl.textContent = Math.max(0, current - 1);
+            if (!container?.querySelector('.workspace-record')) {
+              if (container) container.innerHTML = "<div class=\"workspace-empty\"><h3>Shaxsiy g'oya yo'q</h3><p>Birinchi shaxsiy g'oyangizni yarating.</p></div>";
+            }
           } catch (error) {
             alert(error.message || 'Import amalga oshmadi.');
             button.disabled = false;
           }
         });
-      });
+      }
+      document.querySelectorAll('[data-import-idea]').forEach(setupImportButton);
     })();
   </script>
   <script>
