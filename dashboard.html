@@ -733,11 +733,12 @@
           if (freshData) {
             window.APP_CONTEXT = { profile, teams: freshData.teams, notifications: freshData.notifications };
             mountLayout('dashboard', window.APP_CONTEXT);
+            // R7 — Dashboard main content (stats, teams, ideas, notifications) qayta render
+            if (typeof window.__renderDashboardContent === 'function') {
+              window.__renderDashboardContent(freshData);
+            }
           }
         } catch (_) {}
-        // Re-run key render logic from the IIFE above:
-        const lastTime = document.getElementById('lastUpdateTime');
-        if (lastTime) lastTime.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
         setTimeout(() => btn.classList.remove('refreshing'), 600);
       });
 
@@ -760,20 +761,172 @@
           button.disabled = false;
         }
       });
-      // 30 soniyalik avtomatik yangilanish — sahifa reload qilmaydi, faqat timestamp yangilanadi
-      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
-        const ts = document.getElementById('lastUpdateTime');
-        if (ts) {
-          ts.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+      // R7 — Dashboard main content refresh (stats, teams, ideas, notifications) — auto-refresh uchun
+      window.__renderDashboardContent = function(freshData) {
+        const ft = freshData.teams || [];
+        const fi = freshData.ideas || [];
+        const fUnread = (freshData.notifications || []).filter((n) => n.unread || n.isRead === false).length;
+        const aIds = Array.isArray(profile?.assignedTeams) ? profile.assignedTeams : [];
+        const aNames = Array.isArray(profile?.assignedTeamNames) ? profile.assignedTeamNames : [];
+
+        // Stats
+        const sData = [];
+        if (isManager) {
+          sData.push(
+            { n: aIds.length || 0, l: "Mas'ul jamoalar", note: 'Siz biriktirilgan jamoalar' },
+            { n: ft.reduce((s, t) => s + (t.membersCount || 0), 0), l: "Jami a'zolar", note: "Barcha jamoalardagi a'zolar" },
+            { n: fUnread, l: 'Yangi bildirishnomalar', note: 'Hisobot va activity' },
+          );
+        } else {
+          sData.push(
+            { n: ft.length, l: "Workspace'larim", note: 'Siz azo bolgan joylar' },
+            { n: ft.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: "Boshqarayotgan oqimlar" },
+            { n: ft.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami koinadigan userlar" },
+            { n: fUnread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
+          );
         }
+        const iconMap = {"Workspace'larim": '📋', 'Lead workspace': '⭐', "A'zolar": '👥', 'Yangi bildirishnomalar': '🔔', "Mas'ul jamoalar": '📋', "Jami a'zolar": '👤'};
+        document.getElementById('stats').innerHTML = sData.map((s) => `
+          <div class="workspace-stat">
+            <div class="workspace-stat-icon">${iconMap[s.l] || '📊'}</div>
+            <span class="workspace-stat-label">${s.l}</span>
+            <span class="workspace-stat-value">${s.n}</span>
+            <span class="workspace-stat-note">${s.note}</span>
+          </div>
+        `).join('');
+
+        // Teams
+        document.getElementById('teams').innerHTML = ft.length ? ft.map((team) => `
+          <a href="team.html?id=${team.id}" class="workspace-record">
+            <div class="workspace-record-top">
+              <div class="flex items-center gap-3">
+                <div class="team-logo ${team.color || 'tl-1'}">${team.logo || 'W'}</div>
+                <div>
+                  <h3>${team.name}</h3>
+                  <div class="workspace-inline-meta">
+                    <span>${team.membersCount || 0} a'zo</span>
+                    <span>${team.membershipRole || 'member'}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
+          </a>
+        `).join('') : `<div class="workspace-empty"><h3>Workspace yo'q</h3><p>${isAdmin ? "Birinchi workspace yarating." : "Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi."}</p></div>`;
+
+        // Ideas
+        document.getElementById('ideasTable').innerHTML = fi.length ? fi.map((idea) => {
+          const team = ft.find(t => t.id === idea.teamId);
+          return `<tr style="cursor:pointer" onclick="location.href='idea.html?id=${idea.id}'">
+            <td><div class="font-semibold">${idea.title}</div></td>
+            <td><span class="text-sm">${team?.name || '-'}</span></td>
+            <td><span class="badge">${idea.status || idea.category || '-'}</span></td>
+            <td class="muted text-sm">${fmtDate(idea.updatedAt)}</td>
+          </tr>`;
+        }).join('') : "<tr><td colspan=\"4\" class=\"muted text-sm\">Hozircha g'oya yo'q.</td></tr>";
+
+        // Notifications
+        document.getElementById('notifs').innerHTML = freshData.notifications.length ? freshData.notifications.slice(0, 4).map((n) => `
+          <div class="workspace-message-item">
+            <strong>${n.text || n.content}</strong>
+            <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+            <span>${n.type || 'notification'}</span>
+          </div>
+        `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
+
+        // Timestamp
+        document.getElementById('lastUpdateTime').textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+
+        // Manager Dashboardni ham yangilash (agar manager bo'lsa)
+        if (isManager && freshData) {
+          const ft2 = freshData.teams || [];
+          const fUnread2 = (freshData.notifications || []).filter((n) => n.unread || n.isRead === false).length;
+
+          // Mgr teams list
+          const mgrList = document.getElementById('mgrTeamsList');
+          if (mgrList) {
+            if (assignedIds.length) {
+              mgrList.innerHTML = assignedIds.map((tid, idx) => {
+                const tName = assignedNames[idx] || 'Komanda';
+                const colors = ['tl-1', 'tl-2', 'tl-3', 'tl-4', 'tl-5'];
+                const color = colors[idx % colors.length];
+                const teamData = ft2.find(t => t.id === tid);
+                const members = teamData?.membersCount || '?';
+                return `
+                  <div class="mgr-team-card">
+                    <div class="mgr-team-top">
+                      <div class="team-logo ${color}">${tName.charAt(0).toUpperCase()}</div>
+                      <div class="mgr-team-info">
+                        <strong>${tName}</strong>
+                        <span class="text-xs muted">${members} a'zo</span>
+                      </div>
+                    </div>
+                    <div class="mgr-team-actions">
+                      <a class="btn btn-primary btn-sm" href="reports.html?teamId=${tid}">📋 Hisobotlar</a>
+                      <a class="btn btn-tertiary btn-sm" href="team.html?id=${tid}">👥 Jamoani korish</a>
+                    </div>
+                  </div>
+                `;
+              }).join('');
+            } else {
+              mgrList.innerHTML = '<div class="workspace-empty"><h3>Hech qanday jamoa biriktirilmagan</h3><p class="muted">Admin sizni jamoalarga mas\'ul qilib tayinlashi kerak.</p></div>';
+            }
+          }
+
+          // Mgr mini stats
+          const mgrStats = document.getElementById('mgrMiniStats');
+          if (mgrStats) {
+            const periodBadge = document.querySelector('#mgrReportModeBadge .badge');
+            const periodLabel = periodBadge ? periodBadge.textContent.replace('📅 ', '') : 'Kunlik hisobot rejimi';
+            mgrStats.innerHTML = `
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">📋 Mas'ul jamoalar</span>
+                <span class="mgr-stat-value">${assignedIds.length} ta</span>
+              </div>
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">📅 Hisobot rejimi</span>
+                <span class="mgr-stat-value">${periodLabel}</span>
+              </div>
+              <div class="mgr-stat-row">
+                <span class="mgr-stat-label">🔔 Kutilmagan bildirishnomalar</span>
+                <span class="mgr-stat-value">${fUnread2} ta</span>
+              </div>
+            `;
+          }
+
+          // Mgr notifications
+          const mgrNotifs = document.getElementById('mgrNotifs');
+          if (mgrNotifs) {
+            mgrNotifs.innerHTML = freshData.notifications.length ? freshData.notifications.slice(0, 4).map((n) => `
+              <div class="workspace-message-item">
+                <strong>${n.text || n.content}</strong>
+                <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+                <span>${n.type || 'notification'}</span>
+              </div>
+            `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
+          }
+        }
+      };
+
+      // 30 soniyalik avtomatik yangilanish — render key solishtirish bilan faqat o'zgarish bo'lsa qayta render
+      const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
+        if (document.visibilityState !== 'visible') return;
+        const btn = document.getElementById('refreshDashboardBtn');
+        btn?.classList.add('refreshing');
         try {
           const freshData = await MllyCore.getDashboardData(user.uid, { forceFresh: true });
-          if (freshData && document.visibilityState === 'visible') {
-            window.APP_CONTEXT = { profile, teams: freshData.teams, notifications: freshData.notifications };
-            mountLayout('dashboard', window.APP_CONTEXT);
+          if (freshData) {
+            const nk = (freshData.teams?.length||0)+'|'+(freshData.ideas?.length||0)+'|'+(freshData.notifications?.length||0)+'|'+((freshData.notifications||[]).filter(n=>n.unread||n.isRead===false).length||0);
+            if (nk !== (window.__dashRK || '')) {
+              window.__dashRK = nk;
+              window.APP_CONTEXT = { profile, teams: freshData.teams, notifications: freshData.notifications };
+              mountLayout('dashboard', window.APP_CONTEXT);
+              window.__renderDashboardContent(freshData);
+            }
           }
         } catch (_) {}
-      }, 60000);
+        setTimeout(() => btn?.classList.remove('refreshing'), 600);
+      }, 30000);
       window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
     })();
   </script>
