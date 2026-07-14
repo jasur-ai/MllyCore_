@@ -581,13 +581,20 @@ async function handleRestoreWorkspace(req, res, db, decoded, user) {
   return { status: 200, success: true, message: 'Workspace tiklandi.' };
 }
 
-async function deleteQueryBatch(db, query) {
-  const snap = await query.limit(300).get();
-  if (snap.empty) return;
-  const batch = db.batch();
-  snap.docs.forEach((d) => batch.delete(d.ref));
-  await batch.commit();
-  if (snap.size === 300) await deleteQueryBatch(db, query);
+async function deleteQueryBatch(db, query, maxIterations = 100) {
+  // FIX (recursion safety): recursion depth cheklovi qo'shildi.
+  // Katta workspace (30000+ doc) uchun stack overflow oldini oladi.
+  let remaining = maxIterations;
+  let currentQuery = query;
+  while (remaining > 0) {
+    const snap = await currentQuery.limit(300).get();
+    if (snap.empty) break;
+    const batch = db.batch();
+    snap.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+    if (snap.size < 300) break;
+    remaining--;
+  }
 }
 
 async function deleteTeamCascade(db, teamId) {
@@ -1038,8 +1045,38 @@ async function handleActions(req, res, db, decoded, user) {
       if (req.query.teamId && !allowed.has(req.query.teamId)) return { status: 403, error: 'Ruxsat yoq.' };
     }
 
-    const snap = await db.collection('tasks').where('status', '!=', 'done').get();
+    // FIX (performance): butun tasks kolleksiyasini yuklab olmaslik uchun
+    // limit qo'shildi va admin bo'lmaganlar faqat o'z jamoa ID'laridagi
+    // vazifalarni ko'radi.
+    let tasksDocs = [];
+    if (allowed && allowed.size > 0) {
+      const allowedArr = Array.from(allowed);
+      // Firestore 'in' query max 10 values
+      for (let i = 0; i < allowedArr.length; i += 10) {
+        const chunk = allowedArr.slice(i, i + 10);
+        const chunkSnap = await db.collection('tasks')
+          .where('status', '!=', 'done')
+          .where('teamId', 'in', chunk)
+          .limit(500)
+          .get();
+        chunkSnap.docs.forEach((d) => tasksDocs.push(d));
+      }
+    } else {
+      // Admin: global query with limit (avoid loading entire collection)
+      const globalSnap = await db.collection('tasks')
+        .where('status', '!=', 'done')
+        .limit(500)
+        .get();
+      tasksDocs = globalSnap.docs;
+    }
     const now = Date.now();
+    const overdue = tasksDocs.map((d) => ({ id: d.id, ...d.data() })).filter((t) => {
+      const dueMs = t.dueDate && t.dueDate.toMillis ? t.dueDate.toMillis() : 0;
+      if (!(dueMs > 0 && dueMs < now)) return false;
+      if (req.query.teamId && t.teamId !== req.query.teamId) return false;
+      if (allowed && !allowed.has(t.teamId)) return false;
+      return true;
+    });
     const overdue = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((t) => {
       const due = t.dueDate && t.dueDate.toMillis ? t.dueDate.toMillis() : 0;
       if (!(due > 0 && due < now)) return false;
@@ -1047,6 +1084,10 @@ async function handleActions(req, res, db, decoded, user) {
       if (allowed && !allowed.has(t.teamId)) return false;
       return true;
     });
+    return { status: 200, tasks: overdue, totalOverdue: overdue.length };
+  }
+
+  return { status: 400, error: 'Action xato.' };
     return { status: 200, tasks: overdue, totalOverdue: overdue.length };
   }
 
