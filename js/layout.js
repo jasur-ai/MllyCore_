@@ -52,6 +52,68 @@
   });
 })();
 
+// ===== Global connection status monitor (Firestore + browser) =====
+(function setupConnectionMonitor() {
+  if (window.__mllyConnMonitorReady) return;
+  window.__mllyConnMonitorReady = true;
+
+  const CHECK_INTERVAL = 30000; // 30 soniya
+  let _timer = null;
+  let _online = navigator.onLine;
+
+  const setStatus = (online) => {
+    if (_online === online) return;
+    _online = online;
+    window.__mllyOnline = online;
+    // Layout indicator ni yangilash
+    const bar = document.getElementById('connStatusBar');
+    if (bar) {
+      bar.className = 'conn-bar ' + (online ? 'conn-ok' : 'conn-err');
+      bar.querySelector('.conn-dot').style.background = online ? '#22c55e' : '#ef4444';
+      bar.querySelector('.conn-text').textContent = online ? 'Firestore: ulangan' : 'Firestore: uzilgan';
+    }
+  };
+
+  const checkFirestore = async () => {
+    try {
+      if (window.MllyCore && typeof window.MllyCore.getHealth === 'function') {
+        const h = await window.MllyCore.getHealth();
+        setStatus(h && (h.firebase || h.status === 'healthy'));
+      } else {
+        // Direct Firestore test
+        if (typeof firebase !== 'undefined' && firebase.firestore) {
+          const db = firebase.firestore();
+          await db.collection('_health').doc('_check').get({ source: 'server' });
+          setStatus(true);
+        } else {
+          setStatus(navigator.onLine);
+        }
+      }
+    } catch (_) {
+      setStatus(false);
+    }
+  };
+
+  const onOnline = () => { setStatus(true); setTimeout(checkFirestore, 500); };
+  const onOffline = () => { setStatus(false); };
+
+  window.addEventListener('online', onOnline);
+  window.addEventListener('offline', onOffline);
+
+  window.__mllyOnline = navigator.onLine;
+
+  // Dastlabki tekshiruv
+  setTimeout(checkFirestore, 1000);
+  _timer = setInterval(checkFirestore, CHECK_INTERVAL);
+
+  // Cleanup
+  window.addEventListener('pagehide', () => {
+    if (_timer) { clearInterval(_timer); _timer = null; }
+    window.removeEventListener('online', onOnline);
+    window.removeEventListener('offline', onOffline);
+  });
+})();
+
 // T57 — Global klient tomoni xatolik kuzatuvi (faqat bir marta o'rnatiladi).
 (function setupErrorTracking() {
   if (window.__mllyErrorTracking) return;
@@ -206,6 +268,10 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
       ${navItems}
     </div>
 
+    <div id="connStatusBar" class="conn-bar conn-ok">
+      <span class="conn-dot" style="background:#22c55e"></span>
+      <span class="conn-text">Firestore: ulangan</span>
+    </div>
     <div class="sidebar-user">
       <div class="avatar">${profile.avatar || 'U'}</div>
       <div style="flex:1;min-width:0">
