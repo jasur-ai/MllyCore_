@@ -393,8 +393,10 @@
           { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
         );
       }
+      const iconMap = {"Workspace'larim": '📋', 'Lead workspace': '⭐', "A'zolar": '👥', 'Yangi bildirishnomalar': '🔔', "Mas'ul jamoalar": '📋', "Jami a'zolar": '👤'};
       document.getElementById('stats').innerHTML = statsData.map((s) => `
         <div class="workspace-stat">
+          <div class="workspace-stat-icon">${iconMap[s.l] || '📊'}</div>
           <span class="workspace-stat-label">${s.l}</span>
           <span class="workspace-stat-value">${s.n}</span>
           <span class="workspace-stat-note">${s.note}</span>
