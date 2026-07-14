@@ -377,10 +377,15 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
 
-      const [users, teams] = await Promise.all([
-        MllyCore.getCollection('users'),
-        MllyCore.getCollection('teams')
-      ]);
+      let users = [], teams = [];
+      try {
+        const _r = await Promise.all([
+          MllyCore.getCollection('users'),
+          MllyCore.getCollection('teams')
+        ]);
+        users = _r[0] || [];
+        teams = _r[1] || [];
+      } catch (_) { console.warn('Admin ma\'lumotlarini yuklashda xatolik'); }
 
       // Faqat bir marta, barcha ma'lumotlar kelgandan keyin layout render qilinadi (Sidebar endi buzilmaydi!)
       mountLayout('admin', { profile: window.MLLYCORE_PROFILE, teams: [], notifications: [] });
@@ -1422,9 +1427,13 @@
           button.disabled = false;
         }
       });
-n      // 30 soniyalik avtomatik yangilash
+n      // 30 soniyalik avtomatik yangilash — visibility check va loading indicator bilan
       const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
+        if (document.visibilityState !== 'visible') return;
+        const refreshBtn = document.getElementById("refreshWorkspaceBtn");
+        refreshBtn?.classList.add('refreshing');
         document.getElementById("refreshWorkspaceBtn")?.click();
+        setTimeout(() => refreshBtn?.classList.remove('refreshing'), 1200);
       }, 30000);
       window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
     })();
