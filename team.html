@@ -41,6 +41,15 @@
     const focusType = qs('focus');
     const focusEntityId = qs('entity');
 
+    // Xavfsizlik: 15 soniya ichida yuklanmasa, Yuklanmoqda matnini xato xabariga almashtiramiz
+    window.__mllyLoadingTimeout = setTimeout(() => {
+      const el = document.getElementById('content');
+      if (!el || !el.querySelector('.loading-copy')) return;
+      el.innerHTML = '<div class=\'workspace-empty\'><h3>Yuklashda xatolik</h3><p>Sahifa uzoq vaqt yuklanmadi. Internet aloqangizni tekshiring yoki qayta urinib koring.</p></div>';
+    }, 15000);
+    // Agar renderWorkspace muvaffaqiyatli bajarilsa, bu timeoutni tozalaymiz
+    window.__clearLoadingTimeout = () => { if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; } };
+
     window.UTIL = window.UTIL || {
       toast: (msg) => {
         const el = document.createElement('div');
@@ -1886,6 +1895,7 @@
       // keyin ma'lumotlar yuklanganda faqat header/sidebar almashtiriladi (to'liq qayta chizilmaydi).
       // Shuningdek kontent o'rniga barqaror skeleton ko'rsatamiz — "sochilib yig'ilish" yo'q.
       const cachedDash = await MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], notifications: [] }));
+      window.__clearLoadingTimeout?.();
       mountLayout('', { profile, teams: cachedDash.teams || [], notifications: cachedDash.notifications || [] });
       renderWorkspaceSkeleton();
 
@@ -1913,7 +1923,7 @@
           }
         } catch (_) {}
         const el = document.getElementById('lastUpdateTime');
-        if (el) el.textContent = 'So'nggi yangilanish: ' + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+        if (el) el.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
       }, 30000);
       } catch(e) { document.getElementById("content").innerHTML = "<div class=\"workspace-empty\"><h3>Xatolik yuz berdi</h3><p>Sahifani qayta yuklang.</p></div>"; console.error("Xato:", e); }
     })();
