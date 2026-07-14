@@ -858,6 +858,17 @@ window.MllyCore = {
     return result;
   },
 
+  async setTaskStatus({ taskId, status }) {
+    const authUser = await this.ensureAuthed();
+    const result = await apiPost('/api/task-action', authUser, {
+      taskId,
+      action: 'set-status',
+      status: String(status || '').trim()
+    });
+    invalidateCacheByPrefix(getCacheKey('team', ''));
+    return result;
+  },
+
   // T-UI — Mas'ulni o'zgartirish: team lead tomonidan vazifaning assignedTo'sini
   // yangilash. Bu client-side Firestore update (api/ ga tegmaydi); Firestore qoidasi
   // team lead'ga task'ni yangilashga ruxsat beradi (firestore.rules: /tasks write -> isTeamLead).

@@ -345,245 +345,306 @@
       const memberCount = data.members.length || 1;
       const target = document.getElementById('tasksList');
       const count = document.getElementById('taskCount');
-      if (count) count.textContent = `${tasks.length} ta`;
+      if (count) count.textContent = tasks.length + ' ta';
 
-      target.innerHTML = tasks.length ? tasks.map((task) => {
-        const taskSubs = submissions.filter((item) => item.taskId === task.id);
-        const hasSubmitted = taskSubs.some((item) => item.userId === currentUserId);
-        // Backend 'assignedTo' saqlaydi (assignedUserId/assignedUserName/assignmentMode emas),
-        // shuning uchun ularni member'lardan va mavjud maydonlardan chiqarib olamiz.
-        const assignedId = task.assignedTo || task.assignedUserId || null;
-        const assignedName = task.assignedUserName
-          || ((data.members || []).find((m) => m.userId === assignedId)?.user?.name)
-          || ((data.members || []).find((m) => m.userId === assignedId)?.name)
-          || null;
-        const mode = task.assignmentMode || (assignedId ? 'direct' : 'open');
-        const isAssignedToCurrent = assignedId === currentUserId;
-        const canClaim = !isViewer && mode === 'open' && !assignedId;
-        const teamRequired = task.requiredCount || Math.max(1, Math.ceil(memberCount * 0.65));
-        const canSubmit = !isViewer && (
-          (mode === 'team') ||
-          ((mode === 'direct' || mode === 'open') && isAssignedToCurrent)
-        ) && !hasSubmitted && task.status !== 'completed';
+      // Guruhlarni statuslar bo'yicha ajratamiz
+      var groups = {
+        open: tasks.filter(t => (t.status || 'open') === 'open'),
+        in_progress: tasks.filter(t => t.status === 'in_progress'),
+        done: tasks.filter(t => t.status === 'done' || t.status === 'completed'),
+        submitted: tasks.filter(t => t.status === 'submitted')
+      };
 
-        return `
-          <div class="workspace-task-card" data-task-id="${task.id}">
-            <div class="workspace-task-head">
-              <div>
-                <h3 style="margin:0">${escapeHtml(task.title)}</h3>
-                <div class="workspace-task-meta">
-                  <span class="badge">${escapeHtml(task.assignmentMode || 'open')}</span>
-                  <span class="badge">${escapeHtml(task.status || 'open')}</span>
-                  <span class="badge" style="${task.blocked ? 'background:#7f1d1d;color:#fff' : ''}">${task.blocked ? '🔒 Bloklangan' : 'Ochiq'}</span>
-                  <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo\'q')}</span>
-                </div>
-              </div>
-              <span class="badge badge-progress">${task.assignmentMode === 'team' ? `${task.progressCount || 0}/${memberCount} kishi` : `${task.progressCount || 0}/${task.requiredCount || 1}`}</span>
-            </div>
-            <p class="workspace-helper">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</p>
-            <div class="workspace-detail-list">
-              <div class="workspace-detail-row"><span>Mas'ul</span><strong>${escapeHtml(assignedName || (mode === 'team' ? 'Jamoaviy' : 'Hali olinmagan'))}</strong></div>
-              <div class="workspace-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
-              ${task.requiredSkill ? `<div class="workspace-detail-row"><span>Ko'nikma</span><strong>${escapeHtml(task.requiredSkill)}${(data.members || []).some((m) => Array.isArray(m.user?.skills) && m.user.skills.includes(task.requiredSkill)) ? '' : ' ⚠ gap'}</strong></div>` : ''}
-              ${task.assignmentMode === 'team' ? `<div class="workspace-detail-row"><span>Progress</span><strong>${task.progressCount || 0}/${memberCount} kishi bajardi (threshold: ${teamRequired})</strong></div>` : ''}
-              ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="workspace-detail-row"><span>Bog'liq </span><strong>${task.dependsOn.map((id) => escapeHtml(((data.tasks || []).find((t) => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
-            </div>
-            ${taskSubs.length ? `
-              <div class="workspace-message-stack">
-                ${taskSubs.map((sub) => `
-                  <div class="workspace-message-item">
-                    <strong>${escapeHtml(sub.userName)}</strong>
-                    <span>${escapeHtml(sub.resultText)}</span>
-                    ${sub.resultLink ? `<a class="text-sm" href="${escapeHtml(sub.resultLink)}" target="_blank" rel="noopener noreferrer" style="color:#7dd3fc;margin-top:8px;display:inline-flex">Linkni ochish</a>` : ''}
-                  </div>
-                `).join('')}
-              </div>
-            ` : ''}
-            <div class="workspace-task-footer">
-              ${canClaim ? `<button class="btn btn-secondary" data-task-claim="${task.id}">Topshiriqni olish</button>` : '<span class="workspace-helper">Topshiriq oqimi faol</span>'}
-              ${canSubmit ? `
-                <div class="workspace-task-submit-grid" style="flex:1">
-                  <input class="input" data-task-result="${task.id}" placeholder="Natijani yozing">
-                  <input class="input" data-task-link="${task.id}" placeholder="Pitch yoki ish linki">
-                  <button class="btn btn-primary" data-task-submit="${task.id}">Tugatdim</button>
-                </div>
-              ` : ''}
-            </div>
-            ${!isViewer ? `
-            <div class="workspace-task-subtools" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-              ${(((mode === 'team') || (mode === 'open' && isAssignedToCurrent) || (mode === 'direct' && isAssignedToCurrent)) || (isLead && (mode === 'open'))) ? `
-              <button class="btn btn-secondary btn-sm" data-task-attach="${task.id}" title="Fayl biriktirish (shifrlangan)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg> Fayl biriktirish</button>
-              ` : ''}
-              ${(((mode === 'team') || (mode === 'open' && isAssignedToCurrent) || (mode === 'direct' && isAssignedToCurrent)) || (isLead && (mode === 'open'))) ? `
-              <button class="btn btn-secondary btn-sm" data-task-github="${task.id}" title="Vazifani GitHub Issuesga yuborish">🐙 GitHub'ga</button>
-              ` : ''}
-              <input type="file" id="file-${task.id}" style="display:none">
-              ${isLead ? `<div class="workspace-task-reassign" style="display:flex;gap:6px;align-items:center;flex:1;">
-                <select class="select btn-sm" id="reassignSel-${task.id}" aria-label="Mas'ulni tanlang">${memberOptions(data.members, false)}</select>
-                <button class="btn btn-secondary btn-sm" data-task-reassign="${task.id}">Mas'ulni o'zgartirish</button>
-              </div>` : ''}
-            </div>` : ''}
-            <div class="text-xs muted" data-attach-feedback="${task.id}"></div>
-            <div class="text-sm muted" data-task-feedback="${task.id}"></div>
-          </div>
-        `;
-      }).join('') : '<div class="workspace-empty"><h3>Topshiriq yo\'q</h3><p>Lead yoki jamoa yangi topshiriq qo\'shganda shu yerda ko\'rinadi.</p></div>';
+      var COLUMNS = [
+        { key: 'open', label: '📋 Ochiq', status: 'open', emptyMsg: 'Ochiq topshiriq yo\'q' },
+        { key: 'in_progress', label: '🔧 Bajarilmoqda', status: 'in_progress', emptyMsg: 'Bajarilayotgan topshiriq yo\'q' },
+        { key: 'submitted', label: '🔍 Tekshiruvda', status: 'submitted', emptyMsg: 'Tekshiruvdagi topshiriq yo\'q' },
+        { key: 'done', label: '✅ Tugallangan', status: 'done', emptyMsg: 'Tugallangan topshiriq yo\'q' }
+      ];
 
-      document.querySelectorAll('[data-task-claim]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const taskId = button.dataset.taskClaim;
-          const feedback = document.querySelector(`[data-task-feedback="${taskId}"]`);
-          if (feedback) {
-            feedback.className = 'text-sm muted feedback-error';
-            feedback.textContent = '';
-          }
+      target.innerHTML = '<div class="kanban-board">' + COLUMNS.map(function(col) {
+        var colTasks = groups[col.key] || [];
+        return '<div class="kanban-column" data-status="' + col.status + '" data-column="' + col.key + '">' +
+          '<div class="kanban-column-header"><span>' + col.label + '</span><span class="count">' + colTasks.length + '</span></div>' +
+          (colTasks.length ? colTasks.map(function(task) {
+            return renderTaskCard(task, data, submissions, memberCount, currentUserId, isLead, isViewer);
+          }).join('') : '<div class="kanban-empty">' + col.emptyMsg + '</div>') +
+        '</div>';
+      }).join('') + '</div>';
+
+      // Event listenerlarni qayta ulash
+      setTimeout(() => attachTaskListeners(data, currentUserId, isLead, isViewer), 0);
+      setTimeout(() => attachColumnDragDrop(data, currentUserId), 50);
+    }
+
+    function renderTaskCard(task, data, submissions, memberCount, currentUserId, isLead, isViewer) {
+      var taskSubs = submissions.filter(item => item.taskId === task.id);
+      var hasSubmitted = taskSubs.some(item => item.userId === currentUserId);
+      var assignedId = task.assignedTo || task.assignedUserId || null;
+      var assignedName = task.assignedUserName ||
+        ((data.members || []).find(m => m.userId === assignedId)?.user?.name) ||
+        ((data.members || []).find(m => m.userId === assignedId)?.name) || null;
+      var mode = task.assignmentMode || (assignedId ? 'direct' : 'open');
+      var isAssignedToCurrent = assignedId === currentUserId;
+      var canClaim = !isViewer && mode === 'open' && !assignedId;
+      var canSubmit = !isViewer && (
+        (mode === 'team') ||
+        ((mode === 'direct' || mode === 'open') && isAssignedToCurrent)
+      ) && !hasSubmitted && task.status !== 'completed' && task.status !== 'done';
+      var canComplete = (isLead || isAssignedToCurrent) && (task.status === 'in_progress' || task.status === 'submitted');
+      var isSubmitted = task.status === 'submitted';
+
+      return '<div class="kanban-task" draggable="true" data-task-id="' + task.id + '" data-status="' + (task.status || 'open') + '" onclick="openTaskDetail(\'' + task.id + '\')">' +
+        '<div class="kanban-task-title">' + escapeHtml(task.title) + '</div>' +
+        '<div class="kanban-task-meta">' +
+          '<span class="badge">' + escapeHtml(mode) + '</span>' +
+          '<span class="badge ' + (isSubmitted ? 'badge-active' : '') + '">' + escapeHtml(task.status || 'open') + '</span>' +
+          (task.blocked ? '<span class="badge" style="background:#7f1d1d;color:#fff">🔒 Bloklangan</span>' : '') +
+        '</div>' +
+        '<div class="kanban-task-footer">' +
+          '<span>' + escapeHtml(assignedName || (mode === 'team' ? 'Jamoaviy' : 'Hali olinmagan')) + '</span>' +
+          '<span>' + (task.deadlineAt ? fmtDate(task.deadlineAt) : '') + '</span>' +
+        '</div>' +
+        (canClaim ? '<button class="btn btn-secondary btn-sm" data-task-claim="' + task.id + '" style="margin-top:6px">Topshiriqni olish</button>' : '') +
+        (canSubmit ? '<button class="btn btn-primary btn-sm" data-task-submit="' + task.id + '" style="margin-top:6px">Tugatdim</button>' : '') +
+        (canComplete ? '<button class="btn btn-primary btn-sm" data-task-complete="' + task.id + '" style="margin-top:6px">✅ Tugallash</button>' : '') +
+      '</div>';
+    }
+
+    window.openTaskDetail = function(taskId) {
+      var panel = document.getElementById('tskPanel');
+      var body = document.getElementById('tskPanelBody');
+      var bd = document.getElementById('tskBackdrop');
+      if (!panel || !body) return;
+      showTskDetail(taskId, panel, body);
+      panel.classList.add('expanded');
+      if (bd) bd.style.display = 'block';
+    };
+
+    function attachTaskListeners(data, currentUserId, isLead, isViewer) {
+      document.querySelectorAll('[data-task-claim]').forEach(button => {
+        button.addEventListener('click', async function(e) {
+          e.stopPropagation();
+          var taskId = button.dataset.taskClaim;
           button.disabled = true;
           try {
             await MllyCore.claimOpenTask(taskId);
             await refreshWorkspace(data.team.id, currentUserId);
           } catch (error) {
-            if (feedback) feedback.textContent = error.message || 'Topshiriq olinmadi.';
+            UTIL.toast(error.message || 'Topshiriq olinmadi.');
             button.disabled = false;
           }
         });
       });
 
-      document.querySelectorAll('[data-task-submit]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const taskId = button.dataset.taskSubmit;
-          const resultText = document.querySelector(`[data-task-result="${taskId}"]`)?.value || '';
-          const resultLink = document.querySelector(`[data-task-link="${taskId}"]`)?.value || '';
-          const feedback = document.querySelector(`[data-task-feedback="${taskId}"]`);
-          if (feedback) {
-            feedback.className = 'text-sm muted feedback-error';
-            feedback.textContent = '';
-          }
+      document.querySelectorAll('[data-task-submit]').forEach(button => {
+        button.addEventListener('click', async function(e) {
+          e.stopPropagation();
+          var taskId = button.dataset.taskSubmit;
+          var resultText = prompt('Natijani yozing:', '');
+          if (resultText === null) return;
           button.disabled = true;
           try {
-            await MllyCore.submitTaskResult({ taskId, resultText, resultLink });
+            await MllyCore.submitTaskResult({ taskId: taskId, resultText: resultText || '', resultLink: '' });
             await refreshWorkspace(data.team.id, currentUserId);
           } catch (error) {
-            if (feedback) feedback.textContent = error.message || 'Natija yuborilmadi.';
+            UTIL.toast(error.message || 'Natija yuborilmadi.');
             button.disabled = false;
           }
         });
       });
 
-      // Mas'ulni o'zgartirish (faqat team lead) — client-side Firestore update
-      // (Firestore qoidasi: team lead task'ni yangilashi mumkin, shuning uchun ruxsat bor).
-      document.querySelectorAll('[data-task-reassign]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const taskId = button.dataset.taskReassign;
-          const sel = document.getElementById('reassignSel-' + taskId);
-          const fb = document.querySelector('[data-task-feedback="' + taskId + '"]');
-          const newId = sel ? sel.value : '';
-          if (!newId) { if (fb) fb.textContent = "Mas'ul uchun a'zo tanlang."; return; }
+      document.querySelectorAll('[data-task-complete]').forEach(button => {
+        button.addEventListener('click', async function(e) {
+          e.stopPropagation();
+          var taskId = button.dataset.taskComplete;
           button.disabled = true;
           try {
-            await MllyCore.reassignTask({ teamId: data.team.id, taskId, assignedTo: newId });
-            if (fb) { fb.className = 'text-sm muted feedback-success'; fb.textContent = "Mas'ul yangilandi."; }
+            await MllyCore.setTaskStatus({ taskId: taskId, status: 'done' });
             await refreshWorkspace(data.team.id, currentUserId);
           } catch (error) {
-            if (fb) fb.textContent = error.message || "Mas'ul o'zgartirilmadi.";
+            UTIL.toast(error.message || 'Topshiriq tugallanmadi.');
             button.disabled = false;
           }
         });
       });
-
-      // T4 - Vaqt kuzatuvi (log-time)
-      document.querySelectorAll('[data-task-logtime]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const taskId = button.dataset.taskLogtime;
-          const minutes = window.prompt('Sarflangan vaqtni daqiqalarda kiriting:', '30');
-          if (minutes === null) return;
-          const ms = parseInt(minutes, 10) * 60000;
-          if (!(ms > 0)) { UTIL.toast('Iltimos, musbat son kiriting.'); return; }
-          button.disabled = true;
-          try {
-            await MllyCore.logTime({ teamId: data.team.id, taskId, durationMs: ms });
-            UTIL.toast("Vaqt qo'shildi.");
-          } catch (error) {
-            UTIL.toast(error.message || "Vaqt qo'shilmadi.");
-          } finally {
-            button.disabled = false;
-          }
-        });
-      });
-
-      // T16 - Shifrlangan fayl biriktirish (client-side AES-GCM, server ochiq fayl ko'rmaydi)
-      // Xavfsizlik: button ko'rinsa ham, qo'shimcha runtime tekshiruvi
-      document.querySelectorAll('[data-task-attach]').forEach((button) => {
-        button.addEventListener('click', () => {
-          const taskId = button.dataset.taskAttach;
-          // Agar button disabled bo'lsa, hech narsa qilmaymiz
-          if (button.disabled) return;
-          document.getElementById('file-' + taskId)?.click();
-        });
-      });
-      document.querySelectorAll('[id^="file-"]').forEach((input) => {
-        input.addEventListener('change', async () => {
-          const taskId = input.id.replace('file-', '');
-          const file = input.files && input.files[0];
-          const fb = document.querySelector(`[data-attach-feedback="${taskId}"]`);
-          if (!file) return;
-          if (fb) fb.textContent = 'Shifrlanmoqda...';
-          try {
-            // HTTPS tekshiruvi — crypto.subtle faqat secure context'da ishlaydi
-            if (!window.isSecureContext || !crypto.subtle) {
-              throw new Error('Fayl shifrlash uchun HTTPS (localhost) talab qilinadi. Sayt HTTPS orqali ochilganiga ishonch hosil qiling.');
-            }
-            const buf = await file.arrayBuffer();
-            const rawKey = crypto.getRandomValues(new Uint8Array(32));
-            const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt']);
-            const iv = crypto.getRandomValues(new Uint8Array(12));
-            const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, buf);
-            const enc = new Uint8Array(ct);
-            const path = `attachments/${data.team.id}/${taskId}/${Date.now()}_${file.name}.enc`;
-            await MllyCore.uploadEncryptedFile({ filePath: path, data: enc, contentType: 'application/octet-stream' });
-            // Uint8Array -> base64 (String.fromCharCode.apply emas, chunki u ba'zi brauzerlarda ishlamaydi)
-            const uint8ToB64 = (u8) => { let s=''; for(let i=0;i<u8.length;i++) s+=String.fromCharCode(u8[i]); return btoa(s); };
-            const ivB64 = uint8ToB64(iv);
-            await MllyCore.createAttachmentMeta({ teamId: data.team.id, taskId, fileName: file.name, size: file.size, iv: ivB64 });
-            const keyB64 = uint8ToB64(rawKey);
-            if (fb) fb.textContent = "✅ Yuklandi. Shifr kaliti (qabul qiluvchiga alohida ulashingiz kerak): " + keyB64;
-            UTIL.toast('Fayl shifrlab yuklandi.');
-          } catch (error) {
-            if (fb) fb.textContent = error.message || 'Yuklashda xatolik.';
-          } finally {
-            input.value = '';
-          }
-        });
-      });
-
-      // T31 - GitHub'ga yuborish (vazifani GitHub issue ga aylantirish)
-      document.querySelectorAll('[data-task-github]').forEach((button) => {
-        button.addEventListener('click', async () => {
-          const taskId = button.dataset.taskGithub;
-          const repo = window.prompt("GitHub repo (masalan: user/repo):", '');
-          if (!repo) return;
-          const token = window.prompt("GitHub token (ixtiyoriy — bo'sh qoldirsangiz serverdagi GITHUB_TOKEN env avtomatik ishlatiladi):", '');
-          button.disabled = true;
-          try {
-            const r = await MllyCore.syncGithubIssue({ taskId, repo: repo.trim(), token: (token || '').trim() });
-            UTIL.toast('GitHub issue yaratildi');
-            if (r.issueUrl) button.insertAdjacentHTML('afterend', ` <a class="github-synced" href="${escapeHtml(r.issueUrl)}" target="_blank" rel="noopener">✓ GitHub'da</a>`);
-          } catch (e) { UTIL.toast(e.message); }
-          finally { button.disabled = false; }
-        });
-      });
-
-      if (isLead) {
-        const assignmentMode = document.getElementById('taskAssignmentMode');
-        const assigneeWrap = document.getElementById('taskAssigneeWrap');
-        const toggleAssignee = () => {
-          if (!assignmentMode || !assigneeWrap) return;
-          assigneeWrap.style.display = assignmentMode.value === 'direct' ? '' : 'none';
-        };
-        assignmentMode?.addEventListener('change', toggleAssignee);
-        toggleAssignee();
-      }
     }
 
+    function attachColumnDragDrop(data, currentUserId) {
+      var tasks = document.querySelectorAll('.kanban-task[draggable="true"]');
+      var columns = document.querySelectorAll('.kanban-column');
+
+      tasks.forEach(function(task) {
+        task.addEventListener('dragstart', function(e) {
+          this.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', this.dataset.taskId);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        task.addEventListener('dragend', function() {
+          this.classList.remove('dragging');
+          columns.forEach(function(col) { col.classList.remove('drag-over'); });
+        });
+      });
+
+      columns.forEach(function(col) {
+        col.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          this.classList.add('drag-over');
+        });
+        col.addEventListener('dragleave', function() {
+          this.classList.remove('drag-over');
+        });
+        col.addEventListener('drop', async function(e) {
+          e.preventDefault();
+          this.classList.remove('drag-over');
+          var taskId = e.dataTransfer.getData('text/plain');
+          var newStatus = this.dataset.status;
+          var taskEl = document.querySelector('.kanban-task[data-task-id="' + taskId + '"]');
+          if (!taskEl || !taskId || !newStatus) return;
+          var oldStatus = taskEl.dataset.status;
+          if (oldStatus === newStatus) return;
+
+          // Optimistik yangilash
+          taskEl.setAttribute('data-status', newStatus);
+          taskEl.classList.add('dragging');
+
+          try {
+            await MllyCore.setTaskStatus({ taskId: taskId, status: newStatus });
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            taskEl.setAttribute('data-status', oldStatus);
+            taskEl.classList.remove('dragging');
+            UTIL.toast(error.message || 'Status yangilanmadi.');
+          }
+        });
+      });
+    }
+    function renderTaskCard(task, data, submissions, memberCount, currentUserId, isLead, isViewer) {
+      var taskSubs = submissions.filter(function(item) { return item.taskId === task.id; });
+      var hasSubmitted = taskSubs.some(function(item) { return item.userId === currentUserId; });
+      var assignedId = task.assignedTo || task.assignedUserId || null;
+      var assignedName = task.assignedUserName ||
+        ((data.members || []).find(function(m) { return m.userId === assignedId; })?.user?.name) ||
+        ((data.members || []).find(function(m) { return m.userId === assignedId; })?.name) || null;
+      var mode = task.assignmentMode || (assignedId ? 'direct' : 'open');
+      var isAssignedToCurrent = assignedId === currentUserId;
+      var canClaim = !isViewer && mode === 'open' && !assignedId;
+      var canSubmit = !isViewer && (
+        (mode === 'team') ||
+        ((mode === 'direct' || mode === 'open') && isAssignedToCurrent)
+      ) && !hasSubmitted && task.status !== 'completed' && task.status !== 'done';
+      var canComplete = (isLead || isAssignedToCurrent) && (task.status === 'in_progress' || task.status === 'submitted');
+
+      return '<div class="kanban-task" draggable="true" data-task-id="' + task.id + '" data-status="' + (task.status || 'open') + '">' +
+        '<div class="kanban-task-title">' + escapeHtml(task.title) + '</div>' +
+        '<div class="kanban-task-meta">' +
+          '<span class="badge">' + escapeHtml(mode) + '</span>' +
+          '<span class="badge">' + escapeHtml(task.status || 'open') + '</span>' +
+          (task.blocked ? '<span class="badge" style="background:#7f1d1d;color:#fff">🔒 Bloklangan</span>' : '') +
+        '</div>' +
+        '<div class="kanban-task-footer">' +
+          '<span>' + escapeHtml(assignedName || (mode === 'team' ? 'Jamoaviy' : 'Hali olinmagam')) + '</span>' +
+          '<span>' + (task.deadlineAt ? fmtDate(task.deadlineAt) : '') + '</span>' +
+        '</div>' +
+        (canClaim ? '<button class="btn btn-secondary btn-sm" data-task-claim="' + task.id + '" style="margin-top:6px">Topshiriqni olish</button>' : '') +
+        (canSubmit ? '<button class="btn btn-primary btn-sm" data-task-submit="' + task.id + '" style="margin-top:6px">Tugatdim</button>' : '') +
+        (canComplete ? '<button class="btn btn-primary btn-sm" data-task-complete="' + task.id + '" style="margin-top:6px">✅ Tugallash</button>' : '') +
+      '</div>';
+    }
+
+    function attachTaskListeners(data, currentUserId, isLead, isViewer) {
+      document.querySelectorAll('[data-task-claim]').forEach(function(button) {
+        button.addEventListener('click', async function() {
+          var taskId = button.dataset.taskClaim;
+          button.disabled = true;
+          try {
+            await MllyCore.claimOpenTask(taskId);
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            UTIL.toast(error.message || 'Topshiriq olinmadi.');
+            button.disabled = false;
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-task-submit]').forEach(function(button) {
+        button.addEventListener('click', async function() {
+          var taskId = button.dataset.taskSubmit;
+          button.disabled = true;
+          try {
+            await MllyCore.submitTaskResult({ taskId: taskId, resultText: '', resultLink: '' });
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            UTIL.toast(error.message || 'Natija yuborilmadi.');
+            button.disabled = false;
+          }
+        });
+      });
+
+      document.querySelectorAll('[data-task-complete]').forEach(function(button) {
+        button.addEventListener('click', async function() {
+          var taskId = button.dataset.taskComplete;
+          button.disabled = true;
+          try {
+            await MllyCore.setTaskStatus({ taskId: taskId, status: 'done' });
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            UTIL.toast(error.message || 'Topshiriq tugallanmadi.');
+            button.disabled = false;
+          }
+        });
+      });
+    }
+
+    function attachColumnDragDrop(data, currentUserId) {
+      var tasks = document.querySelectorAll('.kanban-task[draggable="true"]');
+      var columns = document.querySelectorAll('.kanban-column');
+
+      tasks.forEach(function(task) {
+        task.addEventListener('dragstart', function(e) {
+          this.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', this.dataset.taskId);
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        task.addEventListener('dragend', function() {
+          this.classList.remove('dragging');
+          columns.forEach(function(col) { col.classList.remove('drag-over'); });
+        });
+      });
+
+      columns.forEach(function(col) {
+        col.addEventListener('dragover', function(e) {
+          e.preventDefault();
+          this.classList.add('drag-over');
+        });
+        col.addEventListener('dragleave', function() {
+          this.classList.remove('drag-over');
+        });
+        col.addEventListener('drop', async function(e) {
+          e.preventDefault();
+          this.classList.remove('drag-over');
+          var taskId = e.dataTransfer.getData('text/plain');
+          var newStatus = this.dataset.status;
+          var taskEl = document.querySelector('.kanban-task[data-task-id="' + taskId + '"]');
+          if (!taskEl || !taskId || !newStatus) return;
+          var oldStatus = taskEl.dataset.status;
+          if (oldStatus === newStatus) return;
+
+          // Optimistik yangilash
+          taskEl.setAttribute('data-status', newStatus);
+          taskEl.classList.add('dragging');
+
+          try {
+            await MllyCore.setTaskStatus({ taskId: taskId, status: newStatus });
+            await refreshWorkspace(data.team.id, currentUserId);
+          } catch (error) {
+            taskEl.setAttribute('data-status', oldStatus);
+            taskEl.classList.remove('dragging');
+            UTIL.toast(error.message || 'Status yangilanmadi.');
+          }
+        });
+      });
+    }
     function renderWorkspaceSkeleton() {
       const target = document.getElementById('content');
       if (!target) return;
@@ -2233,8 +2294,11 @@
         try { await refreshWorkspace(workspaceState.team.id, user.uid); } catch (_) {}
         setTimeout(() => btn.classList.remove('refreshing'), 600);
       });
-      // 30 soniyalik avtomatik yangilash
+      // 30 soniyalik avtomatik yangilash — visibility check va loading indicator bilan
       const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
+        if (document.visibilityState !== 'visible') return;
+        const refreshBtn = document.getElementById('refreshTeamBtn');
+        refreshBtn?.classList.add('refreshing');
         try {
           const freshData = await MllyCore.getTeamData(workspaceState.team.id);
           if (freshData) {
@@ -2244,6 +2308,7 @@
         } catch (_) {}
         const el = document.getElementById('lastUpdateTime');
         if (el) el.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+        setTimeout(() => refreshBtn?.classList.remove('refreshing'), 600);
       }, 30000);
       } catch(e) { document.getElementById("content").innerHTML = "<div class=\"workspace-empty\"><h3>Xatolik yuz berdi</h3><p>Sahifani qayta yuklang.</p></div>"; console.error("Xato:", e); }
     })();

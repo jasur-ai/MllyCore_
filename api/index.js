@@ -451,6 +451,10 @@ async function handleTaskAction(req, res, db, decoded, user) {
     } catch (_) { /* non-fatal */ }
   }
   if (action === 'claim') { update.assignedTo = decoded.uid; update.assignmentMode = 'assigned'; }
+  if (action === 'set-status') {
+    if (!status) return { status: 400, error: 'Status kerak.' };
+    update.status = status;
+  }
   if (action === 'submit') {
     update.submission = { text: resultText || '', link: resultLink || '', byUserId: decoded.uid, at: SV() };
     update.status = 'submitted';
