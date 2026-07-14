@@ -69,6 +69,7 @@
   <script src="js/firebase-service.js"></script>
   <script>
     (async () => {
+      try {
       const state = await MllyCore.init();
       if (!state) {
         location.href = 'login.html';
@@ -88,6 +89,7 @@
         }
         document.getElementById('verifyMessage').textContent = 'Emailga link yuborish uchun "Link yuborish" tugmasini bosing.';
       });
+      } catch(e) { location.href = "login.html"; }
     })();
 
     let resendLocked = false;
@@ -125,7 +127,7 @@
     });
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await MllyCore.logout();
+      try { await MllyCore.logout(); } catch (_) {}
       location.href = 'login.html';
     });
 
