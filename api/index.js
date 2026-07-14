@@ -1077,17 +1077,6 @@ async function handleActions(req, res, db, decoded, user) {
       if (allowed && !allowed.has(t.teamId)) return false;
       return true;
     });
-    const overdue = snap.docs.map((d) => ({ id: d.id, ...d.data() })).filter((t) => {
-      const due = t.dueDate && t.dueDate.toMillis ? t.dueDate.toMillis() : 0;
-      if (!(due > 0 && due < now)) return false;
-      if (req.query.teamId && t.teamId !== req.query.teamId) return false;
-      if (allowed && !allowed.has(t.teamId)) return false;
-      return true;
-    });
-    return { status: 200, tasks: overdue, totalOverdue: overdue.length };
-  }
-
-  return { status: 400, error: 'Action xato.' };
     return { status: 200, tasks: overdue, totalOverdue: overdue.length };
   }
 
