@@ -1201,8 +1201,16 @@ window.MllyCore = {
   async ensureAuthed() {
     const state = await this.init();
     if (!state) throw new Error('Firebase sozlanmagan.');
+    // FIX (auth race): Avval `MLLYCORE_AUTH_USER` (auth-guard tomonidan o'rnatiladi),
+    // keyin `state.auth.currentUser` (Firebase Auth holati).
+    // Agar ikkalasi ham null bo'lsa, login.html ga yo'naltirish shart emas —
+    // chaqiruvchi funksiya exception'ni ushlab, kerakli joyga redirect qiladi.
     const authUser = window.MLLYCORE_AUTH_USER || state.auth.currentUser;
-    if (!authUser) throw new Error('Avval tizimga kiring.');
+    if (!authUser) {
+      const err = new Error('Avval tizimga kiring.');
+      err.code = 'auth/not-authenticated';
+      throw err;
+    }
     return authUser;
   },
 
@@ -1850,7 +1858,12 @@ function toMillis(value) {
 }
 
 function sortByCreatedAtDesc(a, b) {
-  return toMillis(b.updatedAt || b.createdAt) - toMillis(a.updatedAt || a.createdAt);
+  // FIX (updatedAt 0 bug): updatedAt firestore serverTimestamp bo'lib, 0/null/undefined
+  // bo'lishi mumkin, shuning uchun updatedAt ni tekshirib, agar mavjud bo'lmasa createdAt ga tayanamiz.
+  // number, Timestamp, Date, string hammasini toMillis() to'g'ri ishlaydi.
+  const aTime = (a.updatedAt != null && a.updatedAt !== 0) ? a.updatedAt : (a.createdAt || 0);
+  const bTime = (b.updatedAt != null && b.updatedAt !== 0) ? b.updatedAt : (b.createdAt || 0);
+  return toMillis(bTime) - toMillis(aTime);
 }
 
 function sortByChatAscending(a, b) {
@@ -1906,10 +1919,15 @@ function writeCache(key, value) {
 function invalidateDashboardCache(uid = '') {
   if (uid) {
     invalidateCacheByPrefix(getCacheKey('dashboard', `admin:${uid}`));
+    invalidateCacheByPrefix(getCacheKey('dashboard', `manager:${uid}`));
+    invalidateCacheByPrefix(getCacheKey('dashboard', `team_lead:${uid}`));
     invalidateCacheByPrefix(getCacheKey('dashboard', `member:${uid}`));
+    invalidateCacheByPrefix(getCacheKey('dashboard', `viewer:${uid}`));
+    invalidateCacheByPrefix(getCacheKey('mgrdash', uid));
     return;
   }
   invalidateCacheByPrefix(getCacheKey('dashboard', ''));
+  invalidateCacheByPrefix(getCacheKey('mgrdash', ''));
 }
 
 function invalidateTeamCache(teamId = '') {

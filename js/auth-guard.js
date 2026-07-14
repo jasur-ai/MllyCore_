@@ -21,7 +21,12 @@
       return await window.MllyCore.requireAuth();
     } catch (error) {
       console.error(error);
-      location.href = 'login.html';
+      // FIX (redirect loop): Agar allaqachon login.html da bo'lsak, yana redirect
+      // qilish loopga olib keladi. Faqat boshqa sahifalarda redirect qilamiz.
+      const currentPage = location.pathname.split('/').pop() || 'index.html';
+      if (currentPage !== 'login.html' && currentPage !== 'register.html') {
+        location.href = 'login.html';
+      }
       return null;
     }
   })();

@@ -62,17 +62,30 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/')) return;
   if (url.hostname.includes('firebase') || url.hostname.includes('gstatic') || url.hostname.includes('googleapis')) return;
 
-  // App-shell: cache-first, keyin network, oxirida index.html fallback.
+  // FIX (SW fallback): `index.html` faqat navigation requestlar (HTML sahifalar)
+  // uchun fallback bo'ladi. Agar image/JS/CSS/font yuklanmasa, `index.html` qaytarish
+  // noto'g'ri — brauzer uni parse qilib, silent xatolikka olib keladi.
+  const isNavigation = req.mode === 'navigate' ||
+    (req.method === 'GET' && req.headers.get('Accept')?.includes('text/html'));
+  
   event.respondWith(
     caches.match(req).then((cached) => {
       if (cached) return cached;
       return fetch(req).then((res) => {
         try {
           const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          // Faqat bizning shell resurslarimizni cache'ga qo'shamiz (CSS/JS/HTML)
+          if (res.ok && url.pathname.match(/\.(html?|css|js|svg|png)$/)) {
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
         } catch (_) { /* ignore */ }
         return res;
-      }).catch(() => caches.match('index.html'));
+      }).catch(() => {
+        // Faqat navigation requestlar uchun index.html fallback
+        if (isNavigation) return caches.match('index.html');
+        // Boshqa resurslar (image, font, js) uchun empty fallback
+        return new Response('', { status: 503, statusText: 'Offline' });
+      });
     })
   );
 });
