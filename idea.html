@@ -13,6 +13,14 @@
   <link rel="stylesheet" href="css/styles.css">
   <script src="js/icons.js"></script>
   <script>(function(){try{var s=localStorage.getItem('mllycore-theme')||'dark';document.body.className=s==='light'?'theme-light':'theme-dark'}catch(_){document.body.className='theme-dark';}})();</script>
+  <script>
+    // Xavfsizlik: 15 soniya ichida yuklanmasa, Yuklanmoqda matnini xato xabariga almashtiramiz
+    window.__mllyLoadingTimeout = setTimeout(function() {
+      var el = document.getElementById('ideaApp');
+      if (!el || !el.querySelector('.loading-copy')) return;
+      el.innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Sahifa uzoq vaqt yuklanmadi. Internet aloqangizni tekshiring yoki qayta urinib koring.</p></div>';
+    }, 15000);
+  </script>
 </head>
 <body>
   <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
@@ -46,6 +54,8 @@
         MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] })),
         MllyCore.getIdeaById(ideaId).catch(() => null)
       ]);
+      // Yuklash muvaffaqiyatli — timeoutni tozalaymiz
+      if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; }
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: dashboard.teams, notifications: dashboard.notifications });
       if (!idea) {
         document.getElementById('ideaApp').innerHTML = '<div class="workspace-empty"><h3>G\'oya topilmadi</h3><p>Bu yozuv mavjud emas yoki sizda ko\'rish huquqi yo\'q.</p></div>';
