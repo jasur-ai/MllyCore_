@@ -2784,6 +2784,7 @@ module.exports = async (req, res) => {
     else if (action === 'set-public') result = await handleSetPublic(req, res, db, decoded, user);
     else if (action === 'roadmap') result = await handleRoadmap(req, res, db, decoded, user);
     else if (action === 'link-telegram') result = await handleLinkTelegram(req, res, db, decoded, user);
+    else if (action === 'generate-telegram-code') result = await handleGenerateTelegramCode(req, res, db, decoded, user);
     else if (action === 'telegram-webhook') result = await handleTelegramWebhook(req, res);
     else if (action === 'finances') result = await handleFinances(req, res, db, decoded, user);
     else if (action === 'runway') result = await handleRunway(req, res, db, decoded, user);

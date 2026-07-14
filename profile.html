@@ -25,182 +25,237 @@
         </div>
       </section>
 
-            <section class="workspace-layout">
-        <div class="ws-tabs" role="tablist" aria-label="Profil bo'limlari">
-          <button type="button" class="ws-tab" role="tab" data-tab="shaxsiy" aria-selected="true" id="tab-shaxsiy">👤 Shaxsiy</button>
-          <button type="button" class="ws-tab" role="tab" data-tab="ish" aria-selected="false" id="tab-ish">⚙️ Ish sozlamalari</button>
-          <button type="button" class="ws-tab" role="tab" data-tab="malumotlar" aria-selected="false" id="tab-malumotlar">📊 Ma'lumotlarim</button>
-        </div>
-        <div class="ws-tab-panels">
+              <div class="ws-tabs" role="tablist" aria-label="Profil bo'limlari" style="margin-bottom:0;border-bottom:none;">
+        <button type="button" class="ws-tab" role="tab" data-tab="shaxsiy" aria-selected="true" id="tab-shaxsiy">👤 Shaxsiy</button>
+        <button type="button" class="ws-tab" role="tab" data-tab="ish" aria-selected="false" id="tab-ish">⚙️ Ish sozlamalari</button>
+        <button type="button" class="ws-tab" role="tab" data-tab="malumotlar" aria-selected="false" id="tab-malumotlar">📊 Ma'lumotlarim</button>
+      </div>
+      <div class="ws-tab-panels" style="margin-top:20px;">
 
-          <div class="ws-tab-panel" data-panel="shaxsiy" role="tabpanel" aria-labelledby="tab-shaxsiy">
-            <div class="workspace-surface pad" style="margin-top:20px;">
-              <div class="section-head"><h2>Profil</h2></div>
-              <div class="workspace-form-grid">
-                <div>
-                  <label class="label">Ism</label>
-                  <input class="input" id="name">
-                </div>
-                <div>
-                  <label class="label">Username</label>
-                  <input class="input" id="username">
-                </div>
-                <div>
-                  <label class="label">Email</label>
-                  <input class="input" id="email" disabled>
-                </div>
-                <button class="btn btn-primary" id="saveProfileBtn">Saqlash</button>
-              </div>
-            </div>
-
-            <div class="workspace-surface pad" style="margin-top:20px;" id="twoFactorPanel">
-              <div class="section-head"><h2>🔐 Ikki bosqichli tasdiqlash </h2></div>
-              <p class="muted text-sm">Shaxsiy hisobingizni TOTP (Google Authenticator / Authy) orqali qo'shimcha himoyalang.</p>
-              <p class="muted text-sm" style="margin-top:6px"><strong>Qanday faollashtirish:</strong> "2FA ni yoqish" tugmasini bosing → ekranga chiqadigan <strong>secret key</strong> ni autentifikator ilovasiga kiriting yoki QR kodni skan qiling → 6 xonali kodni kiritib "Tasdiqlash" bosing. <span class="modal-secret-warn">Secret key faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang.</span></p>
-              <div id="twoFactorStatus" class="text-sm muted" style="margin:8px 0;"></div>
-              <div id="twoFactorSetup" style="display:none;margin-bottom:12px;">
-                <div class="text-sm">1. Secret ni autentifikatorga kiriting yoki QR ochang:</div>
-                <div class="modal-secret-warn">⚠️ Bu secret faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang. Tasdiqlangandan keyin o'chib ketadi.</div>
-                <div class="modal-secret-value">
-                  <code id="twoFactorSecret" style="word-break:break-all;background:var(--surface-sub);padding:8px;border-radius:8px;"></code>
-                  <button type="button" class="btn btn-secondary btn-sm" id="copyTwoFactorSecret">Copy</button>
-                </div>
-                <a id="twoFactorOtpauth" class="btn btn-tertiary btn-sm" target="_blank" rel="noopener">QR ochish</a>
-                <div class="workspace-form-grid" style="margin-top:10px;">
-                  <input class="input" id="twoFactorCode" placeholder="6 xonali kod">
-                  <button class="btn btn-primary" id="twoFactorVerifyBtn">Tasdiqlash</button>
+        <div class="ws-tab-panel" data-panel="shaxsiy" role="tabpanel" aria-labelledby="tab-shaxsiy">
+          <div class="workspace-layout">
+            <div class="workspace-main-stack">
+              <div class="workspace-surface pad">
+                <div class="section-head"><h2>👤 Shaxsiy ma'lumotlar</h2></div>
+                <div class="workspace-form-grid">
+                  <div>
+                    <label class="label">Ism</label>
+                    <input class="input" id="name" placeholder="Ismingizni kiriting">
+                  </div>
+                  <div>
+                    <label class="label">Username</label>
+                    <input class="input" id="username" placeholder="username">
+                  </div>
+                  <div>
+                    <label class="label">Email</label>
+                    <input class="input" id="email" disabled>
+                  </div>
+                  <button class="btn btn-primary" id="saveProfileBtn">💾 Saqlash</button>
                 </div>
               </div>
-              <div class="workspace-form-actions" style="justify-content:flex-start;">
-                <button class="btn btn-primary" id="twoFactorEnableBtn">2FA ni yoqish</button>
-                <button class="btn btn-danger" id="twoFactorDisableBtn" style="display:none;">2FA ni o'chirish</button>
+
+              <div class="workspace-surface pad" id="twoFactorPanel">
+                <div class="section-head"><h2>🔐 Ikki bosqichli tasdiqlash (2FA)</h2></div>
+                <p class="muted text-sm">Shaxsiy hisobingizni TOTP (Google Authenticator / Authy) orqali qo'shimcha himoyalang.</p>
+                <p class="muted text-sm" style="margin-top:6px"><strong>Qanday faollashtirish:</strong> "2FA ni yoqish" tugmasini bosing → ekranga chiqadigan <strong>secret key</strong> ni autentifikator ilovasiga kiriting yoki QR kodni skan qiling → 6 xonali kodni kiritib "Tasdiqlash" bosing. <span class="modal-secret-warn">Secret key faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang.</span></p>
+                <div id="twoFactorStatus" class="text-sm muted" style="margin:8px 0;"></div>
+                <div id="twoFactorSetup" style="display:none;margin-bottom:12px;">
+                  <div class="text-sm">1. Secret ni autentifikatorga kiriting yoki QR ochang:</div>
+                  <div class="modal-secret-warn">⚠️ Bu secret faqat bir marta ko'rsatiladi — uni saqlab oling va hech kimga bermang. Tasdiqlangandan keyin o'chib ketadi.</div>
+                  <div class="modal-secret-value">
+                    <code id="twoFactorSecret" style="word-break:break-all;background:var(--surface-sub);padding:8px;border-radius:8px;"></code>
+                    <button type="button" class="btn btn-secondary btn-sm" id="copyTwoFactorSecret">Copy</button>
+                  </div>
+                  <a id="twoFactorOtpauth" class="btn btn-tertiary btn-sm" target="_blank" rel="noopener">QR ochish</a>
+                  <div class="workspace-form-grid" style="margin-top:10px;">
+                    <input class="input" id="twoFactorCode" placeholder="6 xonali kod">
+                    <button class="btn btn-primary" id="twoFactorVerifyBtn">Tasdiqlash</button>
+                  </div>
+                </div>
+                <div class="workspace-form-actions" style="justify-content:flex-start;">
+                  <button class="btn btn-primary" id="twoFactorEnableBtn">2FA ni yoqish</button>
+                  <button class="btn btn-danger" id="twoFactorDisableBtn" style="display:none;">2FA ni o'chirish</button>
+                </div>
               </div>
             </div>
 
             <aside class="workspace-side-stack">
               <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Parolni yangilash</h3>
+                <h3 style="margin:0 0 12px;display:flex;align-items:center;gap:8px;">🔑 Parolni yangilash</h3>
                 <p class="muted text-sm" style="margin:0 0 14px">Team lead uchun boshlang'ich parol email bilan bir xil bo'lishi mumkin. Uni shu yerda almashtiring.</p>
-                <div class="workspace-form-grid">
+                <div class="workspace-form-stack">
                   <div>
                     <label class="label">Hozirgi parol</label>
-                    <input class="input" id="currentPassword" type="password" autocomplete="current-password">
+                    <input class="input" id="currentPassword" type="password" autocomplete="current-password" placeholder="Joriy parolni kiriting">
                   </div>
                   <div>
                     <label class="label">Yangi parol</label>
-                    <input class="input" id="newPassword" type="password" autocomplete="new-password">
+                    <input class="input" id="newPassword" type="password" autocomplete="new-password" placeholder="Kamida 6 belgi">
                   </div>
                   <div>
                     <label class="label">Yangi parolni takrorlang</label>
-                    <input class="input" id="confirmPassword" type="password" autocomplete="new-password">
+                    <input class="input" id="confirmPassword" type="password" autocomplete="new-password" placeholder="Yangi parolni qayta kiriting">
                   </div>
-                  <button class="btn btn-primary" id="changePasswordBtn">Parolni almashtirish</button>
-                  <button class="btn btn-tertiary" id="resetPasswordBtn">Email orqali link</button>
+                  <button class="btn btn-primary w-full" id="changePasswordBtn">Parolni almashtirish</button>
+                  <button class="btn btn-tertiary w-full" id="resetPasswordBtn">📧 Email orqali link yuborish</button>
                 </div>
               </div>
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Xavfsizlik eslatmasi</h3>
-                <p class="muted text-sm" style="margin:0">Email orqali link Firebase Authentication tomonidan yuboriladi.</p>
+              <div class="workspace-surface pad" style="background:rgba(59,130,246,0.06);border-color:rgba(59,130,246,0.18);">
+                <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:6px;">🛡️ Xavfsizlik eslatmasi</h3>
+                <p class="muted text-sm" style="margin:0">Email orqali link Firebase Authentication tomonidan yuboriladi. Profil o'zgarishlari barcha sessiyalarda qayta yuklanadi.</p>
               </div>
             </aside>
           </div>
-
-          <div class="ws-tab-panel" data-panel="ish" role="tabpanel" aria-labelledby="tab-ish" hidden>
-            <div class="workspace-surface pad" style="margin-top:20px;">
-              <div class="section-head"><h2>Ish vaqti va bildirishnomalar </h2></div>
-              <div class="workspace-form-grid">
-                <div>
-                  <label class="label">Ish boshlanishi </label>
-                  <input class="input" id="workingHoursStart" type="time" placeholder="09:00">
-                </div>
-                <div>
-                  <label class="label">Ish tugashi </label>
-                  <input class="input" id="workingHoursEnd" type="time" placeholder="18:00">
-                </div>
-                <div>
-                  <label class="label">Timezone</label>
-                  <select class="input" id="timezone">
-                    <option value="UTC">UTC</option>
-                    <option value="Asia/Tashkent">Asia/Tashkent</option>
-                    <option value="Europe/Istanbul">Europe/Istanbul</option>
-                    <option value="Europe/Moscow">Europe/Moscow</option>
-                    <option value="America/New_York">America/New_York</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="label">Email digest</label>
-                  <select class="input" id="emailDigestFrequency">
-                    <option value="off">O'chirilgan</option>
-                    <option value="daily">Har kuni</option>
-                    <option value="weekly">Haftada</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="label">Telegram username</label>
-                  <input class="input" id="telegramUsername" placeholder="@username">
-                </div>
-                <button class="btn btn-primary" id="savePreferencesBtn">Sozlamalarni Saqlash</button>
-              </div>
-            </div>
-
-            <div class="workspace-surface pad" style="margin-top:20px;" id="extraProfilePanel">
-              <div class="section-head"><h2>Qo'shimcha sozlamalar </h2></div>
-              <div class="workspace-form-grid">
-                <div class="extra-setting">
-                  <label class="label">Telegram Chat ID </label>
-                  <input class="input" id="telegramChatId" placeholder="masalan: 123456789">
-                  <button class="btn btn-primary btn-sm" id="linkTelegramBtn" style="margin-top:6px;">Ulash</button>
-                  <p class="muted text-xs" style="margin-top:6px">Chat ID qayerdan olinadi: Telegram'da @userinfobot ga yozing va /start bosing.</p>
-                </div>
-                <div class="extra-setting">
-                  <label class="label">Ko'nikmalar (vergul bilan)</label>
-                  <input class="input" id="skillsInput" placeholder="React, Figma, Marketing">
-                  <button class="btn btn-primary btn-sm" id="saveSkillsBtn" style="margin-top:6px;">Saqlash</button>
-                  <p class="muted text-xs" style="margin-top:6px">Sizning ko'nikmalaringiz profilda va vazifa moslashida ko'rinadi.</p>
-                </div>
-                <div class="extra-setting">
-                  <label class="label">Til </label>
-                  <select class="input" id="localeSelect">
-                    <option value="uz">O'zbekcha</option>
-                    <option value="ru">Русский</option>
-                    <option value="en">English</option>
-                  </select>
-                  <button class="btn btn-primary btn-sm" id="saveLocaleBtn" style="margin-top:6px;">Saqlash</button>
-                  <p class="muted text-xs" style="margin-top:6px">Interfeys tili shu yerda saqlanadi.</p>
-                </div>
-              </div>
-            </div>
-
-            <div class="workspace-surface pad" style="margin-top:20px;">
-              <div class="section-head"><h2>🐙 GitHub ulanishi </h2></div>
-              <p class="muted text-sm" style="margin:0 0 10px">Vazifani GitHub Issue ga aylantirish uchun vazifa kartasidagi 🐙 GitHub'ga tugmasidan foydalaning. Repo nomi <code>user/repo</code> ko'rinishida kiritiladi.</p>
-            </div>
-          </div>
-
-          <div class="ws-tab-panel" data-panel="malumotlar" role="tabpanel" aria-labelledby="tab-malumotlar" hidden>
-            <div class="workspace-surface" id="personalStatsSurface">
-              <div class="workspace-surface-head">
-                <div>
-                  <h2>Shaxsiy statistika </h2>
-                  <div class="workspace-surface-copy">Shaxsiy faoliyat va performance metrikalari.</div>
-                </div>
-              </div>
-              <div id="personalStatsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
-            </div>
-
-            <div class="workspace-surface" style="margin-top:20px;">
-              <div class="workspace-surface-head">
-                <div>
-                  <h2>Cross-WS Overview </h2>
-                  <div class="workspace-surface-copy">Siz a'zo bo'lgan barcha workspace'lardagi shaxsiy umumlashma.</div>
-                </div>
-              </div>
-              <div id="myOverviewContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
-            </div>
-          </div>
-
         </div>
-      </section>
+
+        <div class="ws-tab-panel" data-panel="ish" role="tabpanel" aria-labelledby="tab-ish" hidden>
+          <div class="workspace-layout">
+            <div class="workspace-main-stack">
+              <div class="workspace-surface pad">
+                <div class="section-head"><h2>⏰ Ish vaqti va bildirishnomalar</h2></div>
+                <div class="workspace-form-grid">
+                  <div>
+                    <label class="label">Ish boshlanishi</label>
+                    <input class="input" id="workingHoursStart" type="time" placeholder="09:00">
+                  </div>
+                  <div>
+                    <label class="label">Ish tugashi</label>
+                    <input class="input" id="workingHoursEnd" type="time" placeholder="18:00">
+                  </div>
+                  <div>
+                    <label class="label">Vaqt mintaqasi</label>
+                    <select class="input" id="timezone">
+                      <option value="UTC">UTC</option>
+                      <option value="Asia/Tashkent">Asia/Tashkent (+5)</option>
+                      <option value="Asia/Almaty">Asia/Almaty (+6)</option>
+                      <option value="Europe/Istanbul">Europe/Istanbul (+3)</option>
+                      <option value="Europe/Moscow">Europe/Moscow (+3)</option>
+                      <option value="America/New_York">America/New_York (-5)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label">Email digest</label>
+                    <select class="input" id="emailDigestFrequency">
+                      <option value="off">O'chirilgan</option>
+                      <option value="daily">Har kuni</option>
+                      <option value="weekly">Haftada bir marta</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="label">Telegram username</label>
+                    <input class="input" id="telegramUsername" placeholder="@username">
+                  </div>
+                  <button class="btn btn-primary" id="savePreferencesBtn">💾 Sozlamalarni saqlash</button>
+                </div>
+              </div>
+
+              <div class="workspace-surface pad" id="extraProfilePanel">
+                <div class="section-head"><h2>🔧 Qo'shimcha sozlamalar</h2></div>
+                <div class="workspace-form-stack">
+                  <div class="extra-setting" style="border-color:rgba(59,130,246,0.20);">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                      <span style="font-size:18px;">🤖</span>
+                      <strong>Telegram bot</strong>
+                      <span class="badge badge-active" id="telegramLinkStatus">Ulanish mavjud emas</span>
+                    </div>
+                    <p class="muted text-xs" style="margin:0 0 8px;">
+                      Bot orqali bildirishnomalarni Telegram'da oling. 
+                      <code>@MllyCoreBot</code> ga <strong>/start</strong> yozing — yangi usul!
+                    </p>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                      <button class="btn btn-primary btn-sm" id="generateTelegramCodeBtn" style="white-space:nowrap;">🔑 Kod olish</button>
+                      <span class="muted text-xs">yoki eski usul:</span>
+                      <input class="input" id="telegramChatId" placeholder="Chat ID" style="max-width:180px;">
+                      <button class="btn btn-secondary btn-sm" id="linkTelegramBtn" style="white-space:nowrap;">✅ Ulash</button>
+                    </div>
+                    <div id="telegramCodeDisplay" style="display:none;margin-top:10px;padding:14px;background:var(--surface-sub);border:1px solid var(--line);border-radius:10px;text-align:center;">
+                      <div class="text-sm muted" style="margin-bottom:8px;">15 daqiqa ichida Telegram'da <code>@MllyCoreBot</code> ga quyidagi kodni yuboring:</div>
+                      <div style="font-size:28px;font-weight:800;font-family:'Space Grotesk',monospace;letter-spacing:6px;color:var(--accent);padding:12px;background:var(--bg);border-radius:8px;display:inline-block;" id="telegramCodeValue">------</div>
+                      <div class="text-xs muted" style="margin-top:8px;">Kodni nusxalash uchun ustiga bosing</div>
+                    </div>
+                  </div>
+                  <div class="extra-setting">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                      <span style="font-size:18px;">🧠</span>
+                      <strong>Ko'nikmalar</strong>
+                    </div>
+                    <p class="muted text-xs" style="margin:0 0 8px;">Ko'nikmalaringizni vergul bilan ajrating. Vazifa moslashida foydalaniladi.</p>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                      <input class="input" id="skillsInput" placeholder="React, Figma, Marketing" style="flex:1;">
+                      <button class="btn btn-primary btn-sm" id="saveSkillsBtn">💾 Saqlash</button>
+                    </div>
+                  </div>
+                  <div class="extra-setting">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                      <span style="font-size:18px;">🌐</span>
+                      <strong>Interfeys tili</strong>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                      <select class="input" id="localeSelect" style="flex:1;">
+                        <option value="uz">O'zbekcha</option>
+                        <option value="ru">Русский</option>
+                        <option value="en">English</option>
+                      </select>
+                      <button class="btn btn-primary btn-sm" id="saveLocaleBtn">💾 Saqlash</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <aside class="workspace-side-stack">
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px;display:flex;align-items:center;gap:6px;">🐙 GitHub ulanishi</h3>
+                <p class="muted text-sm" style="margin:0 0 10px">Vazifani GitHub Issue ga aylantirish uchun vazifa kartasidagi 🐙 GitHub'ga tugmasidan foydalaning.</p>
+                <p class="muted text-xs" style="margin:0">Repo nomi <code>user/repo</code> ko'rinishida kiritiladi.</p>
+              </div>
+              <div class="workspace-surface pad" style="background:rgba(34,197,94,0.06);border-color:rgba(34,197,94,0.18);">
+                <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:6px;">📋 Sozlamalar haqida</h3>
+                <p class="muted text-sm" style="margin:0;line-height:1.7;">Bu bo'limdagi sozlamalar faqat sizning hisobingizga ta'sir qiladi. Ish vaqti va bildirishnoma sozlamalari quiet hours va digest xabarlarida ishlatiladi.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <div class="ws-tab-panel" data-panel="malumotlar" role="tabpanel" aria-labelledby="tab-malumotlar" hidden>
+          <div class="workspace-layout">
+            <div class="workspace-main-stack">
+              <div class="workspace-surface" id="personalStatsSurface">
+                <div class="workspace-surface-head">
+                  <div>
+                    <h2>📊 Shaxsiy statistika</h2>
+                    <div class="workspace-surface-copy">Shaxsiy faoliyat va performance metrikalari.</div>
+                  </div>
+                </div>
+                <div id="personalStatsContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;"></div>
+              </div>
+
+              <div class="workspace-surface">
+                <div class="workspace-surface-head">
+                  <div>
+                    <h2>📋 Cross-Workspace Overview</h2>
+                    <div class="workspace-surface-copy">Siz a'zo bo'lgan barcha workspace'lardagi shaxsiy umumlashma.</div>
+                  </div>
+                </div>
+                <div id="myOverviewContainer" style="padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;"></div>
+              </div>
+            </div>
+
+            <aside class="workspace-side-stack">
+              <div class="workspace-surface pad">
+                <h3 style="margin:0 0 12px;display:flex;align-items:center;gap:6px;">📥 Ma'lumotlarni eksport qilish</h3>
+                <p class="muted text-sm" style="margin:0 0 12px">Barcha shaxsiy ma'lumotlaringizni JSON formatida yuklab oling.</p>
+                <button class="btn btn-primary w-full" onclick="window.exportMyData()">📦 Ma'lumotlarni yuklab olish</button>
+              </div>
+              <div class="workspace-surface pad" style="background:rgba(245,158,11,0.06);border-color:rgba(245,158,11,0.18);">
+                <h3 style="margin:0 0 8px;display:flex;align-items:center;gap:6px;">📌 Eslatma</h3>
+                <p class="muted text-sm" style="margin:0;line-height:1.7;">Statistika ma'lumotlari har bir workspace bo'yicha alohida hisoblanadi. Yangi workspace qo'shilganda avtomatik yangilanadi.</p>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+      </div>
 
     </div>
   </div>
@@ -398,6 +453,42 @@
           const v = document.getElementById('telegramChatId').value.trim();
           if (!v) return UTIL.toast('Chat ID kiriting');
           try { await MllyCore.linkTelegram(v); UTIL.toast('Telegram ulandi'); } catch (e) { UTIL.toast(e.message); }
+        });
+        document.getElementById('generateTelegramCodeBtn')?.addEventListener('click', async function() {
+          const btn = this;
+          btn.disabled = true;
+          btn.textContent = '⏳ Yuklanmoqda...';
+          try {
+            const idToken = await user.getIdToken();
+            const resp = await fetch('/api/index?action=generate-telegram-code', {
+              headers: { 'Authorization': 'Bearer ' + idToken },
+              method: 'POST'
+            });
+            const data = await resp.json();
+            if (data.success && data.code) {
+              const display = document.getElementById('telegramCodeDisplay');
+              const value = document.getElementById('telegramCodeValue');
+              value.textContent = data.code;
+              display.style.display = 'block';
+              try { await navigator.clipboard.writeText(data.code); } catch (_) {}
+              UTIL.toast('Kod yaratildi va nusxalandi! Telegram\'da @MllyCoreBot ga /start ' + data.code + ' yozing.');
+            } else {
+              UTIL.toast(data.error || 'Kod olishda xatolik');
+            }
+          } catch (e) {
+            UTIL.toast(e.message || 'Kod olishda xatolik');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = '🔑 Kod olish';
+          }
+        });
+        // Kodni bosganda nusxalash
+        document.getElementById('telegramCodeValue')?.addEventListener('click', async function() {
+          if (this.textContent === '------') return;
+          try {
+            await navigator.clipboard.writeText(this.textContent);
+            UTIL.toast('Kod nusxalandi');
+          } catch (_) {}
         });
         document.getElementById('saveSkillsBtn')?.addEventListener('click', async () => {
           const v = document.getElementById('skillsInput').value.split(',').map((s) => s.trim()).filter(Boolean);
