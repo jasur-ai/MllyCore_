@@ -1992,13 +1992,24 @@
       renderWorkspaceSkeleton();
 
       MllyCore.syncTeamTasks(teamId).catch(() => {});
-      const [dashboard, initialWorkspace] = await Promise.all([
-        MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(() => cachedDash),
-        teamId ? MllyCore.getTeamData(teamId).catch(() => null) : Promise.resolve(null)
+      const [dashboard, initialWorkspace] = await Promise.race([
+        Promise.all([
+          MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(() => cachedDash),
+          teamId ? MllyCore.getTeamData(teamId).catch(() => null) : Promise.resolve(null)
+        ]),
+        new Promise(function(resolve) {
+          setTimeout(function() {
+            resolve([cachedDash, { _timeout: true }]);
+          }, 15000);
+        })
       ]);
       mountLayout('', { profile, teams: dashboard.teams || [], notifications: dashboard.notifications || [] });
       window.APP_CONTEXT = { profile, teams: dashboard.teams, notifications: dashboard.notifications };
       workspaceState = initialWorkspace;
+      if (workspaceState && workspaceState._timeout) {
+        document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Ma\'lumotlarni yuklash uzoq davom etdi. Internet aloqangizni tekshirib, qayta urinib ko\'ring.</p><button class="btn btn-primary" onclick="location.reload()" style="margin-top:12px">🔄 Qayta urinish</button></div>';
+        return;
+      }
       if (!workspaceState) {
         document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
         return;
