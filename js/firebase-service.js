@@ -1765,41 +1765,56 @@ window.MllyCore = {
     return new Promise((resolve) => {
       const unsub = onAuthStateChanged(state.auth, async (user) => {
         unsub();
-        if (!user) {
-          location.href = 'login.html';
-          resolve(null);
-          return;
-        }
+        try {
+          if (!user) {
+            location.href = 'login.html';
+            resolve(null);
+            return;
+          }
 
-        const currentPage = location.pathname.split('/').pop() || 'index.html';
-        if (!user.emailVerified && currentPage !== 'verify-email.html') {
-          location.href = 'verify-email.html';
-          resolve(null);
-          return;
-        }
+          const currentPage = location.pathname.split('/').pop() || 'index.html';
+          if (!user.emailVerified && currentPage !== 'verify-email.html') {
+            location.href = 'verify-email.html';
+            resolve(null);
+            return;
+          }
 
-        let profile = await this.getUserProfile(user.uid);
-        if (!profile) {
-          profile = {
-            id: user.uid,
-            name: user.displayName || user.email,
-            username: (user.email || 'user').split('@')[0],
-            email: user.email,
-            role: 'member',
-            avatar: initials(user.displayName || user.email || 'U')
-          };
-        }
-        const requiredRole = document.documentElement.dataset.requiredRole;
-        if (requiredRole && profile?.role !== requiredRole) {
-          location.href = 'dashboard.html';
-          resolve(null);
-          return;
-        }
+          let profile = null;
+          try {
+            profile = await this.getUserProfile(user.uid);
+          } catch (_) {
+            // getUserProfile xatosi — jim qoladi, default profile ishlatiladi
+          }
+          if (!profile) {
+            profile = {
+              id: user.uid,
+              name: user.displayName || user.email,
+              username: (user.email || 'user').split('@')[0],
+              email: user.email,
+              role: 'member',
+              avatar: initials(user.displayName || user.email || 'U')
+            };
+          }
+          const requiredRole = document.documentElement.dataset.requiredRole;
+          if (requiredRole && profile?.role !== requiredRole) {
+            location.href = 'dashboard.html';
+            resolve(null);
+            return;
+          }
 
-        window.MLLYCORE_AUTH_USER = user;
-        window.MLLYCORE_PROFILE = profile;
-        document.documentElement.classList.add('auth-ready');
-        resolve(user);
+          window.MLLYCORE_AUTH_USER = user;
+          window.MLLYCORE_PROFILE = profile;
+          document.documentElement.classList.add('auth-ready');
+          resolve(user);
+        } catch (e) {
+          console.error('requireAuth() xatosi:', e);
+          // Agar har qanday xato bo'lsa ham promise resolve bo'lishi kerak
+          // aks holda workspace abadiy Yuklanmoqda da qotib qoladi
+          window.MLLYCORE_AUTH_USER = user || null;
+          window.MLLYCORE_PROFILE = null;
+          document.documentElement.classList.add('auth-ready');
+          resolve(user || null);
+        }
       });
     });
   }

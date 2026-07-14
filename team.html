@@ -50,6 +50,15 @@
     }, 15000);
     // Agar renderWorkspace muvaffaqiyatli bajarilsa, bu timeoutni tozalaymiz
     window.__clearLoadingTimeout = () => { if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; } };
+    // Xavfsizlik: 30 soniya ichida hali ham yuklanmasa, avtomatik qayta yuklaymiz
+    window.__mllyFallbackReload = setTimeout(() => {
+      const el = document.getElementById("content");
+      if (el && el.querySelector('.loading-copy')) {
+        location.reload();
+      }
+    }, 30000);
+    window.__clearFallbackReload = () => { if (window.__mllyFallbackReload) { clearTimeout(window.__mllyFallbackReload); window.__mllyFallbackReload = null; } };
+    
 
     window.UTIL = window.UTIL || {
       toast: (msg) => {
@@ -2318,7 +2327,7 @@
       _cleanupPresence();
       if (chatSeenTimer) clearTimeout(chatSeenTimer);
       _chatSeenQueue = [];
-        MllyCore.stopAutoRefresh(_autoRefreshId);
+        MllyCore.stopAllAutoRefresh();
       // updatePresence('offline') endi firebase-service.js tomonidan avtomatik ishlaydi
     });
 
