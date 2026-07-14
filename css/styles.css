@@ -2450,6 +2450,326 @@ body.theme-light .skeleton-card {
   background: rgba(241,245,249,0.8);
 }
 
+/* ===== Professional slide-out task panel ===== */
+.tsk-toggle {
+  position: relative;
+}
+.tsk-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.tsk-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 420px;
+  max-width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  z-index: 500;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 40px rgba(0,0,0,0.25);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(105%);
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tsk-panel.open {
+  transform: translateX(0);
+}
+.tsk-panel.expanded {
+  width: min(780px, 90vw);
+}
+.tsk-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 499;
+  background: rgba(2,6,15,0.5);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.tsk-panel-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.tsk-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.tsk-panel-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'Space Grotesk', sans-serif;
+}
+.tsk-panel-head-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.tsk-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+}
+.tsk-panel-body::-webkit-scrollbar {
+  width: 4px;
+}
+.tsk-panel-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Task item rows inside panel */
+.tsk-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.tsk-item:hover {
+  border-color: rgba(99,102,241,0.35);
+  background: var(--surface-sub);
+  transform: translateX(2px);
+}
+.tsk-item:active {
+  transform: translateX(2px) scale(0.99);
+}
+.tsk-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.tsk-item-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tsk-item-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tsk-item-meta .badge {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+.tsk-item-assignee {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.tsk-item-arrow {
+  color: var(--muted);
+  font-size: 16px;
+  opacity: 0.4;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.tsk-item:hover .tsk-item-arrow {
+  opacity: 0.8;
+  transform: translateX(2px);
+}
+
+/* Quick add form inside panel */
+.tsk-quick-add {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px dashed var(--border);
+  background: var(--surface);
+  margin-top: 12px;
+}
+.tsk-quick-add-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.tsk-quick-add-head:hover {
+  color: var(--text);
+}
+.tsk-quick-add-body {
+  display: none;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tsk-quick-add-body.open {
+  display: grid;
+}
+.tsk-quick-add-body .full {
+  grid-column: 1 / -1;
+}
+.tsk-quick-add-body .btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+/* Expanded task detail view */
+.tsk-detail {
+  display: grid;
+  gap: 16px;
+  animation: accSlideIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.tsk-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.tsk-detail-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s ease;
+}
+.tsk-detail-back:hover {
+  background: var(--panel-2);
+  color: var(--text);
+}
+.tsk-detail h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+.tsk-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tsk-detail-desc {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+.tsk-detail-info {
+  display: grid;
+  gap: 10px;
+}
+.tsk-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--muted);
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.tsk-detail-row strong {
+  color: var(--text);
+}
+.tsk-detail-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Task list empty state */
+.tsk-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted);
+}
+.tsk-empty .tsk-empty-ico {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+.tsk-empty h4 {
+  margin: 0 0 6px;
+  font-size: 16px;
+  color: var(--text);
+}
+.tsk-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Light mode overrides */
+body.theme-light .tsk-panel {
+  background: rgba(246,248,252,0.98);
+  box-shadow: -8px 0 40px rgba(148,163,184,0.12);
+}
+body.theme-light .tsk-panel-backdrop {
+  background: rgba(148,163,184,0.3);
+}
+body.theme-light .tsk-item {
+  background: rgba(255,255,255,0.9);
+}
+body.theme-light .tsk-item:hover {
+  background: rgba(246,248,252,0.98);
+}
+body.theme-light .tsk-detail-row {
+  background: rgba(255,255,255,0.85);
+}
+body.theme-light .tsk-quick-add {
+  background: rgba(255,255,255,0.85);
+}
+body.theme-light .tsk-badge {
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+/* Responsive panel */
+@media (max-width: 640px) {
+  .tsk-panel {
+    width: 100vw;
+    border-left: none;
+  }
+  .tsk-panel.expanded {
+    width: 100vw;
+  }
+}
+
 /* ===== Enhanced dropdown/select styling ===== */
 .dropdown {
   position: relative;

@@ -628,6 +628,10 @@
           </div>
           <div class="workspace-command-tools">
             <button class="btn btn-tertiary btn-sm" id="refreshTeamBtn" title="Ma'lumotlarni yangilash" aria-label="Yangilash">🔄</button>
+            <button class="btn btn-tertiary btn-sm tsk-toggle" id="taskPanelToggle" title="Topshiriqlar" aria-label="Topshiriqlar paneli">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              <span class="tsk-badge" id="taskPanelBadge" style="display:none">0</span>
+            </button>
             <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
             <span class="badge badge-active">${escapeHtml(membership?.role || (window.MLLYCORE_PROFILE?.role === 'manager' ? 'Manager (kuzatuvchi)' : 'member'))}</span>
             ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
@@ -1149,6 +1153,18 @@
           </div>
           </div>
         </section>
+
+      <!-- Task slide-out panel (fixed overlay) -->
+      <div class="tsk-panel-backdrop" id="tskBackdrop"></div>
+      <div class="tsk-panel" id="tskPanel">
+        <div class="tsk-panel-head">
+          <h3 id="tskPanelTitle">📋 Topshiriqlar</h3>
+          <div class="tsk-panel-head-actions">
+            <button class="btn btn-tertiary btn-sm" id="tskPanelClose" title="Yopish">✕</button>
+          </div>
+        </div>
+        <div class="tsk-panel-body" id="tskPanelBody"></div>
+      </div>
       `;
 
       renderEntries(data, currentUserId, isLead, isManagerViewer);
@@ -1919,6 +1935,298 @@
       }
       try { await renderWorkspace(workspaceState, user.uid); } catch (e) { document.getElementById("content").innerHTML = "<div class=\"workspace-empty\"><h3>Xatolik yuz berdi</h3><p>Sahifani qayta yuklang.</p></div>"; console.error("Render xatosi:", e); return; }
       MllyCore.updatePresence('online').catch(() => {});
+      // ===== Topshiriqlar slide-out panel (professional drawer) =====
+      (function initTaskPanel() {
+  // Use event delegation on document so listeners survive DOM re-renders
+  document.addEventListener('click', function tskHandler(e) {
+    const toggle = e.target.closest('#taskPanelToggle');
+    const closeBtn = e.target.closest('#tskPanelClose');
+    const backdrop = e.target.closest('#tskBackdrop');
+    const tskItem = e.target.closest('.tsk-item');
+    const backBtn = e.target.closest('#tskDetailBack, #tskDetailBack2');
+    const quickAddHead = e.target.closest('#tskQuickAddHead');
+    const quickSave = e.target.closest('#tskQSaveBtn');
+    
+    const panel = document.getElementById('tskPanel');
+    const body = document.getElementById('tskPanelBody');
+    const bd = document.getElementById('tskBackdrop');
+    
+    if (toggle && panel) {
+      const isOpen = panel.classList.contains('open');
+      if (isOpen) { closeTskPanel(panel, body, bd); }
+      else { openTskPanel(panel, body, bd); }
+      return;
+    }
+    if ((closeBtn || (backdrop && e.target === backdrop)) && panel) {
+      closeTskPanel(panel, body, bd);
+      return;
+    }
+    if (closeBtn || backdrop) return;
+    
+    if (tskItem && panel) {
+      const taskId = tskItem.dataset.taskId;
+      if (taskId) showTskDetail(taskId, panel, body);
+      return;
+    }
+    if (backBtn && panel && body) {
+      renderTskList(body);
+      panel.classList.remove('expanded');
+      return;
+    }
+    if (quickAddHead) {
+      const f = document.getElementById('tskQuickAddBody');
+      if (f) f.classList.toggle('open');
+      return;
+    }
+    if (quickSave) {
+      saveQuickTask();
+      return;
+    }
+  });
+  
+  // Escape key closes
+  document.addEventListener('keydown', function tskKey(e) {
+    if (e.key === 'Escape') {
+      const panel = document.getElementById('tskPanel');
+      const body = document.getElementById('tskPanelBody');
+      const bd = document.getElementById('tskBackdrop');
+      if (panel && panel.classList.contains('open')) {
+        closeTskPanel(panel, body, bd);
+      }
+    }
+  });
+  
+  // Mode toggle in quick-add
+  document.addEventListener('change', function tskModeChange(e) {
+    if (e.target.id === 'tskQMode') {
+      const wrap = document.getElementById('tskQAssigneeWrap');
+      if (wrap) wrap.style.display = e.target.value === 'direct' ? '' : 'none';
+    }
+  });
+  
+  // Update badge after refresh
+  function updateTskBadge() {
+    const badge = document.getElementById('taskPanelBadge');
+    const tasks = workspaceState ? (workspaceState.tasks || []) : [];
+    if (badge) {
+      if (tasks.length) { badge.textContent = tasks.length; badge.style.display = ''; }
+      else { badge.style.display = 'none'; }
+    }
+  }
+  
+  function closeTskPanel(panel, body, bd) {
+    if (!panel) return;
+    panel.classList.remove('open', 'expanded');
+    if (bd) bd.classList.remove('open');
+    document.body.style.overflow = '';
+    if (body) body.innerHTML = '';
+  }
+  
+  function openTskPanel(panel, body, bd) {
+    if (!panel) return;
+    panel.classList.add('open');
+    if (bd) bd.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    renderTskList(body);
+  }
+  
+  function getAssignedName(task, members) {
+    const assignedId = task.assignedTo || task.assignedUserId || null;
+    if (!assignedId) return task.assignmentMode === 'team' ? 'Jamoaviy' : 'Hali olinmagan';
+    const m = (members || []).find(mem => mem.userId === assignedId);
+    return (m && (m.user?.name || m.user?.email || m.name)) || assignedId;
+  }
+  
+  function getMembership() {
+    const uid = window.MLLYCORE_AUTH_USER?.uid;
+    return workspaceState?.members?.find(m => m.userId === uid);
+  }
+  
+  function renderTskList(body) {
+    if (!body) return;
+    body.innerHTML = '';
+    
+    const tasks = workspaceState ? (workspaceState.tasks || []) : [];
+    const members = workspaceState ? (workspaceState.members || []) : [];
+    const submissions = workspaceState ? (workspaceState.taskSubmissions || []) : [];
+    const membership = getMembership();
+    const isLead = membership?.role === 'team_lead';
+    const isViewer = membership?.role === 'viewer';
+    const isManagerViewer = !membership && window.MLLYCORE_PROFILE?.role === 'manager';
+    
+    // Update badge
+    updateTskBadge();
+    
+    // Quick add section (for leads)
+    if (isLead && !isManagerViewer) {
+      const addEl = document.createElement('div');
+      addEl.className = 'tsk-quick-add';
+      addEl.innerHTML = `
+        <div class="tsk-quick-add-head" id="tskQuickAddHead">
+          <span>+ Yangi topshiriq</span>
+          <span style="margin-left:auto;color:var(--muted);font-size:11px">Tezkor qo'shish</span>
+        </div>
+        <div class="tsk-quick-add-body" id="tskQuickAddBody">
+          <div class="full">
+            <input class="input" id="tskQTitle" placeholder="Topshiriq nomi">
+          </div>
+          <div class="full">
+            <textarea class="textarea" id="tskQDesc" rows="2" placeholder="Tavsif (ixtiyoriy)"></textarea>
+          </div>
+          <div>
+            <select class="select" id="tskQMode">
+              <option value="open">Umumiy</option>
+              <option value="direct">Bir kishiga</option>
+              <option value="team">Jamoaviy</option>
+            </select>
+          </div>
+          <div id="tskQAssigneeWrap" style="display:none">
+            <select class="select" id="tskQAssignee">
+              <option value="">A'zo tanlang</option>
+              ${(members || []).filter(m => !isViewer || m.role !== 'team_lead').map(m => '<option value="'+m.userId+'">'+escapeHtml(m.user?.name || m.user?.email || m.userId)+'</option>').join('')}
+            </select>
+          </div>
+          <div>
+            <label class="label" style="margin:0">Deadline</label>
+            <input class="input" id="tskQDeadline" type="datetime-local" value="${new Date(Date.now() + 86400000).toISOString().slice(0, 16)}">
+          </div>
+          <div class="full" style="display:flex;gap:8px;align-items:center">
+            <button class="btn btn-primary btn-sm" id="tskQSaveBtn">➕ Qo'shish</button>
+            <span class="text-sm muted" id="tskQFeedback"></span>
+          </div>
+        </div>
+      `;
+      body.appendChild(addEl);
+    }
+    
+    // Task count header
+    const header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px';
+    header.innerHTML = '<strong style="font-size:15px">' + tasks.length + ' ta topshiriq</strong>' +
+      '<span class="badge" id="tskListBadge">' + tasks.filter(t => (t.status || 'open') !== 'completed').length + ' ochiq</span>';
+    body.appendChild(header);
+    
+    // Task items
+    if (tasks.length) {
+      const list = document.createElement('div');
+      list.style.cssText = 'display:grid;gap:10px';
+      
+      tasks.forEach(task => {
+        const assignedName = getAssignedName(task, members);
+        const status = task.status || 'open';
+        const mode = task.assignmentMode || 'open';
+        
+        const item = document.createElement('div');
+        item.className = 'tsk-item';
+        item.dataset.taskId = task.id;
+        item.innerHTML = `
+          <div class="tsk-item-info">
+            <span class="tsk-item-title">${escapeHtml(task.title)}</span>
+            <div class="tsk-item-meta">
+              <span class="badge ${status === 'completed' ? 'badge-active' : ''}">${escapeHtml(status)}</span>
+              <span class="badge">${escapeHtml(mode)}</span>
+              <span class="tsk-item-assignee">👤 ${escapeHtml(assignedName)}</span>
+            </div>
+          </div>
+          <span class="tsk-item-arrow">›</span>
+        `;
+        list.appendChild(item);
+      });
+      
+      body.appendChild(list);
+    } else {
+      body.innerHTML += '<div class="tsk-empty"><span class="tsk-empty-ico">📋</span><h4>Topshiriq yo'q</h4><p>Lead yoki jamoa yangi topshiriq qo'shganda shu yerda ko'rinadi.</p></div>';
+    }
+  }
+  
+  function showTskDetail(taskId, panel, body) {
+    if (!body) return;
+    const tasks = workspaceState ? (workspaceState.tasks || []) : [];
+    const members = workspaceState ? (workspaceState.members || []) : [];
+    const submissions = workspaceState ? (workspaceState.taskSubmissions || []) : [];
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    
+    panel.classList.add('expanded');
+    
+    const assignedName = getAssignedName(task, members);
+    const taskSubs = submissions.filter(s => s.taskId === task.id);
+    const status = task.status || 'open';
+    
+    body.innerHTML = `
+      <div class="tsk-detail">
+        <div class="tsk-detail-head">
+          <button class="tsk-detail-back">‹</button>
+          <h3>${escapeHtml(task.title)}</h3>
+        </div>
+        
+        <div class="tsk-detail-meta">
+          <span class="badge ${status === 'completed' ? 'badge-active' : ''}">${escapeHtml(status)}</span>
+          <span class="badge">${escapeHtml(task.assignmentMode || 'open')}</span>
+          <span class="badge" style="${task.blocked ? 'background:#7f1d1d;color:#fff' : ''}">${task.blocked ? '🔒 Bloklangan' : 'Ochiq'}</span>
+          <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo'q')}</span>
+        </div>
+        
+        <div class="tsk-detail-desc">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</div>
+        
+        <div class="tsk-detail-info">
+          <div class="tsk-detail-row"><span>Mas'ul</span><strong>${escapeHtml(assignedName)}</strong></div>
+          <div class="tsk-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
+          ${task.requiredSkill ? '<div class="tsk-detail-row"><span>Ko'nikma</span><strong>' + escapeHtml(task.requiredSkill) + '</strong></div>' : ''}
+          ${Array.isArray(task.dependsOn) && task.dependsOn.length ? '<div class="tsk-detail-row"><span>Bog'liq</span><strong>' + task.dependsOn.map(id => escapeHtml((tasks.find(t => t.id === id) || {}).title || id)).join(', ') + '</strong></div>' : ''}
+        </div>
+        
+        ${taskSubs.length ? `
+        <div style="display:grid;gap:8px">
+          <strong style="font-size:14px">Natijalar</strong>
+          ${taskSubs.map(s => `
+            <div class="workspace-message-item">
+              <strong>${escapeHtml(s.userName)}</strong>
+              <span>${escapeHtml(s.resultText)}</span>
+              ${s.resultLink ? '<a class="text-sm" href="' + escapeHtml(s.resultLink) + '" target="_blank" style="color:#7dd3fc;margin-top:4px;display:inline-block">Linkni ochish</a>' : ''}
+            </div>
+          `).join('')}
+        </div>
+        ` : ''}
+        
+        <div class="tsk-detail-actions">
+          <button class="btn btn-tertiary btn-sm" style="margin-left:auto" onclick="var p=document.getElementById('tskPanel'),b=document.getElementById('tskPanelBody');if(p)p.classList.remove('expanded');if(b)renderTskList(b);">‹ Orqaga</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  async function saveQuickTask() {
+    const btn = document.getElementById('tskQSaveBtn');
+    const fb = document.getElementById('tskQFeedback');
+    if (!btn || !workspaceState?.team?.id) return;
+    btn.disabled = true;
+    if (fb) fb.textContent = 'Saqlanmoqda...';
+    try {
+      await MllyCore.createTask({
+        teamId: workspaceState.team.id,
+        title: document.getElementById('tskQTitle')?.value,
+        description: document.getElementById('tskQDesc')?.value,
+        assignmentMode: document.getElementById('tskQMode')?.value || 'open',
+        assignedUserId: document.getElementById('tskQAssignee')?.value || '',
+        deadlineAt: document.getElementById('tskQDeadline')?.value || ''
+      });
+      if (fb) { fb.textContent = '✅ Topshiriq qo'shildi!'; fb.style.color = 'var(--success)'; }
+      const uid = window.MLLYCORE_AUTH_USER?.uid;
+      if (uid && workspaceState.team.id) {
+        await refreshWorkspace(workspaceState.team.id, uid);
+      }
+    } catch(e) {
+      if (fb) { fb.textContent = '❌ ' + (e.message || 'Xatolik'); fb.style.color = 'var(--danger)'; }
+    } finally {
+      btn.disabled = false;
+    }
+  }
+  
+  // Expose renderTskList globally so detail view back button works
+  window.renderTskList = renderTskList;
+  window.updateTskBadge = updateTskBadge;
+})();
       document.getElementById('refreshTeamBtn')?.addEventListener('click', async () => {
         const btn = document.getElementById('refreshTeamBtn');
         btn.classList.add('refreshing');
