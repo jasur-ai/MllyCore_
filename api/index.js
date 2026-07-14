@@ -215,6 +215,31 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
     joinedAt: SV(),
   });
 
+  // Workspace yaratilgani haqida barcha manager'larga bildirishnoma yuborish
+  try {
+    const managerSnap = await db.collection('users').where('role', '==', 'manager').get();
+    const teamName = name.trim();
+    if (!managerSnap.empty) {
+      const batch = db.batch();
+      managerSnap.docs.forEach((mgrDoc) => {
+        const mgrId = mgrDoc.id;
+        const notifRef = db.collection('notifications').doc();
+        batch.set(notifRef, {
+          userId: mgrId,
+          teamId: teamRef.id,
+          type: 'workspace_created',
+          content: `Yangi workspace yaratildi: "${teamName}". Kuzatish uchun dashboardga o'ting.`,
+          text: `Yangi workspace: "${teamName}"`,
+          unread: true,
+          isRead: false,
+          relatedEntityId: teamRef.id,
+          createdAt: SV(),
+        });
+      });
+      await batch.commit();
+    }
+  } catch (_) { /* non-fatal */ }
+
   await audit(db, 'workspace_created', { teamId: teamRef.id, byUserId: decoded.uid, leadUserId: leadUid });
   return { status: 201, success: true, teamId: teamRef.id, message: 'Team yaratildi.' };
 }
@@ -244,6 +269,23 @@ async function handleInviteMember(req, res, db, decoded, user) {
     status: 'pending',
     createdAt: SV(),
   });
+
+  // Invite notification yaratish — bildirishnomalar panelida ko'rinadi
+  try {
+    const teamSnap = await db.collection('teams').doc(teamId).get();
+    const teamName = teamSnap.exists ? (teamSnap.data().name || 'Workspace') : 'Workspace';
+    await db.collection('notifications').add({
+      userId: target.id,
+      teamId,
+      type: 'team_invite',
+      content: `Siz "${teamName}" workspace'ga taklif qilindingiz. Secret key bilan qo'shiling.`,
+      text: `Siz "${teamName}" workspace'ga taklif qilindingiz.`,
+      unread: true,
+      isRead: false,
+      relatedEntityId: teamId,
+      createdAt: SV(),
+    });
+  } catch (_) { /* non-fatal */ }
 
   await audit(db, 'member_invited', { teamId, inviteeUserId: target.id, role });
   // T46 — Generic webhook'larga event yuborish (non-fatal, bloklamaydi)
