@@ -1943,7 +1943,7 @@
     const closeBtn = e.target.closest('#tskPanelClose');
     const backdrop = e.target.closest('#tskBackdrop');
     const tskItem = e.target.closest('.tsk-item');
-    const backBtn = e.target.closest('#tskDetailBack, #tskDetailBack2');
+    const backBtn = e.target.closest('.tsk-detail-back');
     const quickAddHead = e.target.closest('#tskQuickAddHead');
     const quickSave = e.target.closest('#tskQSaveBtn');
     
@@ -2199,7 +2199,7 @@
   async function saveQuickTask() {
     const btn = document.getElementById('tskQSaveBtn');
     const fb = document.getElementById('tskQFeedback');
-    if (!btn || !workspaceState?.team?.id) return;
+    if (!btn || !workspaceState?.team?.id) { if (btn) btn.disabled = false; return; }
     btn.disabled = true;
     if (fb) fb.textContent = 'Saqlanmoqda...';
     try {
