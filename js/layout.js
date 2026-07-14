@@ -253,6 +253,7 @@ function layoutNeedsUpdate(active, context) {
 
 window.mountLayout = function(active, context) {
   if (context) window.APP_CONTEXT = context;
+  try {
   var root = document.getElementById('app');
   if (!root) return;
   
@@ -340,4 +341,5 @@ window.mountLayout = function(active, context) {
 
   // Faza 5 — rolga qarab UI ni yangilash (dinamik renderdan keyin ham).
   try { window.applyRoleVisibility(); } catch (_) {}
+  } catch (_) { /* mountLayout jim qoladi — hech qachon throw qilmaydi */ }
 };
