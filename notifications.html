@@ -230,11 +230,15 @@
         });
       }
 
-      MllyCore.subscribeUserNotifications(user.uid, (notifications) => {
-        const nextData = { ...data, notifications };
-        window.APP_CONTEXT = { ...(window.APP_CONTEXT || {}), notifications };
-        renderNotificationPage(nextData);
-      }).catch(() => {});
+var _notifUnsub = null;
+MllyCore.subscribeUserNotifications(user.uid, (notifications) => {
+  const nextData = { ...data, notifications };
+  window.APP_CONTEXT = { ...(window.APP_CONTEXT || {}), notifications };
+  renderNotificationPage(nextData);
+}).then(function(u) { _notifUnsub = u; }).catch(function() {});
+window.addEventListener('pagehide', function() {
+  if (_notifUnsub) { try { _notifUnsub(); } catch(_) {} _notifUnsub = null; }
+});
     })();
   </script>
   <script>

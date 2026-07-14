@@ -76,7 +76,8 @@
         return;
       }
       const { onAuthStateChanged } = state.modules.authMod;
-      onAuthStateChanged(state.auth, async (user) => {
+      var _unsubVE = onAuthStateChanged(state.auth, async (user) => {
+        _unsubVE();
         if (!user) {
           location.href = 'login.html';
           return;

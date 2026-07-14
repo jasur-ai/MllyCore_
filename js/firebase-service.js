@@ -25,33 +25,46 @@ window.MllyCore = {
     if (!window.MLLYCORE_FIREBASE_ENABLED) return null;
     if (firebaseState.ready) return firebaseState;
 
-    const appMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js');
-    const authMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
-    const dbMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js');
-
-    firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
-    firebaseState.auth = authMod.getAuth(firebaseState.app);
-    await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
-
-    // Offline-first: persist Firestore data locally (IndexedDB) so the app keeps
-    // working without a network connection and re-syncs automatically.
-    let db;
     try {
-      if (dbMod.initializeFirestore && dbMod.persistentLocalCache) {
-        db = dbMod.initializeFirestore(firebaseState.app, {
-          localCache: dbMod.persistentLocalCache({ tabManager: dbMod.persistentMultipleTabManager() }),
-        });
-      } else {
-        db = dbMod.getFirestore(firebaseState.app);
-      }
-    } catch (e) {
-      db = dbMod.getFirestore(firebaseState.app);
-    }
-    firebaseState.db = db;
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Firebase SDK yuklanmadi — CDN timeout (15s)')), 15000);
+      });
 
-    firebaseState.modules = { authMod, dbMod };
-    firebaseState.ready = true;
-    return firebaseState;
+      const loadFirebase = (async () => {
+        const appMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js');
+        const authMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
+        const dbMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js');
+
+        firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
+        firebaseState.auth = authMod.getAuth(firebaseState.app);
+        await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
+
+        // Offline-first: persist Firestore data locally (IndexedDB) so the app keeps
+        // working without a network connection and re-syncs automatically.
+        let db;
+        try {
+          if (dbMod.initializeFirestore && dbMod.persistentLocalCache) {
+            db = dbMod.initializeFirestore(firebaseState.app, {
+              localCache: dbMod.persistentLocalCache({ tabManager: dbMod.persistentMultipleTabManager() }),
+            });
+          } else {
+            db = dbMod.getFirestore(firebaseState.app);
+          }
+        } catch (e) {
+          db = dbMod.getFirestore(firebaseState.app);
+        }
+        firebaseState.db = db;
+
+        firebaseState.modules = { authMod, dbMod };
+        firebaseState.ready = true;
+      })();
+
+      await Promise.race([loadFirebase, timeoutPromise]);
+      return firebaseState;
+    } catch (e) {
+      console.error('MllyCore init() xatosi:', e.message || e);
+      return null;
+    }
   },
 
   async getUserByUsername(username) {
@@ -1463,18 +1476,17 @@ window.MllyCore = {
       { merge: true }
     );
   },
-  subscribeCursors(teamId, onUpdate) {
-    return this.init().then((state) => {
-      if (!state) return () => {};
-      const { collection, onSnapshot, query, where } = state.modules.dbMod;
-      return onSnapshot(
-        query(collection(state.db, 'cursors'), where('teamId', '==', teamId)),
-        (snap) => {
-          const cursors = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-          onUpdate(cursors);
-        }
-      );
-    });
+  async subscribeCursors(teamId, onUpdate) {
+    const state = await this.init();
+    if (!state) return () => {};
+    const { collection, onSnapshot, query, where } = state.modules.dbMod;
+    return onSnapshot(
+      query(collection(state.db, 'cursors'), where('teamId', '==', teamId)),
+      (snap) => {
+        const cursors = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        onUpdate(cursors);
+      }
+    );
   },
 
   // ===== T49 Smart Notification Batching =====
@@ -1600,7 +1612,8 @@ window.MllyCore = {
 
     const { onAuthStateChanged } = state.modules.authMod;
     return new Promise((resolve) => {
-      onAuthStateChanged(state.auth, async (user) => {
+      const unsub = onAuthStateChanged(state.auth, async (user) => {
+        unsub();
         if (!user) {
           location.href = 'login.html';
           resolve(null);
