@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>G'oyalarim - MllyCore</title>
+  <!-- Xavfsizlik: JS yuklanmasa ham 20 soniyadan keyin avtomatik qayta yuklash -->
+  <meta http-equiv="refresh" content="20;url=my-ideas.html?retry=1" id="metaHardTimeout">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="apple-touch-icon" href="images/favicon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -91,6 +93,32 @@
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
+    // JavaScript ishlayapti — meta refreshni to'xtatamiz
+    (function() {
+      var meta = document.getElementById('metaHardTimeout');
+      if (meta) { meta.content = ''; if (meta.parentNode) meta.parentNode.removeChild(meta); }
+    })();
+    // retry=1 bilan qayta yuklanganda — to'g'ridan-to'g'ri xato ko'rsatamiz
+    if (location.search.indexOf('retry=1') !== -1) {
+      document.getElementById('app').innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Sahifa avtomatik qayta yuklandi, ammo ma\'lumotlarni yuklashda davomiy muammo bor. Internet aloqangizni tekshiring.</p><button class="btn btn-primary" onclick="location.href=\'my-ideas.html\'">🔄 Qayta urinish</button></div></div>';
+    }
+
+    // Xavfsizlik: 15 soniya ichida ma'lumotlar yuklanmasa, xato xabarini ko'rsatamiz
+    window.__mllyLoadingTimeout = setTimeout(() => {
+      var container = document.getElementById('personalIdeas');
+      if (!container) return;
+      // Agar `#personalIdeas` ichida hali hech qanday element bo'lmasa → ma'lumot yuklanmagan
+      if (container.children.length === 0) {
+        document.getElementById('app').innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p></div></div>';
+      }
+    }, 15000);
+    window.__clearLoadingTimeout = () => {
+      if (window.__mllyLoadingTimeout) {
+        clearTimeout(window.__mllyLoadingTimeout);
+        window.__mllyLoadingTimeout = null;
+      }
+    };
+
     const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     }[char]));
@@ -102,6 +130,7 @@
         MllyCore.getDashboardData(user.uid, { includeIdeas: true }).catch(() => ({ teams: [], ideas: [], notifications: [] })),
         MllyCore.getPersonalIdeas().catch(() => [])
       ]);
+      window.__clearLoadingTimeout?.();
       mountLayout('ideas', { profile: window.MLLYCORE_PROFILE, teams: data.teams, notifications: data.notifications });
 
       const teams = data.teams || [];

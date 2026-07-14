@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Hisobotlar - MllyCore</title>
+  <!-- Xavfsizlik: JS yuklanmasa ham 20 soniyadan keyin avtomatik qayta yuklash -->
+  <meta http-equiv="refresh" content="20;url=reports.html?retry=1" id="metaHardTimeout">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="apple-touch-icon" href="images/favicon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -100,9 +102,33 @@
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
   <script>
+    // JavaScript ishlayapti — meta refreshni to'xtatamiz
+    (function() {
+      var meta = document.getElementById('metaHardTimeout');
+      if (meta) { meta.content = ''; if (meta.parentNode) meta.parentNode.removeChild(meta); }
+    })();
+    // retry=1 bilan qayta yuklanganda — to'g'ridan-to'g'ri xato ko'rsatamiz
+    if (location.search.indexOf('retry=1') !== -1) {
+      document.getElementById('reportsRoot').innerHTML = '<div class="workspace-surface pad" style="text-align:center;padding:40px"><div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Sahifa avtomatik qayta yuklandi, ammo ma\'lumotlarni yuklashda davomiy muammo bor. Internet aloqangizni tekshiring.</p><button class="btn btn-primary" onclick="location.href=\'reports.html\'">🔄 Qayta urinish</button></div></div>';
+    }
+
     window.UTIL = window.UTIL || {
       openModal: (id) => document.getElementById(id)?.classList.add('open'),
       closeModal: (id) => document.getElementById(id)?.classList.remove('open')
+    };
+
+    // Xavfsizlik: 15 soniya ichida ma'lumotlar yuklanmasa, xato xabarini ko'rsatamiz
+    window.__mllyLoadingTimeout = setTimeout(() => {
+      var skeleton = document.querySelector('.skeleton-card');
+      if (skeleton) {
+        document.getElementById('reportsRoot').innerHTML = '<div class="workspace-surface pad" style="text-align:center;padding:40px"><div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p></div></div>';
+      }
+    }, 15000);
+    window.__clearLoadingTimeout = () => {
+      if (window.__mllyLoadingTimeout) {
+        clearTimeout(window.__mllyLoadingTimeout);
+        window.__mllyLoadingTimeout = null;
+      }
     };
 
     function escapeHtml(str) {
@@ -153,6 +179,7 @@
 
       const profile = window.MLLYCORE_PROFILE;
       const data = await window.MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
+      window.__clearLoadingTimeout?.();
       const teams = data?.teams || [];
       const role = profile?.role || 'member';
 
@@ -603,13 +630,15 @@
       } catch (err) {
         showReportsError(err);
       }
-      // 30 soniyalik avtomatik yangilash
+      // 30 soniyalik avtomatik yangilash — visibility check, loading indicator, double timestamp fix
       const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
-        await loadAllReports();
-        const initTimeEl = document.getElementById('lastUpdateTime');
-        if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-        const el = document.getElementById('lastUpdateTime');
-        if (el) el.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+        if (document.visibilityState !== 'visible') return;
+        const refreshBtn = document.getElementById('refreshReportsBtn');
+        refreshBtn?.classList.add('refreshing');
+        try { await loadAllReports(); } catch (_) {}
+        const ts = document.getElementById('lastUpdateTime');
+        if (ts) ts.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+        setTimeout(() => refreshBtn?.classList.remove('refreshing'), 600);
       }, 30000);
       window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
       // Manual refresh button

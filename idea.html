@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>G'oya - MllyCore</title>
+  <!-- Xavfsizlik: JS yuklanmasa ham 20 soniyadan keyin avtomatik qayta yuklash -->
+  <meta http-equiv="refresh" content="20;url=idea.html?retry=1" id="metaHardTimeout">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="apple-touch-icon" href="images/favicon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -15,6 +17,16 @@
   <script>(function(){try{var s=localStorage.getItem('mllycore-theme')||'dark';document.body.className=s==='light'?'theme-light':'theme-dark'}catch(_){document.body.className='theme-dark';}})();</script>
   <script>
     // Xavfsizlik: 15 soniya ichida yuklanmasa, Yuklanmoqda matnini xato xabariga almashtiramiz
+    // JavaScript ishlayapti — meta refreshni to'xtatamiz
+    (function() {
+      var meta = document.getElementById('metaHardTimeout');
+      if (meta) { meta.content = ''; if (meta.parentNode) meta.parentNode.removeChild(meta); }
+    })();
+    // retry=1 bilan qayta yuklanganda — to'g'ridan-to'g'ri xato ko'rsatamiz
+    if (location.search.indexOf('retry=1') !== -1) {
+      document.getElementById('ideaApp').innerHTML = '<div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Sahifa avtomatik qayta yuklandi, ammo ma\'lumotlarni yuklashda davomiy muammo bor. Internet aloqangizni tekshiring.</p><button class="btn btn-primary" onclick="location.href=\'idea.html\'">🔄 Qayta urinish</button></div>';
+    }
+
     window.__mllyLoadingTimeout = setTimeout(function() {
       var el = document.getElementById('ideaApp');
       if (!el || !el.querySelector('.loading-copy')) return;
