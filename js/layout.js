@@ -76,19 +76,30 @@
 
   const checkFirestore = async () => {
     try {
-      if (window.MllyCore && typeof window.MllyCore.getHealth === 'function') {
-        const h = await window.MllyCore.getHealth();
-        setStatus(h && (h.firebase || h.status === 'healthy'));
-      } else {
-        // Direct Firestore test
-        if (typeof firebase !== 'undefined' && firebase.firestore) {
-          const db = firebase.firestore();
-          await db.collection('_health').doc('_check').get({ source: 'server' });
-          setStatus(true);
-        } else {
-          setStatus(navigator.onLine);
-        }
+      // 1. Direct Firestore v9 tekshirish (eng tez, auth talab qilmaydi)
+      if (window.MllyCore && window.MllyCore.init) {
+        try {
+          const state = await window.MllyCore.init();
+          if (state && state.db && state.modules) {
+            const { collection, getDocs, limit, query } = state.modules.dbMod;
+            await getDocs(query(collection(state.db, 'settings'), limit(1)));
+            setStatus(true);
+            return;
+          }
+        } catch (_) { /* fall through to next method */ }
       }
+
+      // 2. API /health endpoint (server orqali verify)
+      if (window.MllyCore && typeof window.MllyCore.getHealth === 'function') {
+        try {
+          const h = await window.MllyCore.getHealth();
+          setStatus(h && (h.firebase || h.status === 'healthy'));
+          return;
+        } catch (_) { /* fall through */ }
+      }
+
+      // 3. Fallback: brauzer online status
+      setStatus(navigator.onLine);
     } catch (_) {
       setStatus(false);
     }

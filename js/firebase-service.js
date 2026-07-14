@@ -1564,6 +1564,75 @@ window.MllyCore = {
     return apiPost('/api/list-schedules', authUser, { teamId });
   },
 
+  // ===== Paginated Collection — katta kolleksiyalar uchun cursor-based pagination =====
+  async getPaginatedCollection(name, { limit: pageSize = 50, orderByField = 'createdAt', startAfter = null, forceFresh = false } = {}) {
+    const state = await this.init();
+    if (!state) return { items: [], hasMore: false, lastDoc: null };
+    const { collection, getDocs, query, orderBy, limit, startAfter: sa } = state.modules.dbMod;
+    try {
+      let q = query(collection(state.db, name), orderBy(orderByField, 'desc'), limit(pageSize));
+      if (startAfter) q = query(q, sa(startAfter));
+      const snap = await getDocs(q);
+      const items = snap.docs.map((item) => ({ id: item.id, ...item.data() }));
+      const hasMore = snap.docs.length === pageSize;
+      const lastDoc = snap.docs[snap.docs.length - 1] || null;
+      return { items, hasMore, lastDoc };
+    } catch (err) {
+      console.warn(`getPaginatedCollection(${name}) error:`, err.message);
+      return { items: [], hasMore: false, lastDoc: null };
+    }
+  },
+
+  // ===== getUsersByRole — role bo'yicha foydalanuvchilarni samarali olish (getCollection('users') o'rniga) =====
+  // DIQQAT: Bu funksiya `where('role')` so'rovidan foydalanadi.
+  // Firestore'da composite index talab qilmaydi (orderBy ishlatilmaydi).
+  async getUsersByRole(role, { pageSize = 100, startAfter = null } = {}) {
+    const state = await this.init();
+    if (!state) return { items: [], hasMore: false, lastDoc: null };
+    const { collection, getDocs, query, where, limit, startAfter: sa } = state.modules.dbMod;
+    try {
+      // Role filter + limit — oddiy query, composite index talab qilmaydi
+      let q = query(
+        collection(state.db, 'users'),
+        where('role', '==', role),
+        limit(pageSize)
+      );
+      if (startAfter) q = query(q, sa(startAfter));
+      const snap = await getDocs(q);
+      const items = snap.docs.map((item) => ({ id: item.id, ...item.data() }));
+      const hasMore = snap.docs.length === pageSize;
+      const lastDoc = snap.docs[snap.docs.length - 1] || null;
+      // Agar orderBy kerak bo'lsa, client-side sort (index talab qilmaydi)
+      items.sort((a, b) => {
+        const ta = a.joinedAt?.toMillis?.() || a.createdAt || 0;
+        const tb = b.joinedAt?.toMillis?.() || b.createdAt || 0;
+        return tb - ta;
+      });
+      return { items, hasMore, lastDoc };
+    } catch (err) {
+      console.warn(`getUsersByRole(${role}) error:`, err.message);
+      return { items: [], hasMore: false, lastDoc: null };
+    }
+  },
+
+  // ===== getTeamsBatch — ID lar bo'yicha team'larni batch olish (getCollection('teams') o'rniga) =====
+  async getTeamsBatch(teamIds = []) {
+    if (!teamIds.length) return [];
+    const state = await this.init();
+    if (!state) return [];
+    const { doc, getDoc } = state.modules.dbMod;
+    // Firestore 'in' query max 30 values, shuning uchun batch'larga bo'lib olamiz
+    const results = [];
+    for (let i = 0; i < teamIds.length; i += 30) {
+      const batch = teamIds.slice(i, i + 30);
+      const snapshots = await Promise.all(batch.map((id) => getDoc(doc(state.db, 'teams', id))));
+      snapshots.forEach((s) => {
+        if (s.exists()) results.push({ id: s.id, ...s.data() });
+      });
+    }
+    return results;
+  },
+
   // ===== Auto-refresh utility =====
   _refreshIntervals: [],
   startAutoRefresh(fn, intervalMs = 30000) {
@@ -1584,6 +1653,64 @@ window.MllyCore = {
   stopAllAutoRefresh() {
     this._refreshIntervals.forEach(id => clearInterval(id));
     this._refreshIntervals = [];
+  },
+
+  // Alias: clearAutoRefreshIntervals -> stopAllAutoRefresh
+  // Sahifadan chiqishda yoki komponent unmount bo'lganda chaqiriladi.
+  clearAutoRefreshIntervals() {
+    this.stopAllAutoRefresh();
+  },
+
+  // ===== getManagerDashboard — Manager uchun alohida dashboard (cache muammosini hal qiladi) =====
+  // getDashboardData() managerlar uchun cache'ni admin/member bilan aralashtirib yuborishi mumkin.
+  // Bu funksiya faqat managerlar uchun mo'ljallangan, cache kaliti ham farqli.
+  async getManagerDashboard(uid, { forceFresh = false } = {}) {
+    const state = await this.init();
+    if (!state) return { teams: [], notifications: [] };
+    const cacheKey = getCacheKey('mgrdash', uid);
+    if (!forceFresh) {
+      const cached = readCache(cacheKey, CACHE_TTL.dashboard);
+      if (cached) return cached;
+    }
+    try {
+      return await rememberInflight(cacheKey, async () => {
+        const { getDocs, query, where, collection } = state.modules.dbMod;
+        const assignedIds = Array.isArray(window.MLLYCORE_PROFILE?.assignedTeams) ? window.MLLYCORE_PROFILE.assignedTeams : [];
+        // Team'larni batch bo'lib olish (getTeamsBatch orqali)
+        const rawTeams = await this.getTeamsBatch(assignedIds);
+        const teams = rawTeams.map((t) => ({ ...t, membershipRole: 'manager' }));
+        // Bildirishnomalar
+        const notifSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid)));
+        const notifications = notifSnap.docs
+          .map((item) => ({ id: item.id, ...item.data() }))
+          .sort(sortByCreatedAtDesc);
+        const payload = { teams, notifications };
+        writeCache(cacheKey, payload);
+        return payload;
+      });
+    } catch (err) {
+      const stale = readCache(cacheKey, Number.POSITIVE_INFINITY);
+      if (stale) return stale;
+      return { teams: [], notifications: [] };
+    }
+  },
+
+  // ===== getUsersCount — foydalanuvchilar sonini olish (butun kolleksiyani yuklamasdan) =====
+  async getUsersCount() {
+    const state = await this.init();
+    if (!state) return 0;
+    const { collection, getCountFromServer } = state.modules.dbMod;
+    if (typeof getCountFromServer !== 'function') {
+      // Fallback: agar getCountFromServer mavjud bo'lmasa (eski SDK), aggregate query ishlatamiz
+      try {
+        const snap = await state.modules.dbMod.getDocs(collection(state.db, 'users'));
+        return snap.size;
+      } catch (_) { return 0; }
+    }
+    try {
+      const snap = await getCountFromServer(collection(state.db, 'users'));
+      return snap.data().count || 0;
+    } catch (_) { return 0; }
   },
 
   // ===== T57 API Health / Error Tracking =====
