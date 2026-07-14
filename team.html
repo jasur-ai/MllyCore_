@@ -1877,6 +1877,7 @@
         location.href = 'admin.html';
         return;
       }
+      try {
 
       const teamId = qs('id');
       const profile = window.MLLYCORE_PROFILE;
@@ -1914,6 +1915,7 @@
         const el = document.getElementById('lastUpdateTime');
         if (el) el.textContent = 'So'nggi yangilanish: ' + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
       }, 30000);
+      } catch(e) { document.getElementById("content").innerHTML = "<div class=\"workspace-empty\"><h3>Xatolik yuz berdi</h3><p>Sahifani qayta yuklang.</p></div>"; console.error("Xato:", e); }
     })();
 
     window.addEventListener('beforeunload', function() {
