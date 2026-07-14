@@ -43,6 +43,7 @@
         </div>
         <div class="workspace-command-tools">
           <span class="badge badge-active" id="userRoleBadge">Member</span>
+          <button class="btn btn-tertiary btn-sm" id="refreshReportsBtn" title="Ma'lumotlarni yangilash" aria-label="Yangilash">🔄</button>
           <a class="btn btn-tertiary btn-sm" href="dashboard.html">Dashboard</a>
         </div>
       </section>
@@ -610,6 +611,15 @@
         if (el) el.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
       }, 30000);
       window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
+      // Manual refresh button
+      document.getElementById('refreshReportsBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('refreshReportsBtn');
+        btn.classList.add('refreshing');
+        try { await loadAllReports(); } catch (_) {}
+        const initTimeEl = document.getElementById('lastUpdateTime');
+        if (initTimeEl) initTimeEl.textContent = "So'nggi yangilanish: " + new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
+        setTimeout(() => btn.classList.remove('refreshing'), 600);
+      });
     })();
   </script>
   <script>

@@ -2313,6 +2313,136 @@ body.theme-light .workspace-empty { background: rgba(241,245,249,0.5); }
 /* Toast accessibility: ekran o'qiydiychilar uchun live-region. */
 .toast { z-index: 1200; }
 
+/* ===== Refresh button spin animation ===== */
+.refreshing .icon-refresh, .refreshing {
+  animation: refreshSpin 0.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes refreshSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.btn.refreshing {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* ===== Improved workspace board / Ish doskasi UI ===== */
+/* Better form sections inside workspace surface */
+.workspace-surface-body .workspace-form-stack > div {
+  background: rgba(255,255,255,0.02);
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+body.theme-light .workspace-surface-body .workspace-form-stack > div {
+  background: rgba(0,0,0,0.015);
+}
+.workspace-surface-body .workspace-form-stack > div:focus-within {
+  border-color: rgba(99,102,241,0.25);
+  background: rgba(255,255,255,0.04);
+}
+body.theme-light .workspace-surface-body .workspace-form-stack > div:focus-within {
+  background: rgba(255,255,255,0.5);
+}
+
+/* Better task card meta badges alignment */
+.workspace-task-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.workspace-task-head h3 {
+  font-size: 16px;
+  line-height: 1.3;
+}
+.workspace-task-card .workspace-detail-list {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,0.12);
+  border-radius: 10px;
+  margin: 8px 0 4px;
+}
+body.theme-light .workspace-task-card .workspace-detail-list {
+  background: rgba(0,0,0,0.03);
+}
+.workspace-detail-row {
+  padding: 4px 0;
+}
+
+/* Better section separation in kanban tab panels */
+.ws-tab-panel .workspace-surface + .workspace-surface {
+  margin-top: 0;
+}
+.ws-tab-panel > .workspace-main-stack > .workspace-surface {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Improved hover for workspace cards */
+.workspace-record {
+  transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1), 
+              border-color 0.15s ease, 
+              background 0.15s ease, 
+              box-shadow 0.15s ease;
+}
+.workspace-record:hover {
+  transform: translateY(-2px);
+  border-color: rgba(88,166,255,0.30);
+  background: rgba(22,28,36,0.86);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Better empty states */
+.workspace-empty {
+  padding: 32px 20px;
+  border: 1px dashed var(--border);
+  border-radius: 14px;
+  background: rgba(11,15,26,0.25);
+}
+.workspace-empty h3 {
+  font-size: 15px;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+.workspace-empty p {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+/* Better card grids */
+.workspace-card-grid.cols-2 {
+  gap: 12px;
+}
+
+/* Form action buttons alignment */
+.workspace-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 6px;
+}
+
+/* Tab panel accordion group spacing */
+.ws-acc-group {
+  display: grid;
+  gap: 10px;
+}
+
+/* Better input focus ring */
+.input:focus, .select:focus, .textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Kanban panel better overall spacing */
+.ws-tab-panel {
+  padding: 6px 20px 24px;
+}
+
 /* ===================== Style template ga mos tipografiya =====================
    Style repodagi dizayn tizimi: sarlavhalar Space Grotesk, matn/UI Manrope.
    Asosiy brend rangi azure (#087afc) + glow-soyalar, katta radiuslar.

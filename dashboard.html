@@ -28,6 +28,7 @@
           </div>
         </div>
         <div class="workspace-command-tools">
+          <button class="btn btn-tertiary btn-sm" id="refreshDashboardBtn" title="Ma'lumotlarni yangilash" aria-label="Yangilash">🔄</button>
           <div class="search" style="display:none">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
             <input class="input" id="globalSearch" placeholder="Workspace ichidan qidirish...">
@@ -718,6 +719,22 @@
         document.querySelectorAll('#ideasTable tr').forEach((row) => {
           row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
         });
+      });
+
+      document.getElementById('refreshDashboardBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('refreshDashboardBtn');
+        btn.classList.add('refreshing');
+        try {
+          const freshData = await MllyCore.getDashboardData(user.uid, { forceFresh: true });
+          if (freshData) {
+            window.APP_CONTEXT = { profile, teams: freshData.teams, notifications: freshData.notifications };
+            mountLayout('dashboard', window.APP_CONTEXT);
+          }
+        } catch (_) {}
+        // Re-run key render logic from the IIFE above:
+        const lastTime = document.getElementById('lastUpdateTime');
+        if (lastTime) lastTime.textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
+        setTimeout(() => btn.classList.remove('refreshing'), 600);
       });
 
       document.getElementById('createWorkspaceBtn').addEventListener('click', async () => {
