@@ -362,11 +362,11 @@
       };
       window.loadMyOverview();
 
-      // Load User Preferences
+      // Load User Preferences — getCollection o'rniga getUserProfile (getDoc) ishlatiladi,
+      // chunki non-admin userlar users kolleksiyasini list qila olmaydi (security rules).
       (async () => {
         try {
-          const users = await MllyCore.getCollection('users');
-          const userDoc = users.find(u => u.id === user.uid);
+          const userDoc = await MllyCore.getUserProfile(user.uid);
           if (userDoc) {
             if (userDoc.workingHours) {
               document.getElementById('workingHoursStart').value = userDoc.workingHours.start || '09:00';
@@ -392,8 +392,7 @@
         if (!panel) return;
         let enabled = false;
         try {
-          const users = await MllyCore.getCollection('users');
-          const me = users.find((u) => u.id === user.uid);
+          const me = await MllyCore.getUserProfile(user.uid);
           enabled = !!(me && me.twoFactorEnabled);
         } catch (_) {}
         const render = () => {
@@ -452,8 +451,7 @@
       // ===== T22 / T25 / T33 qo'shimcha profil sozlamalari =====
       (async () => {
         try {
-          const users = await MllyCore.getCollection('users');
-          const me = users.find((u) => u.id === user.uid);
+          const me = await MllyCore.getUserProfile(user.uid);
           if (me) {
             if (me.telegramChatId) {
               document.getElementById('telegramChatId').value = me.telegramChatId;

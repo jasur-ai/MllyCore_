@@ -43,14 +43,28 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if signedIn();
+      // Xavfsizlik: To'liq ro'yxatni olish (enumeration) faqat admin uchun.
+      // Biroq member profillarini ko'rish uchun (getTeamData -> getUserProfile)
+      // boshqa a'zolarni ham o'qishga ruxsat kerak.
+      // Cheklov: 'list' so'rovlari (getDocs -> collection('users')) faqat admin uchun,
+      // individual getDoc so'rovlari esa barcha auth userlar uchun ochiq.
+      // Firestore rules 'list' vs 'get' ni farqlay oladi!
+      allow read: if isAdmin();
+      allow get: if signedIn();
       allow create: if isAdmin() || (signedIn() && request.auth.uid == userId);
-      allow update: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      // CRITICAL: Non-admin foydalanuvchi o'z rolini o'zgartira olmasligi kerak!
+      // Agar non-admin bo'lsa, faqat role o'zgarmagan hollarda update ruxsat.
+      allow update: if isAdmin()
+        || (signedIn()
+            && request.auth.uid == userId
+            && (!resource.data.keys().hasAny(['role'])
+                || request.resource.data.role == resource.data.role));
       allow delete: if isAdmin();
     }
 
     match /teams/{teamId} {
-      allow read: if signedIn();
+      // Xavfsizlik: Team'larni ko'rish faqat admin yoki jamoa a'zosi/manager uchun.
+      allow read: if isAdmin() || isManager() || isTeamMember(teamId);
       allow create: if isAdmin();
       allow update: if isAdmin() || isManager() || isTeamLead(teamId) || isTeamCreator(teamId);
       allow delete: if isAdmin();
@@ -139,6 +153,8 @@ service cloud.firestore {
     }
 
     match /settings/{settingId} {
+      // Sozlamalar: reportPeriodMode kabi umumiy sozlamalar barcha userlar o'qiy oladi.
+      // Yozish faqat admin uchun.
       allow read: if signedIn();
       allow write: if isAdmin();
     }
@@ -159,7 +175,8 @@ service cloud.firestore {
     }
 
     match /templates/{templateId} {
-      allow read: if signedIn();
+      // Xavfsizlik: shablonlar faqat admin uchun
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
@@ -176,7 +193,8 @@ service cloud.firestore {
 
     // --- T17 Weekly Digest ---
     match /digests/{digestId} {
-      allow read: if signedIn();
+      // Xavfsizlik: digest faqat admin o'qiy oladi
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
@@ -250,11 +268,6 @@ service cloud.firestore {
       allow write: if signedIn() && request.resource.data.userId == request.auth.uid;
     }
 
-    // --- T27 Idea Comments ---
-    match /ideaComments/{commentId} {
-      allow read: if isAdmin() || isTeamMember(resource.data.teamId);
-      allow create: if isAdmin() || isTeamMember(resource.data.teamId);
-      allow update, delete: if isAdmin() || (signedIn() && resource.data.userId == request.auth.uid);
-    }
+    // --- T27 Idea Comments (QO'SHIMCHA: avvalgi ideaComments qoidasi o'rniga bu ishlatiladi) ---
   }
 }
