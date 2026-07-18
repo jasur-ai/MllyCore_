@@ -25,46 +25,50 @@ window.MllyCore = {
     if (!window.MLLYCORE_FIREBASE_ENABLED) return null;
     if (firebaseState.ready) return firebaseState;
 
-    try {
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => reject(new Error('Firebase SDK yuklanmadi — CDN timeout (15s)')), 15000);
-      });
+    // FIX: SDK yuklanishiga global timeout va xatolik nazorati
+    if (window.__mlly_init_promise) return window.__mlly_init_promise;
 
-      const loadFirebase = (async () => {
-        const appMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js');
-        const authMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js');
-        const dbMod = await import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js');
+    window.__mlly_init_promise = (async () => {
+      try {
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Firebase SDK timeout (10s)')), 10000);
+        });
 
-        firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
-        firebaseState.auth = authMod.getAuth(firebaseState.app);
-        await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
+        const loadFirebase = (async () => {
+          const [appMod, authMod, dbMod] = await Promise.all([
+            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js'),
+            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js'),
+            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js')
+          ]);
 
-        // Offline-first: persist Firestore data locally (IndexedDB) so the app keeps
-        // working without a network connection and re-syncs automatically.
-        let db;
-        try {
-          if (dbMod.initializeFirestore && dbMod.persistentLocalCache) {
-            db = dbMod.initializeFirestore(firebaseState.app, {
-              localCache: dbMod.persistentLocalCache({ tabManager: dbMod.persistentMultipleTabManager() }),
-            });
-          } else {
+          firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
+          firebaseState.auth = authMod.getAuth(firebaseState.app);
+          await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
+
+          let db;
+          try {
+            db = dbMod.getFirestore(firebaseState.app);
+            // Oflayn ishlashni yoqish
+            dbMod.enableIndexedDbPersistence(db).catch(() => {});
+          } catch (e) {
             db = dbMod.getFirestore(firebaseState.app);
           }
-        } catch (e) {
-          db = dbMod.getFirestore(firebaseState.app);
-        }
-        firebaseState.db = db;
+          firebaseState.db = db;
+          firebaseState.modules = { authMod, dbMod };
+          firebaseState.ready = true;
+          return firebaseState;
+        })();
 
-        firebaseState.modules = { authMod, dbMod };
-        firebaseState.ready = true;
-      })();
+        return await Promise.race([loadFirebase, timeoutPromise]);
+      } catch (e) {
+        console.error('MllyCore init() xatosi:', e.message);
+        firebaseState.ready = false;
+        window.__mlly_init_promise = null; // Qayta urinish uchun
+        throw e;
+      }
+    })();
 
-      await Promise.race([loadFirebase, timeoutPromise]);
-      return firebaseState;
-    } catch (e) {
-      console.error('MllyCore init() xatosi:', e.message || e);
-      return null;
-    }
+    return window.__mlly_init_promise;
   },
 
   async getUserByUsername(username) {
@@ -199,21 +203,21 @@ window.MllyCore = {
           payload = { teams, ideas: [], notifications: [], pendingInvites: [] };
         } else if (window.MLLYCORE_PROFILE?.role === 'manager') {
           const assignedIds = Array.isArray(window.MLLYCORE_PROFILE.assignedTeams) ? window.MLLYCORE_PROFILE.assignedTeams : [];
-          const teamDocs = await Promise.all(assignedIds.map((id) => getDoc(doc(state.db, 'teams', id))));
+          const teamDocs = await Promise.all(assignedIds.map((id) => getDoc(doc(state.db, 'teams', id)).catch(() => ({ exists: () => false }))));
           const teams = teamDocs
             .map((teamDoc) => (teamDoc.exists() ? { id: teamDoc.id, membershipRole: 'manager', ...teamDoc.data() } : null))
             .filter(Boolean);
           // Managerlar ham bildirishnomalarni ko'rishi kerak!
-          const notificationSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid)));
+          const notificationSnap = await getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))).catch(() => ({ docs: [] }));
           const notifications = notificationSnap.docs
             .map((item) => ({ id: item.id, ...item.data() }))
             .sort(sortByCreatedAtDesc);
           payload = { teams, ideas: [], notifications, pendingInvites: [] };
         } else {
           const [memberSnap, notificationSnap, inviteSnap] = await Promise.all([
-            getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))),
-            getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))),
-            getDocs(query(collection(state.db, 'workspaceInvites'), where('inviteeUserId', '==', uid)))
+            getDocs(query(collection(state.db, 'teamMembers'), where('userId', '==', uid))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(state.db, 'notifications'), where('userId', '==', uid))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(state.db, 'workspaceInvites'), where('inviteeUserId', '==', uid))).catch(() => ({ docs: [] }))
           ]);
 
           const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
@@ -304,12 +308,17 @@ window.MllyCore = {
         }
         const team = { id: teamSnap.id, ...teamSnap.data() };
 
+        // FIX: Har bir so'rovga individual error handling va default qiymatlar
+        const safeGet = async (query) => {
+          try { return await getDocs(query); } catch (e) { console.warn('Firestore fetch xatosi:', e.message); return { docs: [] }; }
+        };
+
         const [memberSnap, ideaSnap, messageSnap, taskSnap, taskSubmissionSnap] = await Promise.all([
-          getDocs(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId))),
-          getDocs(query(collection(state.db, 'ideas'), where('teamId', '==', teamId))),
-          getDocs(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId))),
-          getDocs(query(collection(state.db, 'tasks'), where('teamId', '==', teamId))),
-          getDocs(query(collection(state.db, 'taskSubmissions'), where('teamId', '==', teamId)))
+          safeGet(query(collection(state.db, 'teamMembers'), where('teamId', '==', teamId))),
+          safeGet(query(collection(state.db, 'ideas'), where('teamId', '==', teamId))),
+          safeGet(query(collection(state.db, 'chatMessages'), where('teamId', '==', teamId))),
+          safeGet(query(collection(state.db, 'tasks'), where('teamId', '==', teamId))),
+          safeGet(query(collection(state.db, 'taskSubmissions'), where('teamId', '==', teamId)))
         ]);
 
         const memberships = memberSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
@@ -1504,13 +1513,16 @@ window.MllyCore = {
     const state = await this.init();
     if (!state) return () => {};
     const { collection, onSnapshot, query, where } = state.modules.dbMod;
-    return onSnapshot(
-      query(collection(state.db, 'cursors'), where('teamId', '==', teamId)),
-      (snap) => {
-        const cursors = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        onUpdate(cursors);
-      }
-    );
+    try {
+      return onSnapshot(
+        query(collection(state.db, 'cursors'), where('teamId', '==', teamId)),
+        (snap) => {
+          const cursors = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          onUpdate(cursors);
+        },
+        (err) => console.warn('Cursors snapshot xatosi:', err.message)
+      );
+    } catch (_) { return () => {}; }
   },
 
   // ===== T49 Smart Notification Batching =====
@@ -1763,7 +1775,20 @@ window.MllyCore = {
 
     const { onAuthStateChanged } = state.modules.authMod;
     return new Promise((resolve) => {
+      // FIX (hang protection): 12 soniya ichida Firebase javob bermasa, 
+      // yuklanishdan to'xtatamiz va login'ga qaytaramiz (yuklanmoqda qolib ketmasligi uchun).
+      const authTimeout = setTimeout(() => {
+        if (typeof unsub === 'function') unsub();
+        console.warn('Auth timeout: Firebase 12s ichida javob bermadi.');
+        const currentPage = location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'login.html' && currentPage !== 'register.html') {
+          location.href = 'login.html';
+        }
+        resolve(null);
+      }, 12000);
+
       const unsub = onAuthStateChanged(state.auth, async (user) => {
+        clearTimeout(authTimeout);
         unsub();
         try {
           if (!user) {

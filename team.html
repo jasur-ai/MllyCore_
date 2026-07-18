@@ -45,6 +45,10 @@
     const escapeHtml = (value) => String(value || '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
     }[char]));
+    const nameOf = (m, members) => {
+      const mem = (members || []).find((mm) => mm.userId === m.userId);
+      return (mem && (mem.user?.name || mem.user?.email)) || m.name || m.userId || 'A’zo';
+    };
     const fmtDate = (value) => {
       if (!value) return '-';
       const date = value.toDate ? value.toDate() : new Date(value);
@@ -62,7 +66,7 @@
     window.__mllyLoadingTimeout = setTimeout(() => {
       const el = document.getElementById('content');
       if (!el || !el.querySelector('.loading-copy')) return;
-      el.innerHTML = '<div class=\'workspace-empty\'><h3>Yuklashda xatolik</h3><p>Sahifa uzoq vaqt yuklanmadi. Internet aloqangizni tekshiring yoki qayta urinib koring.</p></div>';
+      el.innerHTML = '<div class=\'workspace-empty\'><h3>Yuklashda xatolik</h3><p>Sahifa uzoq vaqt yuklanmadi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
     }, 15000);
     // Agar renderWorkspace muvaffaqiyatli bajarilsa, bu timeoutni tozalaymiz
     window.__clearLoadingTimeout = () => { if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; } };
@@ -544,6 +548,7 @@
         });
       });
     }
+
     function renderTaskCard(task, data, submissions, memberCount, currentUserId, isLead, isViewer) {
       var taskSubs = submissions.filter(function(item) { return item.taskId === task.id; });
       var hasSubmitted = taskSubs.some(function(item) { return item.userId === currentUserId; });
@@ -577,99 +582,6 @@
       '</div>';
     }
 
-    function attachTaskListeners(data, currentUserId, isLead, isViewer) {
-      document.querySelectorAll('[data-task-claim]').forEach(function(button) {
-        button.addEventListener('click', async function() {
-          var taskId = button.dataset.taskClaim;
-          button.disabled = true;
-          try {
-            await MllyCore.claimOpenTask(taskId);
-            await refreshWorkspace(data.team.id, currentUserId);
-          } catch (error) {
-            UTIL.toast(error.message || 'Topshiriq olinmadi.');
-            button.disabled = false;
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-task-submit]').forEach(function(button) {
-        button.addEventListener('click', async function() {
-          var taskId = button.dataset.taskSubmit;
-          button.disabled = true;
-          try {
-            await MllyCore.submitTaskResult({ taskId: taskId, resultText: '', resultLink: '' });
-            await refreshWorkspace(data.team.id, currentUserId);
-          } catch (error) {
-            UTIL.toast(error.message || 'Natija yuborilmadi.');
-            button.disabled = false;
-          }
-        });
-      });
-
-      document.querySelectorAll('[data-task-complete]').forEach(function(button) {
-        button.addEventListener('click', async function() {
-          var taskId = button.dataset.taskComplete;
-          button.disabled = true;
-          try {
-            await MllyCore.setTaskStatus({ taskId: taskId, status: 'done' });
-            await refreshWorkspace(data.team.id, currentUserId);
-          } catch (error) {
-            UTIL.toast(error.message || 'Topshiriq tugallanmadi.');
-            button.disabled = false;
-          }
-        });
-      });
-    }
-
-    function attachColumnDragDrop(data, currentUserId) {
-      var tasks = document.querySelectorAll('.kanban-task[draggable="true"]');
-      var columns = document.querySelectorAll('.kanban-column');
-
-      tasks.forEach(function(task) {
-        task.addEventListener('dragstart', function(e) {
-          this.classList.add('dragging');
-          e.dataTransfer.setData('text/plain', this.dataset.taskId);
-          e.dataTransfer.effectAllowed = 'move';
-        });
-        task.addEventListener('dragend', function() {
-          this.classList.remove('dragging');
-          columns.forEach(function(col) { col.classList.remove('drag-over'); });
-        });
-      });
-
-      columns.forEach(function(col) {
-        col.addEventListener('dragover', function(e) {
-          e.preventDefault();
-          this.classList.add('drag-over');
-        });
-        col.addEventListener('dragleave', function() {
-          this.classList.remove('drag-over');
-        });
-        col.addEventListener('drop', async function(e) {
-          e.preventDefault();
-          this.classList.remove('drag-over');
-          var taskId = e.dataTransfer.getData('text/plain');
-          var newStatus = this.dataset.status;
-          var taskEl = document.querySelector('.kanban-task[data-task-id="' + taskId + '"]');
-          if (!taskEl || !taskId || !newStatus) return;
-          var oldStatus = taskEl.dataset.status;
-          if (oldStatus === newStatus) return;
-
-          // Optimistik yangilash
-          taskEl.setAttribute('data-status', newStatus);
-          taskEl.classList.add('dragging');
-
-          try {
-            await MllyCore.setTaskStatus({ taskId: taskId, status: newStatus });
-            await refreshWorkspace(data.team.id, currentUserId);
-          } catch (error) {
-            taskEl.setAttribute('data-status', oldStatus);
-            taskEl.classList.remove('dragging');
-            UTIL.toast(error.message || 'Status yangilanmadi.');
-          }
-        });
-      });
-    }
     function renderWorkspaceSkeleton() {
       const target = document.getElementById('content');
       if (!target) return;
@@ -698,14 +610,53 @@
       `;
     }
 
+    function _cleanupPresence() {
+      if (Array.isArray(presenceUnsubs)) {
+        presenceUnsubs.forEach((unsub) => { if (typeof unsub === 'function') unsub(); });
+      }
+      presenceUnsubs = [];
+    }
+
     async function renderWorkspace(data, currentUserId) {
       const membership = data.members.find((member) => member.userId === currentUserId);
-      const isLead = membership?.role === 'team_lead';
+      const isLead = membership?.role === 'team_lead' || window.MLLYCORE_PROFILE?.role === 'admin';
       const isViewer = membership?.role === 'viewer';
       const isManagerViewer = !membership && window.MLLYCORE_PROFILE?.role === 'manager';
       lastWorkspaceRenderKey = workspaceRenderKey(data);
 
-      document.getElementById('content').innerHTML = `
+      const root = document.getElementById('content');
+      // FIX (Stability): If already rendered, only update dynamic components
+      if (root.querySelector('.workspace-command')) {
+         document.getElementById('ideaStat').textContent = data.ideas.length;
+         document.getElementById('startupStat').textContent = data.ideas.filter(i => i.entryType === 'startup').length;
+         document.getElementById('chatStat').textContent = data.messages.length;
+         
+         renderEntries(data, currentUserId, isLead, isManagerViewer);
+         renderTasks(data, currentUserId, isLead, isViewer || isManagerViewer);
+         renderMembers(data, currentUserId, isLead, isManagerViewer);
+         renderChat(data.messages || [], currentUserId);
+         
+         // Update tools (badge and key might have changed)
+         const tools = root.querySelector('.workspace-command-tools');
+         if (tools) {
+            tools.querySelector('.badge-active').textContent = escapeHtml(membership?.role || (window.MLLYCORE_PROFILE?.role === 'manager' ? 'Manager' : 'member'));
+         }
+
+         _cleanupPresence();
+         if (data.members) {
+           data.members.forEach((m) => {
+             MllyCore.subscribePresence(m.userId, (p) => {
+               const dot = document.getElementById('presence-' + m.userId);
+               if (!dot) return;
+               let st = (p && p.status) || 'offline';
+               dot.style.background = st === 'online' ? '#22c55e' : st === 'away' ? '#f59e0b' : '#64748b';
+             }).then(unsub => { if(typeof unsub === 'function') presenceUnsubs.push(unsub); });
+           });
+         }
+         
+         window.__clearLoadingTimeout?.();
+         return;
+      }
         <section class="workspace-command">
           <div>
             <h1 class="workspace-command-title">${escapeHtml(data.team.name)}</h1>
@@ -1513,14 +1464,7 @@
                 const s = r.summary || {};
                 document.getElementById('loadSummary').textContent = 'Jamoa: ' + (s.members || 0) + ' a’zo — ' + (s.overloaded || 0) + ' overloaded, ' + (s.busy || 0) + ' busy';
                 const colorOf = (sig) => sig === 'overloaded' ? '#e5484d' : sig === 'busy' ? '#f59e0b' : '#22c55e';
-                // FIX (Load signal): backend teamMembers da alohida `name` maydoni bo'lmasligi
-                // mumkin, shuning uchun `m.name` bo'sh bo'lib, raw Firebase UID ko'rinadi.
-                // `data.members` ichida `user?.name`/`user?.email` bor — shu yerdan topamiz.
-                const nameOf = (m) => {
-                  const mem = (data.members || []).find((mm) => mm.userId === m.userId);
-                  return (mem && (mem.user?.name || mem.user?.email)) || m.name || m.userId || 'A’zo';
-                };
-                body.innerHTML = '<div class="workspace-message-stack">' + (r.load || []).map((m) => '<div class="workspace-message-item"><strong>' + escapeHtml(nameOf(m)) + '</strong> — ' + m.openTasks + ' ochiq, ' + (m.timeLoggedMs / 3600000).toFixed(1) + ' soat, ' + m.presence + ' <span style="color:' + colorOf(m.signal) + '">' + m.signal + '</span></div>').join('') + '</div>';
+                body.innerHTML = '<div class="workspace-message-stack">' + (r.load || []).map((m) => '<div class="workspace-message-item"><strong>' + escapeHtml(nameOf(m, data.members)) + '</strong> — ' + m.openTasks + ' ochiq, ' + (m.timeLoggedMs / 3600000).toFixed(1) + ' soat, ' + m.presence + ' <span style="color:' + colorOf(m.signal) + '">' + m.signal + '</span></div>').join('') + '</div>';
               } else if (key === 'webhooks' && body) {
                 loadedAcc.webhooks = true;
                 await renderWebhooks(teamIdT, body);
@@ -1742,15 +1686,16 @@
           _move._last = now;
           MllyCore.updateCursor({ teamId: teamIdT, x: e.clientX, y: e.clientY, name: myName, color: myColor });
         };
-        const _enableCursors = () => {
+        const _enableCursors = async () => {
           if (_unsubCursors) return;
           window.addEventListener('mousemove', _move);
-          _unsubCursors = MllyCore.subscribeCursors(teamIdT, _renderCursors);
+          const unsub = await MllyCore.subscribeCursors(teamIdT, _renderCursors).catch(() => null);
+          if (typeof unsub === 'function') _unsubCursors = unsub;
           cursorLayer.style.display = '';
         };
         const _disableCursors = () => {
           try { window.removeEventListener('mousemove', _move); } catch (_) {}
-          if (_unsubCursors) { try { _unsubCursors(); } catch (_) {} _unsubCursors = null; }
+          if (typeof _unsubCursors === 'function') { _unsubCursors(); _unsubCursors = null; }
           cursorLayer.innerHTML = '';
           cursorLayer.style.display = 'none';
         };
@@ -1922,7 +1867,7 @@
             assignedTo: (document.getElementById('taskAssignmentMode').value === 'direct')
               ? (document.getElementById('taskAssignedUserId')?.value || '')
               : '',
-            deadline: document.getElementById('taskDeadline').value,
+            dueDate: document.getElementById('taskDeadline').value,
             dependsOn,
             requiredSkill: document.getElementById('taskRequiredSkill')?.value || ''
           });
@@ -2010,21 +1955,44 @@
       MllyCore.syncTeamTasks(teamId).catch(() => {});
       const [dashboard, initialWorkspace] = await Promise.race([
         Promise.all([
-          MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(() => cachedDash),
-          teamId ? MllyCore.getTeamData(teamId).catch(() => null) : Promise.resolve(null)
+          MllyCore.getDashboardData(user.uid, { forceFresh: true }).catch(err => {
+            console.error('Dash load error:', err);
+            return cachedDash;
+          }),
+          teamId ? MllyCore.getTeamData(teamId, { forceFresh: true }).catch(err => {
+            console.error('Workspace load error:', err);
+            return { _error: true, message: err.message };
+          }) : Promise.resolve(null)
         ]),
         new Promise(function(resolve) {
           setTimeout(function() {
             resolve([cachedDash, { _timeout: true }]);
           }, 15000);
         })
-      ]);
+      ]).catch(err => {
+        console.error('Global race error:', err);
+        return [cachedDash, { _error: true, message: err.message }];
+      });
       mountLayout('', { profile, teams: dashboard.teams || [], notifications: dashboard.notifications || [] });
       window.APP_CONTEXT = { profile, teams: dashboard.teams, notifications: dashboard.notifications };
       workspaceState = initialWorkspace;
-      if (workspaceState && workspaceState._timeout) {
-        document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Ma\'lumotlarni yuklash uzoq davom etdi. Internet aloqangizni tekshirib, qayta urinib ko\'ring.</p><button class="btn btn-primary" onclick="location.reload()" style="margin-top:12px">🔄 Qayta urinish</button></div>';
-        return;
+      
+      if (workspaceState && (workspaceState._timeout || workspaceState._error)) {
+        // Timeout bo'lsa ham keshdagini ko'rsatishga harakat qilamiz (agar u error emas bo'lsa)
+        const fallback = await MllyCore.getTeamData(teamId).catch(() => null);
+        if (fallback) {
+          workspaceState = fallback;
+        } else {
+          document.getElementById('content').innerHTML = `
+            <div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh">
+              <div class="workspace-empty">
+                <h3>Yuklashda kechikish</h3>
+                <p>${workspaceState.message || 'Internet aloqangizni tekshiring yoki qayta urinib ko‘ring.'}</p>
+                <button class="btn btn-primary" onclick="location.reload()" style="margin-top:12px">🔄 Qayta urinish</button>
+              </div>
+            </div>`;
+          return;
+        }
       }
       if (!workspaceState) {
         document.getElementById('content').innerHTML = '<div class="workspace-empty"><h3>Workspace topilmadi</h3><p>Siz bu workspace a\'zosi emassiz yoki workspace mavjud emas.</p></div>';
@@ -2305,8 +2273,8 @@
         title: document.getElementById('tskQTitle')?.value,
         description: document.getElementById('tskQDesc')?.value,
         assignmentMode: document.getElementById('tskQMode')?.value || 'open',
-        assignedUserId: document.getElementById('tskQAssignee')?.value || '',
-        deadlineAt: document.getElementById('tskQDeadline')?.value || ''
+        assignedTo: document.getElementById('tskQAssignee')?.value || '',
+        dueDate: document.getElementById('tskQDeadline')?.value || ''
       });
       if (fb) { fb.textContent = '✅ Topshiriq qo'shildi!'; fb.style.color = 'var(--success)'; }
       const uid = window.MLLYCORE_AUTH_USER?.uid;
@@ -2369,7 +2337,7 @@
       }
     });
   </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a16d9344a8a0eeba',t:'MTc4MzMzMDA2NA=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>  <script>
+  <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
       window.addEventListener("load", function() {
         navigator.serviceWorker.register("sw.js").catch(function(err) {

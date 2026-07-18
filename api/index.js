@@ -195,7 +195,7 @@ async function handleCreateWorkspace(req, res, db, decoded, user) {
             teamId: teamRef.id,
             title: st.title || 'Vazifa',
             description: st.description || '',
-            status: 'todo',
+            status: 'open',
             priority: st.priority || 'medium',
             createdBy: decoded.uid,
             assignedTo: null,
@@ -366,7 +366,7 @@ async function handleCreateTask(req, res, db, decoded, user) {
     teamId,
     title,
     description: description || '',
-    status: 'todo',
+    status: 'open',
     priority: priority || 'medium',
     createdBy: decoded.uid,
     assignedTo: assignedTo || null,
@@ -620,6 +620,12 @@ async function handleCreateEntry(req, res, db, decoded, user) {
   if (!membership && user.role !== 'admin') return { status: 403, error: 'Ruxsat yoq.' };
   if (isReadOnlyMember(membership)) return { status: 403, error: "Viewer faqat o'qishi mumkin." };
 
+  let ownerName = user.name || decoded.email;
+  if (ownerUserId && ownerUserId !== decoded.uid) {
+    const targetUser = await db.collection('users').doc(ownerUserId).get();
+    if (targetUser.exists) ownerName = targetUser.data().name || targetUser.data().email || ownerName;
+  }
+
   const ref = await db.collection('ideas').add({
     teamId,
     title: title.trim(),
@@ -629,7 +635,7 @@ async function handleCreateEntry(req, res, db, decoded, user) {
     createdByUserId: decoded.uid,
     createdByName: user.name || decoded.email,
     ownerUserId: ownerUserId || decoded.uid,
-    ownerName: user.name || decoded.email,
+    ownerName,
     createdAt: SV(),
     updatedAt: SV(),
   });
@@ -651,8 +657,10 @@ async function handleUpdateEntryOwner(req, res, db, decoded, user) {
   const ideaDoc = await db.collection('ideas').doc(ideaId).get();
   const oldOwner = ideaDoc.exists ? ideaDoc.data().ownerUserId : null;
   const userSnap = await db.collection('users').doc(ownerUserId).get();
-  const name = userSnap.exists ? (userSnap.data().name || '') : '';
-  await db.collection('ideas').doc(ideaId).update({ ownerUserId, ownerName: name, updatedAt: SV() });
+  const ownerName = userSnap.exists ? (userSnap.data().name || userSnap.data().email || '') : '';
+  await db.collection('ideas').doc(ideaId).update({ ownerUserId, ownerName, updatedAt: SV() });
+  return { status: 200, success: true };
+}
   await audit(db, 'entry_owner_changed', {
     teamId, ideaId, fromUserId: oldOwner, toUserId: ownerUserId,
     restoreCollection: 'ideas', restoreDocId: ideaId,
@@ -1016,7 +1024,7 @@ async function handleActions(req, res, db, decoded, user) {
       teamId,
       title: title || idea.data().title,
       description: idea.data().description || '',
-      status: 'todo',
+      status: 'open',
       priority: 'medium',
       createdBy: decoded.uid,
       assignedTo: null,
@@ -2130,7 +2138,7 @@ async function handleMeetingNotes(req, res, db, decoded, user) {
     const batch = db.batch();
     actionItems.filter(Boolean).slice(0, 20).forEach((t) => {
       const r = db.collection('tasks').doc();
-      batch.set(r, { teamId, title: String(t).slice(0, 200), status: 'todo', priority: 'medium', createdBy: decoded.uid, assignedTo: null, dueDate: null, createdAt: SV() });
+      batch.set(r, { teamId, title: String(t).slice(0, 200), status: 'open', priority: 'medium', createdBy: decoded.uid, assignedTo: null, dueDate: null, createdAt: SV() });
     });
     await batch.commit();
   }
@@ -2448,7 +2456,7 @@ async function handleBreakdownIdea(req, res, db, decoded, user) {
     tasks.forEach((t) => {
       const r = db.collection('tasks').doc();
       batch.set(r, {
-        teamId, ideaId, title: t.title, description: '', status: 'todo',
+        teamId, ideaId, title: t.title, description: '', status: 'open',
         priority: t.priority, createdBy: decoded.uid, assignedTo: null,
         dueDate: null, createdAt: SV(),
       });

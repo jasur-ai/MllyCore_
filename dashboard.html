@@ -276,7 +276,7 @@
       // Faqat bosh sahifa hali yuklanmagan bo'lsa
       var statsEl = document.getElementById('stats');
       if (statsEl && statsEl.children.length === 0) {
-        statsEl.innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p></div>';
+        statsEl.innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
       }
     }, 15000);
     window.__clearLoadingTimeout = () => {
@@ -336,10 +336,25 @@
       const isAdmin = profile?.role === 'admin';
       const isManager = profile?.role === 'manager';
 
-      mountLayout('dashboard', { profile: profile || {}, teams: [], notifications: [] });      const data = await window.MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
+      mountLayout('dashboard', { profile: profile || {}, teams: [], notifications: [] });
+      
+      const data = await Promise.race([
+        window.MllyCore.getDashboardData(user.uid, { forceFresh: true }),
+        new Promise(resolve => setTimeout(() => resolve('TIMEOUT'), 12000))
+      ]).catch(() => ({ teams: [], ideas: [], notifications: [] }));
+
+      if (data === 'TIMEOUT') {
+         // Timeout bo'lsa keshdan olishga harakat qilamiz
+         const cached = await window.MllyCore.getDashboardData(user.uid).catch(() => ({ teams: [], ideas: [], notifications: [] }));
+         window.__renderDashboardContent(cached);
+         UTIL.toast('Ulanish sekin, keshdan foydalanilmoqda');
+      } else {
+         window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
+         mountLayout('dashboard', window.APP_CONTEXT);
+         window.__renderDashboardContent(data);
+      }
+      
       window.__clearLoadingTimeout?.();
-      window.APP_CONTEXT = { profile, teams: data.teams, notifications: data.notifications };
-      mountLayout('dashboard', window.APP_CONTEXT);
 
       // Manager uchun: dashboard title ni moslashtirish + member dashboard ni yashirish
       if (isManager) {
@@ -954,6 +969,14 @@
         setTimeout(() => btn?.classList.remove('refreshing'), 600);
       }, 30000);
       window.addEventListener('pagehide', () => MllyCore.stopAutoRefresh(_autoRefreshId));
+      
+      // Safety: 10 soniyadan keyin agar UI hali ham bo'sh bo'lsa, xato xabarini ko'rsatish
+      setTimeout(() => {
+        const stats = document.getElementById('stats');
+        if (stats && stats.innerHTML.trim() === '') {
+          stats.innerHTML = '<div class="workspace-empty"><h3>Ma’lumot yuklanmadi</h3><p>Internet aloqangizni tekshiring va sahifani yangilang.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
+        }
+      }, 10000);
     })();
   </script>
   <script>

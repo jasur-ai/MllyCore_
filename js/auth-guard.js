@@ -18,7 +18,22 @@
   }
   window.MLLYCORE_AUTH_READY = (async () => {
     try {
-      return await window.MllyCore.requireAuth();
+      // FIX (safety hang protection): 15 soniya ichida auth javob bermasa, 
+      // yuklanmoqda holatini majburan tugatamiz va login'ga qaytaramiz.
+      const authResult = await Promise.race([
+        window.MllyCore.requireAuth(),
+        new Promise((resolve) => setTimeout(() => resolve('TIMEOUT'), 15000))
+      ]);
+      
+      if (authResult === 'TIMEOUT') {
+        console.warn('Auth guard timeout: login sahifasiga yo\'naltirilmoqda.');
+        const currentPage = location.pathname.split('/').pop() || 'index.html';
+        if (currentPage !== 'login.html' && currentPage !== 'register.html') {
+          location.href = 'login.html';
+        }
+        return null;
+      }
+      return authResult;
     } catch (error) {
       console.error(error);
       // FIX (redirect loop): Agar allaqachon login.html da bo'lsak, yana redirect

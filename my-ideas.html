@@ -109,7 +109,7 @@
       if (!container) return;
       // Agar `#personalIdeas` ichida hali hech qanday element bo'lmasa → ma'lumot yuklanmagan
       if (container.children.length === 0) {
-        document.getElementById('app').innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p></div></div>';
+        document.getElementById('app').innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div></div>';
       }
     }, 15000);
     window.__clearLoadingTimeout = () => {

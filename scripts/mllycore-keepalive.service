@@ -1,0 +1,12 @@
+[Unit]
+Description=MllyCore Keep-Alive — prevent router idle disconnect
+After=network.target
+
+[Service]
+ExecStart=/bin/bash /mnt/d/StartUp/MllyCore/scripts/keepalive.sh start
+Type=simple
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

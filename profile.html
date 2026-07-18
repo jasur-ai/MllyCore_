@@ -305,9 +305,19 @@
     };
 
     window.UTIL = window.UTIL || { toast: (msg) => alert(msg) };
+    
+    // Xavfsizlik: 15 soniya ichida yuklanmasa, xato xabarini ko'rsatamiz
+    window.__mllyLoadingTimeout = setTimeout(() => {
+      var appEl = document.getElementById('app');
+      if (!appEl || appEl.classList.contains('app')) return;
+      appEl.innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Profil ma\'lumotlarini yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div></div>';
+    }, 15000);
+    window.__clearLoadingTimeout = () => { if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; } };
+
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
+      window.__clearLoadingTimeout?.();
       const profile = window.MLLYCORE_PROFILE;
       // FIX (complaint 7): profilga o'tganda "Workspace'larim" yo'qolmasligi uchun
       // haqiqiy jamoalar ro'yxatini yuklab, sidebar ga uzatamiz.

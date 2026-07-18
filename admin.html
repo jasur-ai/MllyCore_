@@ -340,6 +340,15 @@
   <script src="js/layout.js"></script>
   <script src="js/analytics-widgets.js"></script>
   <script>
+    // Xavfsizlik: 15 soniya ichida yuklanmasa, xato xabarini ko'rsatamiz
+    window.__mllyLoadingTimeout = setTimeout(() => {
+      var statsEl = document.getElementById('stats');
+      if (statsEl && statsEl.children.length === 0) {
+        statsEl.innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
+      }
+    }, 15000);
+    window.__clearLoadingTimeout = () => { if (window.__mllyLoadingTimeout) { clearTimeout(window.__mllyLoadingTimeout); window.__mllyLoadingTimeout = null; } };
+
     window.UTIL = window.UTIL || {
       openModal: (id) => document.getElementById(id)?.classList.add('open'),
       closeModal: (id) => document.getElementById(id)?.classList.remove('open'),
@@ -376,6 +385,7 @@
     (async () => {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
+      window.__clearLoadingTimeout?.();
 
       let users = [], teams = [];
       try {
@@ -1427,7 +1437,7 @@
           button.disabled = false;
         }
       });
-n      // 30 soniyalik avtomatik yangilash — visibility check va loading indicator bilan
+      // 30 soniyalik avtomatik yangilash — visibility check va loading indicator bilan
       const _autoRefreshId = MllyCore.startAutoRefresh(async () => {
         if (document.visibilityState !== 'visible') return;
         const refreshBtn = document.getElementById("refreshWorkspaceBtn");

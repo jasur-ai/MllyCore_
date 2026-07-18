@@ -986,13 +986,17 @@
 
   <script>
     // ─── Page loader ───
-    window.addEventListener('load', function() {
+    (function() {
       var loader = document.getElementById('pageLoader');
-      if (loader) {
+      function hideLoader() {
+        if (!loader || loader.classList.contains('hidden')) return;
         loader.classList.add('hidden');
         setTimeout(function() { if (loader.parentNode) loader.parentNode.removeChild(loader); }, 600);
       }
-    });
+      window.addEventListener('load', hideLoader);
+      // Xavfsizlik: 5 soniyadan keyin loader har qanday holatda yashiriladi
+      setTimeout(hideLoader, 5000);
+    })();
 
     // ─── Floating particles ───
     (function() {

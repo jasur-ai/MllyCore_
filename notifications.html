@@ -85,7 +85,7 @@
     window.__mllyLoadingTimeout = setTimeout(() => {
       var container = document.getElementById('invites');
       if (!container || container.children.length > 0) return;
-      document.getElementById('list').innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p></div>';
+      document.getElementById('list').innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
     }, 15000);
     window.__clearLoadingTimeout = () => {
       if (window.__mllyLoadingTimeout) {
