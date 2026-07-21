@@ -727,7 +727,7 @@ async function handleImportPersonalIdea(req, res, db, decoded, user) {
 }
 
 async function handleSyncTasks(req, res, db, decoded, user) {
-  const teamId = req.body?.teamId || req.query?.teamId;
+  const { teamId } = req.body || {};
   if (!teamId) return { status: 400, error: 'teamId kerak.' };
 
   const membership = await getMembership(db, teamId, decoded.uid);
