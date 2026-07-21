@@ -157,6 +157,9 @@ async function audit(db, action, data, opts) {
 
 function tryParse(body) {
   if (!body) return {};
+  if (Buffer.isBuffer(body)) {
+    try { return JSON.parse(body.toString('utf8')); } catch (_) { return {}; }
+  }
   if (typeof body === 'object') return body;
   try { return JSON.parse(body); } catch (_) { return {}; }
 }
