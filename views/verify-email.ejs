@@ -17,7 +17,7 @@
 <body class="auth-page">
   <div class="auth-shell-pro">
     <aside class="auth-panel-side">
-      <a href="index.html" class="auth-panel-brand">
+      <a href="index" class="auth-panel-brand">
         <span class="auth-panel-mark"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></span>
         <span>
           <span class="auth-panel-name"><img src="images/logo-text.svg" alt="MllyCore" height="31" style="vertical-align:middle"></span>
@@ -74,25 +74,25 @@
       try {
       const state = await MllyCore.init();
       if (!state) {
-        location.href = 'login.html';
+        location.href = 'login';
         return;
       }
       const { onAuthStateChanged } = state.modules.authMod;
       var _unsubVE = onAuthStateChanged(state.auth, async (user) => {
         _unsubVE();
         if (!user) {
-          location.href = 'login.html';
+          location.href = 'login';
           return;
         }
         document.documentElement.classList.add('auth-ready');
         document.getElementById('userEmail').textContent = user.email || '';
         if (user.emailVerified) {
-          location.href = 'dashboard.html';
+          location.href = 'dashboard';
           return;
         }
         document.getElementById('verifyMessage').textContent = 'Emailga link yuborish uchun "Link yuborish" tugmasini bosing.';
       });
-      } catch(e) { location.href = "login.html"; }
+      } catch(e) { location.href = "login"; }
     })();
 
     let resendLocked = false;
@@ -120,7 +120,7 @@
       try {
         const user = await MllyCore.reloadCurrentUser();
         if (user.emailVerified) {
-          location.href = 'dashboard.html';
+          location.href = 'dashboard';
           return;
         }
         message.textContent = 'Email hali tasdiqlanmagan. Emaildagi linkni ochib, keyin qayta tekshiring.';
@@ -131,7 +131,7 @@
 
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       try { await MllyCore.logout(); } catch (_) {}
-      location.href = 'login.html';
+      location.href = 'login';
     });
 
     function friendlyVerifyError(error) {

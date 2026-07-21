@@ -187,7 +187,7 @@
               <div class="section-head"><h2>Keyingi qadam</h2></div>
               <div class="workspace-note-bar">${escapeHtml(team?.name || 'Workspace')} ichiga qaytib, task va chat oqimi bilan bog'lab ishlashingiz mumkin.</div>
               <div class="workspace-form-actions" style="margin-top:14px;justify-content:flex-start">
-                <a class="btn btn-primary" href="team.html?id=${idea.teamId}&focus=${idea.entryType === 'startup' ? 'startup' : 'ideas'}&entity=${idea.id}">Workspacega o'tish</a>
+                <a class="btn btn-primary" href="team?id=${idea.teamId}&focus=${idea.entryType === 'startup' ? 'startup' : 'ideas'}&entity=${idea.id}">Workspacega o'tish</a>
               </div>
             </div>
           </div>
@@ -221,7 +221,7 @@
               if (sim) {
                 const a = document.createElement('a');
                 a.className = 'workspace-record';
-                a.href = 'idea.html?id=' + sid;
+                a.href = 'idea?id=' + sid;
                 a.style.display = 'block';
                 a.style.marginBottom = '8px';
                 a.innerHTML = `<div class="workspace-record-top"><h3>${escapeHtml(sim.title || sid)}</h3></div>`;
@@ -250,7 +250,7 @@
           catch (e) { UTIL.toast(e.message); }
         });
         document.getElementById('pitchBtn')?.addEventListener('click', async () => {
-          try { const r = await MllyCore.generatePitch(ideaId); const blob = new Blob([r.html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pitch.html'; a.click(); }
+          try { const r = await MllyCore.generatePitch(ideaId); const blob = new Blob([r.html], { type: 'text/html' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pitch'; a.click(); }
           catch (e) { UTIL.toast(e.message); }
         });
         document.getElementById('breakdownBtn')?.addEventListener('click', async () => {

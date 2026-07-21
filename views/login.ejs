@@ -21,7 +21,7 @@
       <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()"><span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span><span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span></button>
     </div>
     <aside class="auth-panel-side">
-      <a href="index.html" class="auth-panel-brand">
+      <a href="index" class="auth-panel-brand">
         <span class="auth-panel-mark"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></span>
         <span>
           <span class="auth-panel-name"><img src="images/logo-text.svg" alt="MllyCore" height="31" style="vertical-align:middle"></span>
@@ -71,7 +71,7 @@
           </div>
           <div class="workspace-form-inline">
             <label class="flex items-center gap-2 text-sm muted"><input type="checkbox" checked> Eslab qolish</label>
-            <a href="verify-email.html" class="text-sm" style="color:#7dd3fc">Email tasdiqlash</a>
+            <a href="verify-email" class="text-sm" style="color:#7dd3fc">Email tasdiqlash</a>
             <a href="#" id="forgotLink" class="text-sm" style="color:#7dd3fc; display:block; margin-top:6px;">Parolni unutdingizmi?</a>
           </div>
           <button class="btn btn-primary w-full" type="submit">Kirish</button>
@@ -84,7 +84,7 @@
           <p class="text-sm muted" id="forgotMessage" style="min-height:18px;margin:6px 0 0;"></p>
         </div>
         <div class="auth-helper">
-          Akkauntingiz yo'qmi? <a href="register.html">Ro'yxatdan o'ting</a>
+          Akkauntingiz yo'qmi? <a href="register">Ro'yxatdan o'ting</a>
         </div>
       </div>
     </section>
@@ -109,7 +109,7 @@
           if (!cred.user.emailVerified) {
             message.className = 'text-sm muted feedback-error';
             message.textContent = 'Avval emailingizni tasdiqlang.';
-            location.href = 'verify-email.html';
+            location.href = 'verify-email';
             return;
           }
         } else {
@@ -117,7 +117,7 @@
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
-        location.href = 'dashboard.html';
+        location.href = 'dashboard';
       } catch (error) {
         message.className = 'text-sm muted feedback-error';
         message.textContent = friendlyAuthError(error);

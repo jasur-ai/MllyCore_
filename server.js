@@ -55,28 +55,42 @@ app.get('/manifest.webmanifest', (req, res) => res.sendFile(path.join(__dirname,
 app.get('/favicon.ico', (req, res) => res.sendFile(path.join(__dirname, 'images', 'favicon.svg')));
 app.get('/robots.txt', (req, res) => res.type('text/plain').send('User-agent: *\nAllow: /\n'));
 
-// ── 4. Page Routes — All .html URLs preserved exactly ───────────────────────
+// ── 4. Page Routes — Clean URLs (no .html extension) ────────────────────────
 // Landing
 app.get('/', (req, res) => res.render('index'));
-app.get('/index.html', (req, res) => res.render('index'));
 
 // Auth
-app.get('/login.html', (req, res) => res.render('login'));
-app.get('/register.html', (req, res) => res.render('register'));
-app.get('/verify-email.html', (req, res) => res.render('verify-email'));
+app.get('/login', (req, res) => res.render('login'));
+app.get('/register', (req, res) => res.render('register'));
+app.get('/verify-email', (req, res) => res.render('verify-email'));
 
 // App pages
-app.get('/dashboard.html', (req, res) => res.render('dashboard'));
-app.get('/team.html', (req, res) => res.render('team'));
-app.get('/admin.html', (req, res) => res.render('admin'));
-app.get('/profile.html', (req, res) => res.render('profile'));
-app.get('/idea.html', (req, res) => res.render('idea'));
-app.get('/my-ideas.html', (req, res) => res.render('my-ideas'));
-app.get('/notifications.html', (req, res) => res.render('notifications'));
-app.get('/reports.html', (req, res) => res.render('reports'));
+app.get('/dashboard', (req, res) => res.render('dashboard'));
+app.get('/team', (req, res) => res.render('team'));
+app.get('/admin', (req, res) => res.render('admin'));
+app.get('/profile', (req, res) => res.render('profile'));
+app.get('/idea', (req, res) => res.render('idea'));
+app.get('/my-ideas', (req, res) => res.render('my-ideas'));
+app.get('/notifications', (req, res) => res.render('notifications'));
+app.get('/reports', (req, res) => res.render('reports'));
 
 // Demo
-app.get('/tw-demo.html', (req, res) => res.render('tw-demo'));
+app.get('/tw-demo', (req, res) => res.render('tw-demo'));
+
+// Legacy .html URL redirects — keep for backward compatibility
+app.get('/index.html', (req, res) => res.redirect('/'));
+app.get('/login.html', (req, res) => res.redirect('/login'));
+app.get('/register.html', (req, res) => res.redirect('/register'));
+app.get('/verify-email.html', (req, res) => res.redirect('/verify-email'));
+app.get('/dashboard.html', (req, res) => res.redirect('/dashboard'));
+app.get('/team.html', (req, res) => res.redirect('/team'));
+app.get('/admin.html', (req, res) => res.redirect('/admin'));
+app.get('/profile.html', (req, res) => res.redirect('/profile'));
+app.get('/idea.html', (req, res) => res.redirect('/idea'));
+app.get('/my-ideas.html', (req, res) => res.redirect('/my-ideas'));
+app.get('/notifications.html', (req, res) => res.redirect('/notifications'));
+app.get('/reports.html', (req, res) => res.redirect('/reports'));
+app.get('/tw-demo.html', (req, res) => res.redirect('/tw-demo'));
 
 // ── 5. API — Lazy-loaded from existing api/index.js ─────────────────────────
 // The API requires firebase-admin credentials, so we load it only when needed.

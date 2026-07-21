@@ -329,7 +329,7 @@
       `).join('') : '<div class="workspace-empty"><h3>Startup yo\'q</h3><p>Hozircha team lead startup qo\'shmagan.</p></div>';
 
       document.getElementById('ideasList').innerHTML = ideas.length ? ideas.map((item) => `
-        <a href="idea.html?id=${item.id}" class="workspace-record workspace-record-idea" data-idea-id="${item.id}">
+        <a href="idea?id=${item.id}" class="workspace-record workspace-record-idea" data-idea-id="${item.id}">
           <div class="workspace-record-top">
             <div>
               <h3>${escapeHtml(item.title)}</h3>
@@ -672,7 +672,7 @@
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
               <span class="tsk-badge" id="taskPanelBadge" style="display:none">0</span>
             </button>
-            <a class="btn btn-secondary btn-sm" href="reports.html?teamId=${data.team.id}">📋 Hisobotlar</a>
+            <a class="btn btn-secondary btn-sm" href="reports?teamId=${data.team.id}">📋 Hisobotlar</a>
             <span class="badge badge-active">${escapeHtml(membership?.role || (window.MLLYCORE_PROFILE?.role === 'manager' ? 'Manager (kuzatuvchi)' : 'member'))}</span>
             ${isLead ? `<span class="badge">${escapeHtml(data.team.secretKey || data.team.invitationCode || '-')}</span>` : ''}
             ${data.team.templateId ? `<span class="badge" title="Shablon asosida yaratilgan">📋 Shablon</span>` : ''}
@@ -1939,7 +1939,7 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       if (window.MLLYCORE_PROFILE?.role === 'admin') {
-        location.href = 'admin.html';
+        location.href = 'admin';
         return;
       }
       try {

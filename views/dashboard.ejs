@@ -1,264 +1,264 @@
 <!DOCTYPE html>
-<html lang="uz" class="auth-required">
+<html lang=\"uz\" class=\"auth-required\">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset=\"UTF-8\">
+  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
   <title>Dashboard - MllyCore</title>
   <!-- Xavfsizlik: JS yuklanmasa ham 20 soniyadan keyin avtomatik qayta yuklash -->
-  <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
-  <link rel="apple-touch-icon" href="images/favicon.svg">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <link rel="manifest" href="manifest.webmanifest">
-  <meta name="theme-color" content="#0f172a">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel=\"icon\" type=\"image/svg+xml\" href=\"images/favicon.svg\">
+  <link rel=\"apple-touch-icon\" href=\"images/favicon.svg\">
+  <meta name=\"apple-mobile-web-app-capable\" content=\"yes\">
+  <link rel=\"manifest\" href=\"manifest.webmanifest\">
+  <meta name=\"theme-color\" content=\"#0f172a\">
+  <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap\" rel=\"stylesheet\">
+  <link rel=\"stylesheet\" href=\"css/styles.css\">
   
   <script>(function(){try{var s=localStorage.getItem('mllycore-theme')||'dark';document.documentElement.className=s==='light'?'theme-light':'theme-dark'}catch(_){document.documentElement.className='theme-dark';}})();</script>
 </head>
 <body>
-  <a href="#app" class="skip-link">Asosiy kontentga o'tish</a>
-  <div id="app">
-    <div class="workspace-app">
-      <section class="workspace-command">
+  <a href=\"#app\" class=\"skip-link\">Asosiy kontentga o'tish</a>
+  <div id=\"app\">
+    <div class=\"workspace-app\">
+      <section class=\"workspace-command\">
         <div>
-          <div style="display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;">
+          <div style=\"display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;\">
             <div>
-              <h1 class="workspace-command-title" id="welcome">Workspace overview</h1>
-              <p class="workspace-command-copy" id="dashboardSubtitle">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
+              <h1 class=\"workspace-command-title\" id=\"welcome\">Workspace overview</h1>
+              <p class=\"workspace-command-copy\" id=\"dashboardSubtitle\">Workspace, g'oyalar va bildirishnomalar bitta boshqaruv qatlamida.</p>
             </div>
-            <span id="lastUpdateTime" class="text-xs muted" style="white-space:nowrap;font-size:11px;flex-shrink:0;"></span>
+            <span id=\"lastUpdateTime\" class=\"text-xs muted\" style=\"white-space:nowrap;font-size:11px;flex-shrink:0;\"></span>
           </div>
         </div>
-        <div class="workspace-command-tools">
-          <button class="btn btn-tertiary btn-sm" id="refreshDashboardBtn" title="Ma'lumotlarni yangilash" aria-label="Yangilash">🔄</button>
-          <div class="search" style="display:none">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-            <input class="input" id="globalSearch" placeholder="Workspace ichidan qidirish...">
+        <div class=\"workspace-command-tools\">
+          <button class=\"btn btn-tertiary btn-sm\" id=\"refreshDashboardBtn\" title=\"Ma'lumotlarni yangilash\" aria-label=\"Yangilash\">🔄</button>
+          <div class=\"search\" style=\"display:none\">
+            <svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M21 21l-4.3-4.3\"/></svg>
+            <input class=\"input\" id=\"globalSearch\" placeholder=\"Workspace ichidan qidirish...\">
           </div>
-          <button class="btn btn-primary" id="adminCreateTeam" onclick="UTIL.openModal('newTeamModal')" style="display:none">+ Workspace yaratish</button>
+          <button class=\"btn btn-primary\" id=\"adminCreateTeam\" onclick=\"UTIL.openModal('newTeamModal')\" style=\"display:none\">+ Workspace yaratish</button>
         </div>
       </section>
 
-      <section class="workspace-overview" id="stats"></section>
-      <div id="securityReminder"></div>
+      <section class=\"workspace-overview\" id=\"stats\"></section>
+      <div id=\"securityReminder\"></div>
 
       <!-- Manager Dashboard Section (faqat manager roli uchun) -->
-      <section class="workspace-main-stack" id="managerDashboard" style="display:none">
-        <div class="workspace-main-stack">
+      <section class=\"workspace-main-stack\" id=\"managerDashboard\" style=\"display:none\">
+        <div class=\"workspace-main-stack\">
           <!-- Manager boshqarayotgan jamoalar -->
-          <div class="workspace-surface" id="mgrTeamsSurface">
-            <div class="workspace-surface-head">
+          <div class=\"workspace-surface\" id=\"mgrTeamsSurface\">
+            <div class=\"workspace-surface-head\">
               <div>
                 <h2>📋 Mas'ul jamoalaringiz</h2>
-                <div class="workspace-surface-copy">Siz biriktirilgan barcha jamoalar va ularning hisobot holati.</div>
+                <div class=\"workspace-surface-copy\">Siz biriktirilgan barcha jamoalar va ularning hisobot holati.</div>
               </div>
-              <div class="workspace-chip-row" id="mgrReportModeBadge">
-                <span class="badge badge-active">Hisobot rejimi: ?</span>
+              <div class=\"workspace-chip-row\" id=\"mgrReportModeBadge\">
+                <span class=\"badge badge-active\">Hisobot rejimi: ?</span>
               </div>
             </div>
-            <div class="workspace-card-grid cols-2" id="mgrTeamsList"></div>
+            <div class=\"workspace-card-grid cols-2\" id=\"mgrTeamsList\"></div>
           </div>
 
           <!-- Manager quick actions -->
-          <div class="workspace-layout">
-            <div class="workspace-surface pad">
-              <div class="section-head">
+          <div class=\"workspace-layout\">
+            <div class=\"workspace-surface pad\">
+              <div class=\"section-head\">
                 <h3>⚡ Tezkor amallar</h3>
               </div>
-              <div style="display:flex;gap:10px;flex-wrap:wrap">
-                <a class="btn btn-primary btn-sm" href="reports.html">📋 Hisobotlar paneli</a>
-                <a class="btn btn-secondary btn-sm" href="notifications.html">🔔 Bildirishnomalar</a>
-                <a class="btn btn-tertiary btn-sm" href="profile.html">👤 Profil</a>
+              <div style=\"display:flex;gap:10px;flex-wrap:wrap\">
+                <a class=\"btn btn-primary btn-sm\" href=\"reports\">📋 Hisobotlar paneli</a>
+                <a class=\"btn btn-secondary btn-sm\" href=\"notifications\">🔔 Bildirishnomalar</a>
+                <a class=\"btn btn-tertiary btn-sm\" href=\"profile\">👤 Profil</a>
               </div>
             </div>
-            <div class="workspace-surface pad">
-              <div class="section-head">
+            <div class=\"workspace-surface pad\">
+              <div class=\"section-head\">
                 <h3>📊 Umumiy statistika</h3>
               </div>
-              <div style="display:grid;gap:10px" id="mgrMiniStats">
+              <div style=\"display:grid;gap:10px\" id=\"mgrMiniStats\">
                 <div>Yuklanmoqda...</div>
               </div>
             </div>
           </div>
 
           <!-- Manager bildirishnomalar -->
-          <div class="workspace-surface" id="mgrNotifsSurface">
-            <div class="workspace-surface-head">
+          <div class=\"workspace-surface\" id=\"mgrNotifsSurface\">
+            <div class=\"workspace-surface-head\">
               <div>
                 <h3>🔔 So'nggi bildirishnomalar</h3>
-                <div class="workspace-surface-copy">Jamoalardan kelgan activity va hisobot bildirishlari.</div>
+                <div class=\"workspace-surface-copy\">Jamoalardan kelgan activity va hisobot bildirishlari.</div>
               </div>
-              <a href="notifications.html" class="skeleton-link">Hammasi</a>
+              <a href=\"notifications\" class=\"skeleton-link\">Hammasi</a>
             </div>
-            <div class="workspace-card-grid" id="mgrNotifs"></div>
+            <div class=\"workspace-card-grid\" id=\"mgrNotifs\"></div>
           </div>
         </div>
       </section>
 
       <!-- Member/Lead Dashboard Section (member va team_lead uchun) -->
-      <section class="workspace-main-stack" id="memberDashboard">
-        <div class="workspace-main-stack">
-          <div class="workspace-surface" id="teamsSurface">
-            <div class="workspace-surface-head">
+      <section class=\"workspace-main-stack\" id=\"memberDashboard\">
+        <div class=\"workspace-main-stack\">
+          <div class=\"workspace-surface\" id=\"teamsSurface\">
+            <div class=\"workspace-surface-head\">
               <div>
                 <h2>Mening workspace'larim</h2>
-                <div class="workspace-surface-copy" id="workspaceRoleHint">Team lead a'zo qo'shadi va secret keyni boshqaradi.</div>
+                <div class=\"workspace-surface-copy\" id=\"workspaceRoleHint\">Team lead a'zo qo'shadi va secret keyni boshqaradi.</div>
               </div>
-              <div class="workspace-chip-row">
-                <span class="badge badge-active">Private</span>
-                <span class="badge">Role-based</span>
+              <div class=\"workspace-chip-row\">
+                <span class=\"badge badge-active\">Private</span>
+                <span class=\"badge\">Role-based</span>
               </div>
             </div>
-            <div class="workspace-card-grid cols-2" id="teams"></div>
+            <div class=\"workspace-card-grid cols-2\" id=\"teams\"></div>
           </div>
 
-          <div class="workspace-surface pad">
-            <div class="section-head"><h3>Keyingi qadam</h3></div>
-            <div class="workspace-note-bar" id="nextStep">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
+          <div class=\"workspace-surface pad\">
+            <div class=\"section-head\"><h3>Keyingi qadam</h3></div>
+            <div class=\"workspace-note-bar\" id=\"nextStep\">Workspace tanlang. G'oyalar ommaviy ko'rinmaydi va qidiruv faqat siz kirgan workspace ichida ishlaydi.</div>
           </div>
 
-          <div class="workspace-surface pad" id="personalizationSurface">
-            <div class="section-head">
-              <span class="ds-toggle-icon" style="font-size:20px;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="17.5" cy="14.5" r="1.5"/><circle cx="13.5" cy="18.5" r="1.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h3c3.3 0 6-2.7 6-6 0-5.5-4.5-10-10-10z"/></svg></span>
+          <div class=\"workspace-surface pad\" id=\"personalizationSurface\">
+            <div class=\"section-head\">
+              <span class=\"ds-toggle-icon\" style=\"font-size:20px;\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"13.5\" cy=\"6.5\" r=\"1.5\"/><circle cx=\"17.5\" cy=\"10.5\" r=\"1.5\"/><circle cx=\"17.5\" cy=\"14.5\" r=\"1.5\"/><circle cx=\"13.5\" cy=\"18.5\" r=\"1.5\"/><path d=\"M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.4-.3-.4-.5-.9-.5-1.4 0-1.1.9-2 2-2h3c3.3 0 6-2.7 6-6 0-5.5-4.5-10-10-10z\"/></svg></span>
               <h3>Personalizatsiya</h3>
             </div>
-            <div class="workspace-surface-copy" id="roleQuickActions" style="margin-bottom:12px">Rolingizga mos tez amallar shu yerda.</div>
-            <p class="muted text-sm" style="margin:0 0 16px">Quyidagi belgilashlar dashbordingizda qaysi bo'limlar ko'rinishini boshqaradi. O'zgartirgandan keyin "Saqlash" tugmasini bosing.</p>
-            <div style="display:grid;gap:10px" id="widgetToggles">
-              <label class="ds-toggle-row" data-active="true">
-                <div class="ds-toggle-info">
-                  <span class="ds-toggle-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></span>
+            <div class=\"workspace-surface-copy\" id=\"roleQuickActions\" style=\"margin-bottom:12px\">Rolingizga mos tez amallar shu yerda.</div>
+            <p class=\"muted text-sm\" style=\"margin:0 0 16px\">Quyidagi belgilashlar dashbordingizda qaysi bo'limlar ko'rinishini boshqaradi. O'zgartirgandan keyin \"Saqlash\" tugmasini bosing.</p>
+            <div style=\"display:grid;gap:10px\" id=\"widgetToggles\">
+              <label class=\"ds-toggle-row\" data-active=\"true\">
+                <div class=\"ds-toggle-info\">
+                  <span class=\"ds-toggle-icon\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"/><line x1=\"3\" y1=\"9\" x2=\"21\" y2=\"9\"/><line x1=\"9\" y1=\"21\" x2=\"9\" y2=\"9\"/></svg></span>
                   <div>
                     <strong>Workspace'lar</strong>
-                    <span class="text-xs muted">Jamoaviy workspace ro'yxati</span>
+                    <span class=\"text-xs muted\">Jamoaviy workspace ro'yxati</span>
                   </div>
                 </div>
-                <div class="ds-toggle-switch">
-                  <input type="checkbox" class="widget-toggle" value="teams" checked hidden>
-                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                <div class=\"ds-toggle-switch\">
+                  <input type=\"checkbox\" class=\"widget-toggle\" value=\"teams\" checked hidden>
+                  <span class=\"ds-toggle-track\"><span class=\"ds-toggle-thumb\"></span></span>
                 </div>
               </label>
-              <label class="ds-toggle-row" data-active="true">
-                <div class="ds-toggle-info">
-                  <span class="ds-toggle-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg></span>
+              <label class=\"ds-toggle-row\" data-active=\"true\">
+                <div class=\"ds-toggle-info\">
+                  <span class=\"ds-toggle-icon\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3\"/><line x1=\"12\" y1=\"17\" x2=\"12.01\" y2=\"17\"/><circle cx=\"12\" cy=\"12\" r=\"10\"/></svg></span>
                   <div>
                     <strong>G'oyalar</strong>
-                    <span class="text-xs muted">So'nggi g'oyalar jadvali</span>
+                    <span class=\"text-xs muted\">So'nggi g'oyalar jadvali</span>
                   </div>
                 </div>
-                <div class="ds-toggle-switch">
-                  <input type="checkbox" class="widget-toggle" value="ideas" checked hidden>
-                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                <div class=\"ds-toggle-switch\">
+                  <input type=\"checkbox\" class=\"widget-toggle\" value=\"ideas\" checked hidden>
+                  <span class=\"ds-toggle-track\"><span class=\"ds-toggle-thumb\"></span></span>
                 </div>
               </label>
-              <label class="ds-toggle-row" data-active="true">
-                <div class="ds-toggle-info">
-                  <span class="ds-toggle-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></span>
+              <label class=\"ds-toggle-row\" data-active=\"true\">
+                <div class=\"ds-toggle-info\">
+                  <span class=\"ds-toggle-icon\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9\"/><path d=\"M13.73 21a2 2 0 01-3.46 0\"/></svg></span>
                   <div>
                     <strong>Bildirishnomalar</strong>
-                    <span class="text-xs muted">Activity va ogohlantirishlar</span>
+                    <span class=\"text-xs muted\">Activity va ogohlantirishlar</span>
                   </div>
                 </div>
-                <div class="ds-toggle-switch">
-                  <input type="checkbox" class="widget-toggle" value="notifs" checked hidden>
-                  <span class="ds-toggle-track"><span class="ds-toggle-thumb"></span></span>
+                <div class=\"ds-toggle-switch\">
+                  <input type=\"checkbox\" class=\"widget-toggle\" value=\"notifs\" checked hidden>
+                  <span class=\"ds-toggle-track\"><span class=\"ds-toggle-thumb\"></span></span>
                 </div>
               </label>
             </div>
-            <div style="display:flex;align-items:center;gap:12px;margin-top:16px">
-              <button class="btn btn-primary btn-sm" id="saveWidgetPrefs">💾 Saqlash</button>
-              <span class="text-sm muted" id="personalizationStatus"></span>
+            <div style=\"display:flex;align-items:center;gap:12px;margin-top:16px\">
+              <button class=\"btn btn-primary btn-sm\" id=\"saveWidgetPrefs\">💾 Saqlash</button>
+              <span class=\"text-sm muted\" id=\"personalizationStatus\"></span>
             </div>
           </div>
 
-          <div class="workspace-surface" id="ideasSurface">
-            <div class="workspace-surface-head">
+          <div class=\"workspace-surface\" id=\"ideasSurface\">
+            <div class=\"workspace-surface-head\">
               <div>
                 <h2>So'nggi g'oyalar</h2>
-                <div class="workspace-surface-copy">Faqat siz kirgan workspace ichidagi g'oyalar.</div>
+                <div class=\"workspace-surface-copy\">Faqat siz kirgan workspace ichidagi g'oyalar.</div>
               </div>
-              <a href="my-ideas.html" class="skeleton-link">Hammasini ko'rish</a>
+              <a href=\"my-ideas\" class=\"skeleton-link\">Hammasini ko'rish</a>
             </div>
-            <div class="table-wrap">
-              <table class="table">
+            <div class=\"table-wrap\">
+              <table class=\"table\">
                 <thead><tr><th>G'oya</th><th>Workspace</th><th>Status</th><th>Yangilangan</th></tr></thead>
-                <tbody id="ideasTable"></tbody>
+                <tbody id=\"ideasTable\"></tbody>
               </table>
             </div>
           </div>
 
-          <div class="workspace-surface" id="notifsSurface">
-            <div class="workspace-surface-head">
+          <div class=\"workspace-surface\" id=\"notifsSurface\">
+            <div class=\"workspace-surface-head\">
               <div>
                 <h3>Bildirishnomalar</h3>
-                <div class="workspace-surface-copy">So'nggi activity va o'qilmagan ogohlantirishlar.</div>
+                <div class=\"workspace-surface-copy\">So'nggi activity va o'qilmagan ogohlantirishlar.</div>
               </div>
-              <a href="notifications.html" class="skeleton-link">Hammasi</a>
+              <a href=\"notifications\" class=\"skeleton-link\">Hammasi</a>
             </div>
-            <div class="workspace-card-grid" id="notifs"></div>
+            <div class=\"workspace-card-grid\" id=\"notifs\"></div>
           </div>
         </div>
       </section>
 
-      <div id="adminOnlyPanel"></div>
+      <div id=\"adminOnlyPanel\"></div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="newTeamModal" onclick="if(event.target===this)UTIL.closeModal('newTeamModal')">
-    <div class="modal">
+  <div class=\"modal-backdrop\" id=\"newTeamModal\" onclick=\"if(event.target===this)UTIL.closeModal('newTeamModal')\">
+    <div class=\"modal\">
       <h3>Yangi workspace yaratish</h3>
-      <p class="modal-sub">Team lead emaili majburiy. Agar akkaunt yo'q bo'lsa, boshlang'ich parol email bilan bir xil bo'ladi.</p>
-      <label class="label">Workspace nomi</label><input class="input mb-3" id="workspaceName" placeholder="Masalan: MllyCore Workspace">
-      <label class="label">Team lead email</label><input class="input mb-3" id="workspaceLeadEmail" type="email" required placeholder="teamlead@email.com">
-      <label class="label">Tavsif</label><textarea class="textarea" id="workspaceDescription" rows="3" placeholder="Workspace nima ustida ishlaydi?"></textarea>
-      <label class="label">Shablon (ixtiyoriy, T13)</label>
-      <select class="input mb-3" id="workspaceTemplate"><option value="">Shablonsiz</option></select>
-      <p class="text-sm muted" id="workspaceMessage" style="min-height:20px;margin:12px 0 0"></p>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" onclick="UTIL.closeModal('newTeamModal')">Bekor qilish</button>
-        <button class="btn btn-primary" id="createWorkspaceBtn">Yaratish</button>
+      <p class=\"modal-sub\">Team lead emaili majburiy. Agar akkaunt yo'q bo'lsa, boshlang'ich parol email bilan bir xil bo'ladi.</p>
+      <label class=\"label\">Workspace nomi</label><input class=\"input mb-3\" id=\"workspaceName\" placeholder=\"Masalan: MllyCore Workspace\">
+      <label class=\"label\">Team lead email</label><input class=\"input mb-3\" id=\"workspaceLeadEmail\" type=\"email\" required placeholder=\"teamlead@email.com\">
+      <label class=\"label\">Tavsif</label><textarea class=\"textarea\" id=\"workspaceDescription\" rows=\"3\" placeholder=\"Workspace nima ustida ishlaydi?\"></textarea>
+      <label class=\"label\">Shablon (ixtiyoriy, T13)</label>
+      <select class=\"input mb-3\" id=\"workspaceTemplate\"><option value=\"\">Shablonsiz</option></select>
+      <p class=\"text-sm muted\" id=\"workspaceMessage\" style=\"min-height:20px;margin:12px 0 0\"></p>
+      <div class=\"modal-actions\">
+        <button class=\"btn btn-secondary\" onclick=\"UTIL.closeModal('newTeamModal')\">Bekor qilish</button>
+        <button class=\"btn btn-primary\" id=\"createWorkspaceBtn\">Yaratish</button>
       </div>
     </div>
   </div>
 
-  <div class="modal-backdrop" id="deleteWorkspaceModal" onclick="if(event.target===this)UTIL.closeModal('deleteWorkspaceModal')">
-    <div class="modal">
+  <div class=\"modal-backdrop\" id=\"deleteWorkspaceModal\" onclick=\"if(event.target===this)UTIL.closeModal('deleteWorkspaceModal')\">
+    <div class=\"modal\">
       <h3>Workspace o'chirish</h3>
-      <p class="modal-sub" id="deleteWorkspaceSubtitle">Bu amal workspace va unga bog'liq yozuvlarni bazadan ham o'chiradi.</p>
-      <div class="workspace-modal-field">
-        <label class="label">Admin paroli</label>
-        <div class="password-field">
-          <input class="input" id="deleteWorkspacePassword" type="password" placeholder="Admin parolini kiriting">
-          <button class="password-toggle" type="button" id="toggleDeleteWorkspacePassword">Ko'rsat</button>
+      <p class=\"modal-sub\" id=\"deleteWorkspaceSubtitle\">Bu amal workspace va unga bog'liq yozuvlarni bazadan ham o'chiradi.</p>
+      <div class=\"workspace-modal-field\">
+        <label class=\"label\">Admin paroli</label>
+        <div class=\"password-field\">
+          <input class=\"input\" id=\"deleteWorkspacePassword\" type=\"password\" placeholder=\"Admin parolini kiriting\">
+          <button class=\"password-toggle\" type=\"button\" id=\"toggleDeleteWorkspacePassword\">Ko'rsat</button>
         </div>
       </div>
-      <div class="workspace-modal-error" id="deleteWorkspaceError"></div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" type="button" onclick="UTIL.closeModal('deleteWorkspaceModal')">Bekor qilish</button>
-        <button class="btn btn-danger" type="button" id="confirmDeleteWorkspaceBtn">O'chirish</button>
+      <div class=\"workspace-modal-error\" id=\"deleteWorkspaceError\"></div>
+      <div class=\"modal-actions\">
+        <button class=\"btn btn-secondary\" type=\"button\" onclick=\"UTIL.closeModal('deleteWorkspaceModal')\">Bekor qilish</button>
+        <button class=\"btn btn-danger\" type=\"button\" id=\"confirmDeleteWorkspaceBtn\">O'chirish</button>
       </div>
     </div>
   </div>
 
   <!-- Bir martalik sezgir ma'lumot (parol / secret key) — faqat shu modalda (9-bo'lim qoidasi) -->
-  <div class="modal-backdrop" id="secretModal" onclick="if(event.target===this){document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')}">
-    <div class="modal">
+  <div class=\"modal-backdrop\" id=\"secretModal\" onclick=\"if(event.target===this){document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')}\">
+    <div class=\"modal\">
       <h3>Workspace yaratildi ✅</h3>
-      <p class="modal-sub">Quyidagi ma'lumot faqat <b>bir marta</b> ko'rsatiladi — keyinroq qayta ko'ra olmaysiz.</p>
-      <div class="modal-secret-warn">⚠️ Bu ma'lumotni hech kimga bermang va skrinshot olmang. Team lead aynan shu parol bilan kiradi.</div>
-      <div id="secretModalBody"></div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary" type="button" onclick="document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')">Yopish</button>
+      <p class=\"modal-sub\">Quyidagi ma'lumot faqat <b>bir marta</b> ko'rsatiladi — keyinroq qayta ko'ra olmaysiz.</p>
+      <div class=\"modal-secret-warn\">⚠️ Bu ma'lumotni hech kimga bermang va skrinshot olmang. Team lead aynan shu parol bilan kiradi.</div>
+      <div id=\"secretModalBody\"></div>
+      <div class=\"modal-actions\">
+        <button class=\"btn btn-secondary\" type=\"button\" onclick=\"document.getElementById('secretModalBody').innerHTML='';UTIL.closeModal('secretModal')\">Yopish</button>
       </div>
     </div>
   </div>
 
-  <script src="js/theme.js"></script>
-  <script src="js/firebase-config.js"></script>
+  <script src=\"js/theme.js\"></script>
+  <script src=\"js/firebase-config.js\"></script>
   
-  <script src="js/firebase-service.js"></script>
-  <script src="js/auth-guard.js"></script>
-  <script src="js/layout.js"></script>
+  <script src=\"js/firebase-service.js\"></script>
+  <script src=\"js/auth-guard.js\"></script>
+  <script src=\"js/layout.js\"></script>
   <script>
     // JavaScript ishlayapti — meta refreshni to'xtatamiz
     (function() {
@@ -267,7 +267,7 @@
     })();
     // retry=1 bilan qayta yuklanganda — to'g'ridan-to'g'ri xato ko'rsatamiz
     if (location.search.indexOf('retry=1') !== -1) {
-      document.getElementById('app').innerHTML = '<div class="workspace-app" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh"><div class="workspace-empty"><h3>Yuklashda vaqt o\'tdi</h3><p>Sahifa avtomatik qayta yuklandi, ammo ma\'lumotlarni yuklashda davomiy muammo bor. Internet aloqangizni tekshiring.</p><button class="btn btn-primary" onclick="location.href=\'dashboard.html\'">🔄 Qayta urinish</button></div></div>';
+      document.getElementById('app').innerHTML = '<div class=\"workspace-app\" style=\"display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh\"><div class=\"workspace-empty\"><h3>Yuklashda vaqt o\'tdi</h3><p>Sahifa avtomatik qayta yuklandi, ammo ma\'lumotlarni yuklashda davomiy muammo bor. Internet aloqangizni tekshiring.</p><button class=\"btn btn-primary\" onclick=\"location.href=\'dashboard\'\">🔄 Qayta urinish</button></div></div>';
     }
     // Xavfsizlik: 15 soniya ichida yuklanmasa, xato xabarini ko'rsatamiz
     window.__mllyLoadingTimeout = setTimeout(() => {
@@ -276,7 +276,7 @@
       // Faqat bosh sahifa hali yuklanmagan bo'lsa
       var statsEl = document.getElementById('stats');
       if (statsEl && statsEl.children.length === 0) {
-        statsEl.innerHTML = '<div class="workspace-empty"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
+        statsEl.innerHTML = '<div class=\"workspace-empty\"><h3>Yuklashda xatolik</h3><p>Ma\'lumotlarni yuklash uzoq vaqt oldi. Internet aloqangizni tekshiring yoki qayta urinib ko\'ring.</p><button class=\"btn btn-primary btn-sm\" onclick=\"location.reload()\">🔄 Qayta urinish</button></div>';
       }
     }, 15000);
     window.__clearLoadingTimeout = () => {
@@ -333,7 +333,7 @@
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const profile = window.MLLYCORE_PROFILE;
-      // FIX: Manager dashboard — reports.html ga redirect qilinmaydi
+      // FIX: Manager dashboard — reports ga redirect qilinmaydi
       const isAdmin = profile?.role === 'admin';
       const isManager = profile?.role === 'manager';
 
@@ -360,12 +360,12 @@
       // Manager uchun: dashboard title ni moslashtirish + member dashboard ni yashirish
       if (isManager) {
         document.getElementById('welcome').textContent = `📋 Manager panel: Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
-        document.getElementById('dashboardSubtitle').textContent = "Mas'ul jamoalaringiz, ularning hisobot rejimi va faoliyati haqida to'liq ma'lumot.";
+        document.getElementById('dashboardSubtitle').textContent = \"Mas'ul jamoalaringiz, ularning hisobot rejimi va faoliyati haqida to'liq ma'lumot.\";
         document.getElementById('memberDashboard').style.display = 'none';
         document.getElementById('managerDashboard').style.display = '';
       }
 
-      // Admin yoki manager bo'lmasa "Admin only" panelni yashirish
+      // Admin yoki manager bo'lmasa \"Admin only\" panelni yashirish
       if (!isAdmin) {
         const panel = document.getElementById('adminOnlyPanel');
         if (panel) panel.style.display = 'none';
@@ -376,7 +376,7 @@
         MllyCore.getTemplates().then((templates) => {
           const sel = document.getElementById('workspaceTemplate');
           if (sel && templates.length) {
-            sel.innerHTML = '<option value="">Shablonsiz</option>' + templates.map((t) => `<option value="${t.id}">${t.name || t.id}</option>`).join('');
+            sel.innerHTML = '<option value=\"\">Shablonsiz</option>' + templates.map((t) => `<option value=\"${t.id}\">${t.name || t.id}</option>`).join('');
           }
         }).catch(() => {});
       }
@@ -385,26 +385,26 @@
       document.getElementById('welcome').textContent = `Xush kelibsiz, ${(profile?.name || user.email).split(' ')[0]}!`;
       document.getElementById('dashboardSubtitle').textContent = isAdmin
         ? 'Statistika, workspace yaratish va production boshqaruvi shu yerda.'
-        : "Workspace, g'oya va activity oqimi bitta ekranda.";
+        : \"Workspace, g'oya va activity oqimi bitta ekranda.\";
       document.getElementById('adminCreateTeam').style.display = isAdmin ? '' : 'none';
       document.getElementById('globalSearch').closest('.search').style.display = isAdmin ? '' : 'none';
       if (!isAdmin) {
         document.querySelector('.workspace-command-tools').style.justifyContent = 'flex-start';
         document.querySelector('.workspace-command-tools').insertAdjacentHTML('afterbegin', `
-          <span class="badge ${profile?.role === 'team_lead' ? 'badge-active' : ''}">
+          <span class=\"badge ${profile?.role === 'team_lead' ? 'badge-active' : ''}\">
             ${profile?.role === 'team_lead' ? 'Team lead' : 'Member'}
           </span>
         `);
       }
       document.getElementById('workspaceRoleHint').textContent = isAdmin
         ? 'Admin faqat workspace lifecycle ni boshqaradi.'
-        : "Team lead a'zo qo'shadi, member esa faqat ichki oqimni ko'radi.";
+        : \"Team lead a'zo qo'shadi, member esa faqat ichki oqimni ko'radi.\";
 
       if (profile?.passwordResetRequired) {
         document.getElementById('securityReminder').innerHTML = `
-          <div class="workspace-note-bar">
+          <div class=\"workspace-note-bar\">
             Xavfsizlik uchun boshlang'ich parolni yangilang. Profil sahifasida joriy parol va yangi parol bilan darhol almashtirish mumkin.
-            <a class="btn btn-tertiary btn-sm" href="profile.html" style="margin-left:10px">Parolni almashtirish</a>
+            <a class=\"btn btn-tertiary btn-sm\" href=\"profile\" style=\"margin-left:10px\">Parolni almashtirish</a>
           </div>
         `;
       }
@@ -425,25 +425,25 @@
         const mgrTeamCount = assignedIds.length || 0;
         const mgrMembersTotal = teams.reduce((sum, t) => sum + (t.membersCount || 0), 0);
         statsData.push(
-          { n: mgrTeamCount, l: "Mas'ul jamoalar", note: 'Siz biriktirilgan jamoalar' },
-          { n: mgrMembersTotal, l: "Jami a'zolar", note: "Barcha jamoalardagi a'zolar" },
+          { n: mgrTeamCount, l: \"Mas'ul jamoalar\", note: 'Siz biriktirilgan jamoalar' },
+          { n: mgrMembersTotal, l: \"Jami a'zolar\", note: \"Barcha jamoalardagi a'zolar\" },
           { n: unread, l: 'Yangi bildirishnomalar', note: 'Hisobot va activity' },
         );
       } else {
         statsData.push(
-          { n: teams.length, l: "Workspace'larim", note: 'Siz azo bolgan joylar' },
-          { n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: "Boshqarayotgan oqimlar" },
-          { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami koinadigan userlar" },
+          { n: teams.length, l: \"Workspace'larim\", note: 'Siz azo bolgan joylar' },
+          { n: teams.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: \"Boshqarayotgan oqimlar\" },
+          { n: teams.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: \"A'zolar\", note: \"Jami koinadigan userlar\" },
           { n: unread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
         );
       }
-      const iconMap = {"Workspace'larim": '📋', 'Lead workspace': '⭐', "A'zolar": '👥', 'Yangi bildirishnomalar': '🔔', "Mas'ul jamoalar": '📋', "Jami a'zolar": '👤'};
+      const iconMap = {\"Workspace'larim\": '📋', 'Lead workspace': '⭐', \"A'zolar\": '👥', 'Yangi bildirishnomalar': '🔔', \"Mas'ul jamoalar\": '📋', \"Jami a'zolar\": '👤'};
       document.getElementById('stats').innerHTML = statsData.map((s) => `
-        <div class="workspace-stat">
-          <div class="workspace-stat-icon">${iconMap[s.l] || '📊'}</div>
-          <span class="workspace-stat-label">${s.l}</span>
-          <span class="workspace-stat-value">${s.n}</span>
-          <span class="workspace-stat-note">${s.note}</span>
+        <div class=\"workspace-stat\">
+          <div class=\"workspace-stat-icon\">${iconMap[s.l] || '📊'}</div>
+          <span class=\"workspace-stat-label\">${s.l}</span>
+          <span class=\"workspace-stat-value\">${s.n}</span>
+          <span class=\"workspace-stat-note\">${s.note}</span>
         </div>
       `).join('');
 
@@ -457,7 +457,7 @@
           } catch (_) {}
           const periodLabel = periodMode === 'weekly' ? 'Haftalik' : 'Kunlik';
           const badge = document.querySelector('#mgrReportModeBadge');
-          if (badge) badge.innerHTML = `<span class="badge badge-active">📅 ${periodLabel} hisobot rejimi</span>`;
+          if (badge) badge.innerHTML = `<span class=\"badge badge-active\">📅 ${periodLabel} hisobot rejimi</span>`;
 
           // Teams list
           const list = document.getElementById('mgrTeamsList');
@@ -471,26 +471,26 @@
                 const teamData = teams.find(t => t.id === tid);
                 const members = teamData?.membersCount || '?';
                 return `
-                  <div class="mgr-team-card">
-                    <div class="mgr-team-top">
-                      <div class="team-logo ${color}">${tName.charAt(0).toUpperCase()}</div>
-                      <div class="mgr-team-info">
+                  <div class=\"mgr-team-card\">
+                    <div class=\"mgr-team-top\">
+                      <div class=\"team-logo ${color}\">${tName.charAt(0).toUpperCase()}</div>
+                      <div class=\"mgr-team-info\">
                         <strong>${tName}</strong>
-                        <span class="text-xs muted">${members} a'zo · ${periodLabel} hisobot</span>
+                        <span class=\"text-xs muted\">${members} a'zo · ${periodLabel} hisobot</span>
                       </div>
                     </div>
-                    <div class="mgr-team-actions">
-                      <a class="btn btn-primary btn-sm" href="reports.html?teamId=${tid}">📋 Hisobotlar</a>
-                      <a class="btn btn-tertiary btn-sm" href="team.html?id=${tid}">👥 Jamoani korish</a>
+                    <div class=\"mgr-team-actions\">
+                      <a class=\"btn btn-primary btn-sm\" href=\"reports?teamId=${tid}\">📋 Hisobotlar</a>
+                      <a class=\"btn btn-tertiary btn-sm\" href=\"team?id=${tid}\">👥 Jamoani korish</a>
                     </div>
                   </div>
                 `;
               }).join('');
             } else {
-              list.innerHTML = `<div class="workspace-empty">
+              list.innerHTML = `<div class=\"workspace-empty\">
                 <h3>Hech qanday jamoa biriktirilmagan</h3>
-                <p class="muted">Admin sizni jamoalarga mas'ul qilib tayinlashi kerak.</p>
-                <a href="admin.html" class="btn btn-primary btn-sm mt-3">Admin panelga otish</a>
+                <p class=\"muted\">Admin sizni jamoalarga mas'ul qilib tayinlashi kerak.</p>
+                <a href=\"admin\" class=\"btn btn-primary btn-sm mt-3\">Admin panelga otish</a>
               </div>`;
             }
           }
@@ -500,17 +500,17 @@
           if (statsEl) {
             const totalMembers = assignedIds.length;
             statsEl.innerHTML = `
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">📋 Mas'ul jamoalar</span>
-                <span class="mgr-stat-value">${assignedIds.length} ta</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">📋 Mas'ul jamoalar</span>
+                <span class=\"mgr-stat-value\">${assignedIds.length} ta</span>
               </div>
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">📅 Hisobot rejimi</span>
-                <span class="mgr-stat-value">${periodLabel}</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">📅 Hisobot rejimi</span>
+                <span class=\"mgr-stat-value\">${periodLabel}</span>
               </div>
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">🔔 Kutilmagan bildirishnomalar</span>
-                <span class="mgr-stat-value">${unread} ta</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">🔔 Kutilmagan bildirishnomalar</span>
+                <span class=\"mgr-stat-value\">${unread} ta</span>
               </div>
             `;
           }
@@ -519,12 +519,12 @@
           const notifsEl = document.getElementById('mgrNotifs');
           if (notifsEl) {
             notifsEl.innerHTML = data.notifications.length ? data.notifications.slice(0, 4).map((n) => `
-              <div class="workspace-message-item">
+              <div class=\"workspace-message-item\">
                 <strong>${n.text || n.content}</strong>
-                <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+                <div class=\"text-xs muted\">${fmtDate(n.createdAt)}</div>
                 <span>${n.type || 'notification'}</span>
               </div>
-            `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
+            `).join('') : '<div class=\"workspace-empty\"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
           }
         })();
       }
@@ -532,51 +532,51 @@
       if (isAdmin) {
         document.getElementById('memberDashboard').style.display = 'none';
         document.getElementById('adminOnlyPanel').innerHTML = `
-          <section class="workspace-layout">
-            <div class="workspace-main-stack">
-              <div class="workspace-surface pad">
-                <div class="section-head"><h2>Workspace operations</h2></div>
-                <div class="workspace-note-bar">Admin faqat workspace yaratadi, team lead belgilaydi va kerak bo'lsa workspace'ni o'chiradi. Ichki idea, member yoki secret key oqimi team leadga tegishli.</div>
+          <section class=\"workspace-layout\">
+            <div class=\"workspace-main-stack\">
+              <div class=\"workspace-surface pad\">
+                <div class=\"section-head\"><h2>Workspace operations</h2></div>
+                <div class=\"workspace-note-bar\">Admin faqat workspace yaratadi, team lead belgilaydi va kerak bo'lsa workspace'ni o'chiradi. Ichki idea, member yoki secret key oqimi team leadga tegishli.</div>
               </div>
-              <div class="workspace-surface">
-                <div class="workspace-surface-head">
+              <div class=\"workspace-surface\">
+                <div class=\"workspace-surface-head\">
                   <div>
                     <h2>Yaratilgan workspace'lar</h2>
-                    <div class="workspace-surface-copy">Faqat a'zolar soni va lifecycle ko'rsatkichlari.</div>
+                    <div class=\"workspace-surface-copy\">Faqat a'zolar soni va lifecycle ko'rsatkichlari.</div>
                   </div>
                 </div>
-                <div class="workspace-card-grid cols-2">
+                <div class=\"workspace-card-grid cols-2\">
                   ${teams.length ? teams.map((team) => `
-                    <div class="workspace-record">
-                      <div class="workspace-record-top">
+                    <div class=\"workspace-record\">
+                      <div class=\"workspace-record-top\">
                         <div>
                           <h3>${team.name}</h3>
-                          <div class="workspace-inline-meta">
+                          <div class=\"workspace-inline-meta\">
                             <span>${team.membersCount || 0} a'zo</span>
                             <span>${team.leadUserId ? 'Team lead bor' : 'Lead kutilmoqda'}</span>
                           </div>
                         </div>
-                        <button class="btn btn-danger btn-sm" data-admin-delete="${team.id}">O'chirish</button>
+                        <button class=\"btn btn-danger btn-sm\" data-admin-delete=\"${team.id}\">O'chirish</button>
                       </div>
                       <p>${team.description || 'Tavsif kiritilmagan.'}</p>
                     </div>
-                  `).join('') : '<div class="workspace-empty"><h3>Workspace yo\'q</h3><p>Birinchi workspace shu oynadan yaratiladi.</p></div>'}
+                  `).join('') : '<div class=\"workspace-empty\"><h3>Workspace yo\'q</h3><p>Birinchi workspace shu oynadan yaratiladi.</p></div>'}
                 </div>
               </div>
             </div>
-            <aside class="workspace-side-stack">
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Admin qoidasi</h3>
-                <div class="workspace-security-list">
+            <aside class=\"workspace-side-stack\">
+              <div class=\"workspace-surface pad\">
+                <h3 style=\"margin:0 0 12px\">Admin qoidasi</h3>
+                <div class=\"workspace-security-list\">
                   <span>Idea boshqarmaydi</span>
                   <span>Secret key reset qilmaydi</span>
                   <span>Faqat workspace lifecycle</span>
                 </div>
               </div>
-              <div class="workspace-surface pad">
-                <h3 style="margin:0 0 12px">Yangi workspace</h3>
-                <p class="muted text-sm" style="margin:0 0 14px">Team lead emailini kiriting va workspace'ni oching.</p>
-                <button class="btn btn-primary w-full" onclick="UTIL.openModal('newTeamModal')">+ Workspace yaratish</button>
+              <div class=\"workspace-surface pad\">
+                <h3 style=\"margin:0 0 12px\">Yangi workspace</h3>
+                <p class=\"muted text-sm\" style=\"margin:0 0 14px\">Team lead emailini kiriting va workspace'ni oching.</p>
+                <button class=\"btn btn-primary w-full\" onclick=\"UTIL.openModal('newTeamModal')\">+ Workspace yaratish</button>
               </div>
             </aside>
           </section>
@@ -607,7 +607,7 @@
         const toggle = document.getElementById('toggleDeleteWorkspacePassword');
         const reveal = input.type === 'password';
         input.type = reveal ? 'text' : 'password';
-        toggle.textContent = reveal ? 'Yashir' : "Ko'rsat";
+        toggle.textContent = reveal ? 'Yashir' : \"Ko'rsat\";
       });
 
       document.getElementById('confirmDeleteWorkspaceBtn').addEventListener('click', async () => {
@@ -617,7 +617,7 @@
         const errorBox = document.getElementById('deleteWorkspaceError');
         
         if (!password) {
-          errorBox.textContent = "Admin parolini kiritishingiz shart!";
+          errorBox.textContent = \"Admin parolini kiritishingiz shart!\";
           return;
         }
 
@@ -627,12 +627,12 @@
           // Firebase auth backend orqali parolni tekshiradi
           await MllyCore.deleteWorkspace(selectedTeamId, password);
           // Dinamik o'chirish — sahifa reload qilinmaydi
-          const deletedCard = document.querySelector(`[data-admin-delete="${selectedTeamId}"]`)?.closest('.workspace-record');
+          const deletedCard = document.querySelector(`[data-admin-delete=\"${selectedTeamId}\"]`)?.closest('.workspace-record');
           if (deletedCard) deletedCard.remove();
           UTIL.closeModal('deleteWorkspaceModal');
-          UTIL.toast(`"${selectedTeamName}" o'chirildi.`);
+          UTIL.toast(`\"${selectedTeamName}\" o'chirildi.`);
         } catch (error) {
-          errorBox.textContent = error.message || "Admin paroli noto'g'ri yoki workspace o'chirilmadi.";
+          errorBox.textContent = error.message || \"Admin paroli noto'g'ri yoki workspace o'chirilmadi.\";
           button.disabled = false;
         }
       });
@@ -640,23 +640,23 @@
       const nextStepEl = document.getElementById('nextStep');
       const nextStepSurface = nextStepEl ? nextStepEl.closest('.workspace-surface') : null;
       if (teams.length > 0) {
-        // Foydalanuvchi allaqachon workspace'ga ulangan — "Keyingi qadam" kerak emas.
+        // Foydalanuvchi allaqachon workspace'ga ulangan — \"Keyingi qadam\" kerak emas.
         if (nextStepSurface) nextStepSurface.style.display = 'none';
       } else {
         if (nextStepSurface) nextStepSurface.style.display = '';
         nextStepEl.textContent = isAdmin
-          ? "Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang."
-          : "Siz hali workspace'ga qo'shilmagansiz. Team lead sizni taklif qiladi, keyin bildirishnomadan secret key bilan kirasiz.";
+          ? \"Hozircha workspace yo'q. Admin sifatida birinchi workspace yarating va team lead belgilang.\"
+          : \"Siz hali workspace'ga qo'shilmagansiz. Team lead sizni taklif qiladi, keyin bildirishnomadan secret key bilan kirasiz.\";
       }
 
       document.getElementById('teams').innerHTML = teams.length ? teams.map((team) => `
-        <a href="team.html?id=${team.id}" class="workspace-record">
-          <div class="workspace-record-top">
-            <div class="flex items-center gap-3">
-              <div class="team-logo ${team.color || 'tl-1'}">${team.logo || 'W'}</div>
+        <a href=\"team?id=${team.id}\" class=\"workspace-record\">
+          <div class=\"workspace-record-top\">
+            <div class=\"flex items-center gap-3\">
+              <div class=\"team-logo ${team.color || 'tl-1'}\">${team.logo || 'W'}</div>
               <div>
                 <h3>${team.name}</h3>
-                <div class="workspace-inline-meta">
+                <div class=\"workspace-inline-meta\">
                   <span>${team.membersCount || 0} a'zo</span>
                   <span>${team.membershipRole || 'member'}</span>
                 </div>
@@ -665,25 +665,25 @@
           </div>
           <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
         </a>
-      `).join('') : `<div class="workspace-empty"><h3>Workspace yo'q</h3><p>${isAdmin ? "Birinchi workspace yarating." : "Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi."}</p></div>`;
+      `).join('') : `<div class=\"workspace-empty\"><h3>Workspace yo'q</h3><p>${isAdmin ? \"Birinchi workspace yarating.\" : \"Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi.\"}</p></div>`;
 
       document.getElementById('ideasTable').innerHTML = ideas.length ? ideas.map((idea) => {
         const team = teams.find(t => t.id === idea.teamId);
-        return `<tr style="cursor:pointer" onclick="location.href='idea.html?id=${idea.id}'">
-          <td><div class="font-semibold">${idea.title}</div></td>
-          <td><span class="text-sm">${team?.name || '-'}</span></td>
-          <td><span class="badge">${idea.status || idea.category || '-'}</span></td>
-          <td class="muted text-sm">${fmtDate(idea.updatedAt)}</td>
+        return `<tr style=\"cursor:pointer\" onclick=\"location.href='idea?id=${idea.id}'\">
+          <td><div class=\"font-semibold\">${idea.title}</div></td>
+          <td><span class=\"text-sm\">${team?.name || '-'}</span></td>
+          <td><span class=\"badge\">${idea.status || idea.category || '-'}</span></td>
+          <td class=\"muted text-sm\">${fmtDate(idea.updatedAt)}</td>
         </tr>`;
-      }).join('') : "<tr><td colspan=\"4\" class=\"muted text-sm\">Hozircha g'oya yo'q.</td></tr>";
+      }).join('') : \"<tr><td colspan=\\"4\\" class=\\"muted text-sm\\">Hozircha g'oya yo'q.</td></tr>\";
 
       document.getElementById('notifs').innerHTML = data.notifications.length ? data.notifications.slice(0, 4).map((n) => `
-        <div class="workspace-message-item">
+        <div class=\"workspace-message-item\">
           <strong>${n.text || n.content}</strong>
-          <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+          <div class=\"text-xs muted\">${fmtDate(n.createdAt)}</div>
           <span>${n.type || 'notification'}</span>
         </div>
-      `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
+      `).join('') : '<div class=\"workspace-empty\"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
 
       // T51 — Role-based Dashboard Personalization
       const roleQuick = document.getElementById('roleQuickActions');
@@ -718,10 +718,10 @@
       if (roleQuick) {
         const role = profile?.role || 'member';
         const qa = {
-          admin: "<a class=\"btn btn-tertiary btn-sm\" href=\"#\" onclick=\"UTIL.openModal('newTeamModal');return false;\">+ Workspace yaratish</a>",
-          team_lead: "<a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"notifications.html\">Takliflar</a>",
-          manager: "<a class=\"btn btn-tertiary btn-sm\" href=\"reports.html\">Hisobotlar</a>",
-          member: "<a class=\"btn btn-tertiary btn-sm\" href=\"my-ideas.html\">Mening g'oyalarim</a> <a class=\"btn btn-tertiary btn-sm\" href=\"dashboard.html\">Workspace'larim</a>"
+          admin: \"<a class=\\"btn btn-tertiary btn-sm\\" href=\\"#\\" onclick=\\"UTIL.openModal('newTeamModal');return false;\\">+ Workspace yaratish</a>\",
+          team_lead: \"<a class=\\"btn btn-tertiary btn-sm\\" href=\\"dashboard\\">Workspace'larim</a> <a class=\\"btn btn-tertiary btn-sm\\" href=\\"notifications\\">Takliflar</a>\",
+          manager: \"<a class=\\"btn btn-tertiary btn-sm\\" href=\\"reports\\">Hisobotlar</a>\",
+          member: \"<a class=\\"btn btn-tertiary btn-sm\\" href=\\"my-ideas\\">Mening g'oyalarim</a> <a class=\\"btn btn-tertiary btn-sm\\" href=\\"dashboard\\">Workspace'larim</a>\"
         };
         roleQuick.innerHTML = 'Rolingiz: <strong>' + role + '</strong> — ' + (qa[role] || qa.member);
       }
@@ -732,7 +732,7 @@
         applyHidden(prefsRes.prefs && prefsRes.prefs.hiddenWidgets);
       } catch (_) {}
 
-      // "Saqlash" tugmasi — faqat bosilganda saqlaydi
+      // \"Saqlash\" tugmasi — faqat bosilganda saqlaydi
       document.getElementById('saveWidgetPrefs')?.addEventListener('click', async () => {
         const hidden = widgetToggles.filter((x) => !x.checked).map((x) => x.value);
         const status = document.getElementById('personalizationStatus');
@@ -797,7 +797,7 @@
             templateId: document.getElementById('workspaceTemplate')?.value || ''
           });
           showSecretModal(created);
-          setTimeout(() => { location.href = `team.html?id=${created.id}`; }, 3000);
+          setTimeout(() => { location.href = `team?id=${created.id}`; }, 3000);
         } catch (error) {
           message.textContent = error.message || 'Workspace yaratishda xatolik yuz berdi.';
           button.disabled = false;
@@ -815,37 +815,37 @@
         const sData = [];
         if (isManager) {
           sData.push(
-            { n: aIds.length || 0, l: "Mas'ul jamoalar", note: 'Siz biriktirilgan jamoalar' },
-            { n: ft.reduce((s, t) => s + (t.membersCount || 0), 0), l: "Jami a'zolar", note: "Barcha jamoalardagi a'zolar" },
+            { n: aIds.length || 0, l: \"Mas'ul jamoalar\", note: 'Siz biriktirilgan jamoalar' },
+            { n: ft.reduce((s, t) => s + (t.membersCount || 0), 0), l: \"Jami a'zolar\", note: \"Barcha jamoalardagi a'zolar\" },
             { n: fUnread, l: 'Yangi bildirishnomalar', note: 'Hisobot va activity' },
           );
         } else {
           sData.push(
-            { n: ft.length, l: "Workspace'larim", note: 'Siz azo bolgan joylar' },
-            { n: ft.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: "Boshqarayotgan oqimlar" },
-            { n: ft.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: "A'zolar", note: "Jami koinadigan userlar" },
+            { n: ft.length, l: \"Workspace'larim\", note: 'Siz azo bolgan joylar' },
+            { n: ft.filter(t => t.membershipRole === 'team_lead').length, l: 'Lead workspace', note: \"Boshqarayotgan oqimlar\" },
+            { n: ft.reduce((sum, team) => sum + (team.membersCount || 0), 0), l: \"A'zolar\", note: \"Jami koinadigan userlar\" },
             { n: fUnread, l: 'Yangi bildirishnomalar', note: 'Action talab qiladigan itemlar' },
           );
         }
-        const iconMap = {"Workspace'larim": '📋', 'Lead workspace': '⭐', "A'zolar": '👥', 'Yangi bildirishnomalar': '🔔', "Mas'ul jamoalar": '📋', "Jami a'zolar": '👤'};
+        const iconMap = {\"Workspace'larim\": '📋', 'Lead workspace': '⭐', \"A'zolar\": '👥', 'Yangi bildirishnomalar': '🔔', \"Mas'ul jamoalar\": '📋', \"Jami a'zolar\": '👤'};
         document.getElementById('stats').innerHTML = sData.map((s) => `
-          <div class="workspace-stat">
-            <div class="workspace-stat-icon">${iconMap[s.l] || '📊'}</div>
-            <span class="workspace-stat-label">${s.l}</span>
-            <span class="workspace-stat-value">${s.n}</span>
-            <span class="workspace-stat-note">${s.note}</span>
+          <div class=\"workspace-stat\">
+            <div class=\"workspace-stat-icon\">${iconMap[s.l] || '📊'}</div>
+            <span class=\"workspace-stat-label\">${s.l}</span>
+            <span class=\"workspace-stat-value\">${s.n}</span>
+            <span class=\"workspace-stat-note\">${s.note}</span>
           </div>
         `).join('');
 
         // Teams
         document.getElementById('teams').innerHTML = ft.length ? ft.map((team) => `
-          <a href="team.html?id=${team.id}" class="workspace-record">
-            <div class="workspace-record-top">
-              <div class="flex items-center gap-3">
-                <div class="team-logo ${team.color || 'tl-1'}">${team.logo || 'W'}</div>
+          <a href=\"team?id=${team.id}\" class=\"workspace-record\">
+            <div class=\"workspace-record-top\">
+              <div class=\"flex items-center gap-3\">
+                <div class=\"team-logo ${team.color || 'tl-1'}\">${team.logo || 'W'}</div>
                 <div>
                   <h3>${team.name}</h3>
-                  <div class="workspace-inline-meta">
+                  <div class=\"workspace-inline-meta\">
                     <span>${team.membersCount || 0} a'zo</span>
                     <span>${team.membershipRole || 'member'}</span>
                   </div>
@@ -854,27 +854,27 @@
             </div>
             <p>${team.description || 'Workspace tavsifi kiritilmagan.'}</p>
           </a>
-        `).join('') : `<div class="workspace-empty"><h3>Workspace yo'q</h3><p>${isAdmin ? "Birinchi workspace yarating." : "Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi."}</p></div>`;
+        `).join('') : `<div class=\"workspace-empty\"><h3>Workspace yo'q</h3><p>${isAdmin ? \"Birinchi workspace yarating.\" : \"Team lead sizni workspace'ga qo'shgandan keyin shu yerda ko'rinadi.\"}</p></div>`;
 
         // Ideas
         document.getElementById('ideasTable').innerHTML = fi.length ? fi.map((idea) => {
           const team = ft.find(t => t.id === idea.teamId);
-          return `<tr style="cursor:pointer" onclick="location.href='idea.html?id=${idea.id}'">
-            <td><div class="font-semibold">${idea.title}</div></td>
-            <td><span class="text-sm">${team?.name || '-'}</span></td>
-            <td><span class="badge">${idea.status || idea.category || '-'}</span></td>
-            <td class="muted text-sm">${fmtDate(idea.updatedAt)}</td>
+          return `<tr style=\"cursor:pointer\" onclick=\"location.href='idea?id=${idea.id}'\">
+            <td><div class=\"font-semibold\">${idea.title}</div></td>
+            <td><span class=\"text-sm\">${team?.name || '-'}</span></td>
+            <td><span class=\"badge\">${idea.status || idea.category || '-'}</span></td>
+            <td class=\"muted text-sm\">${fmtDate(idea.updatedAt)}</td>
           </tr>`;
-        }).join('') : "<tr><td colspan=\"4\" class=\"muted text-sm\">Hozircha g'oya yo'q.</td></tr>";
+        }).join('') : \"<tr><td colspan=\\"4\\" class=\\"muted text-sm\\">Hozircha g'oya yo'q.</td></tr>\";
 
         // Notifications
         document.getElementById('notifs').innerHTML = freshData.notifications.length ? freshData.notifications.slice(0, 4).map((n) => `
-          <div class="workspace-message-item">
+          <div class=\"workspace-message-item\">
             <strong>${n.text || n.content}</strong>
-            <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+            <div class=\"text-xs muted\">${fmtDate(n.createdAt)}</div>
             <span>${n.type || 'notification'}</span>
           </div>
-        `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
+        `).join('') : '<div class=\"workspace-empty\"><h3>Bildirishnoma yo\'q</h3><p>Yangi activity shu yerda ko\'rinadi.</p></div>';
 
         // Timestamp
         document.getElementById('lastUpdateTime').textContent = `So'nggi yangilanish: ${new Date().toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' })}`;
@@ -895,23 +895,23 @@
                 const teamData = ft2.find(t => t.id === tid);
                 const members = teamData?.membersCount || '?';
                 return `
-                  <div class="mgr-team-card">
-                    <div class="mgr-team-top">
-                      <div class="team-logo ${color}">${tName.charAt(0).toUpperCase()}</div>
-                      <div class="mgr-team-info">
+                  <div class=\"mgr-team-card\">
+                    <div class=\"mgr-team-top\">
+                      <div class=\"team-logo ${color}\">${tName.charAt(0).toUpperCase()}</div>
+                      <div class=\"mgr-team-info\">
                         <strong>${tName}</strong>
-                        <span class="text-xs muted">${members} a'zo</span>
+                        <span class=\"text-xs muted\">${members} a'zo</span>
                       </div>
                     </div>
-                    <div class="mgr-team-actions">
-                      <a class="btn btn-primary btn-sm" href="reports.html?teamId=${tid}">📋 Hisobotlar</a>
-                      <a class="btn btn-tertiary btn-sm" href="team.html?id=${tid}">👥 Jamoani korish</a>
+                    <div class=\"mgr-team-actions\">
+                      <a class=\"btn btn-primary btn-sm\" href=\"reports?teamId=${tid}\">📋 Hisobotlar</a>
+                      <a class=\"btn btn-tertiary btn-sm\" href=\"team?id=${tid}\">👥 Jamoani korish</a>
                     </div>
                   </div>
                 `;
               }).join('');
             } else {
-              mgrList.innerHTML = '<div class="workspace-empty"><h3>Hech qanday jamoa biriktirilmagan</h3><p class="muted">Admin sizni jamoalarga mas\'ul qilib tayinlashi kerak.</p></div>';
+              mgrList.innerHTML = '<div class=\"workspace-empty\"><h3>Hech qanday jamoa biriktirilmagan</h3><p class=\"muted\">Admin sizni jamoalarga mas\'ul qilib tayinlashi kerak.</p></div>';
             }
           }
 
@@ -921,17 +921,17 @@
             const periodBadge = document.querySelector('#mgrReportModeBadge .badge');
             const periodLabel = periodBadge ? periodBadge.textContent.replace('📅 ', '') : 'Kunlik hisobot rejimi';
             mgrStats.innerHTML = `
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">📋 Mas'ul jamoalar</span>
-                <span class="mgr-stat-value">${assignedIds.length} ta</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">📋 Mas'ul jamoalar</span>
+                <span class=\"mgr-stat-value\">${assignedIds.length} ta</span>
               </div>
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">📅 Hisobot rejimi</span>
-                <span class="mgr-stat-value">${periodLabel}</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">📅 Hisobot rejimi</span>
+                <span class=\"mgr-stat-value\">${periodLabel}</span>
               </div>
-              <div class="mgr-stat-row">
-                <span class="mgr-stat-label">🔔 Kutilmagan bildirishnomalar</span>
-                <span class="mgr-stat-value">${fUnread2} ta</span>
+              <div class=\"mgr-stat-row\">
+                <span class=\"mgr-stat-label\">🔔 Kutilmagan bildirishnomalar</span>
+                <span class=\"mgr-stat-value\">${fUnread2} ta</span>
               </div>
             `;
           }
@@ -940,12 +940,12 @@
           const mgrNotifs = document.getElementById('mgrNotifs');
           if (mgrNotifs) {
             mgrNotifs.innerHTML = freshData.notifications.length ? freshData.notifications.slice(0, 4).map((n) => `
-              <div class="workspace-message-item">
+              <div class=\"workspace-message-item\">
                 <strong>${n.text || n.content}</strong>
-                <div class="text-xs muted">${fmtDate(n.createdAt)}</div>
+                <div class=\"text-xs muted\">${fmtDate(n.createdAt)}</div>
                 <span>${n.type || 'notification'}</span>
               </div>
-            `).join('') : '<div class="workspace-empty"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
+            `).join('') : '<div class=\"workspace-empty\"><h3>Bildirishnoma yoq</h3><p>Yangi activity shu yerda korinadi.</p></div>';
           }
         }
       };
@@ -975,7 +975,7 @@
       setTimeout(() => {
         const stats = document.getElementById('stats');
         if (stats && stats.innerHTML.trim() === '') {
-          stats.innerHTML = '<div class="workspace-empty"><h3>Ma’lumot yuklanmadi</h3><p>Internet aloqangizni tekshiring va sahifani yangilang.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
+          stats.innerHTML = '<div class=\"workspace-empty\"><h3>Ma’lumot yuklanmadi</h3><p>Internet aloqangizni tekshiring va sahifani yangilang.</p><button class=\"btn btn-primary btn-sm\" onclick=\"location.reload()\">🔄 Qayta urinish</button></div>';
         }
       }, 10000);
     } catch (e) { /* async IIFE: yashirin xatolarni log qilmaymiz */ }

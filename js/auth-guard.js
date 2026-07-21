@@ -3,7 +3,7 @@ window.MLLYCORE_AUTH_READY = (async () => {
     return await window.MllyCore.requireAuth();
   } catch (error) {
     console.error(error);
-    location.href = 'login.html';
+    location.href = 'login';
     return null;
   }
 })();

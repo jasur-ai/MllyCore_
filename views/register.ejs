@@ -20,7 +20,7 @@
       <button type="button" class="btn btn-ghost btn-sm theme-toggle-btn" data-theme-toggle onclick="window.MllyCoreTheme?.toggle?.()"><span class="theme-glyph theme-sun" aria-hidden="true">&#9728;</span><span class="theme-glyph theme-moon" aria-hidden="true">&#9790;</span></button>
     </div>
     <aside class="auth-panel-side">
-      <a href="index.html" class="auth-panel-brand">
+      <a href="index" class="auth-panel-brand">
         <span class="auth-panel-mark"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></span>
         <span>
           <span class="auth-panel-name"><img src="images/logo-text.svg" alt="MllyCore" height="31" style="vertical-align:middle"></span>
@@ -96,7 +96,7 @@
           <p class="text-sm muted" id="authMessage" style="min-height:20px;margin:0"></p>
         </form>
         <div class="auth-helper">
-          Akkauntingiz bormi? <a href="login.html">Kirish</a>
+          Akkauntingiz bormi? <a href="login">Kirish</a>
         </div>
       </div>
     </section>
@@ -183,7 +183,7 @@
           message.textContent = 'Firebase sozlanmagan. Iltimos, administratorga murojaat qiling.';
           return;
         }
-        setTimeout(() => { location.replace('verify-email.html'); }, 900);
+        setTimeout(() => { location.replace('verify-email'); }, 900);
       } catch (error) {
         message.className = 'text-sm muted feedback-error';
         message.textContent = friendlyAuthError(error, "Ro'yxatdan o'tishda xatolik yuz berdi.");

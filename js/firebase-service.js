@@ -940,33 +940,33 @@ window.MllyCore = {
     try {
       const authUser = await this.ensureAuthed();
       const target = new URL(href, location.href);
-      const page = (target.pathname.split('/').pop() || 'dashboard.html').toLowerCase();
+      const page = (target.pathname.split('/').pop() || 'dashboard').toLowerCase();
       const teamId = target.searchParams.get('id');
       const ideaId = target.searchParams.get('id');
 
-      if (page === 'dashboard.html' || page === 'notifications.html') {
+      if (page === 'dashboard' || page === 'notifications') {
         await this.getDashboardData(authUser.uid);
         return;
       }
-      if (page === 'my-ideas.html') {
+      if (page === 'my-ideas') {
         await this.getDashboardData(authUser.uid, { includeIdeas: true });
         return;
       }
-      if (page === 'team.html' && teamId) {
+      if (page === 'team' && teamId) {
         await Promise.all([
           this.getDashboardData(authUser.uid),
           this.getTeamData(teamId)
         ]);
         return;
       }
-      if (page === 'idea.html' && ideaId) {
+      if (page === 'idea' && ideaId) {
         await Promise.all([
           this.getDashboardData(authUser.uid),
           this.getIdeaById(ideaId)
         ]);
         return;
       }
-      if (page === 'admin.html' && window.MLLYCORE_PROFILE?.role === 'admin') {
+      if (page === 'admin' && window.MLLYCORE_PROFILE?.role === 'admin') {
         await Promise.all([
           this.getCollection('users'),
           this.getCollection('teams')
@@ -1791,7 +1791,7 @@ window.MllyCore = {
   async requireAuth() {
     const state = await this.init();
     if (!state) {
-      location.href = 'login.html';
+      location.href = 'login';
       return null;
     }
 
@@ -1802,9 +1802,9 @@ window.MllyCore = {
       const authTimeout = setTimeout(() => {
         if (typeof unsub === 'function') unsub();
         console.warn('Auth timeout: Firebase 12s ichida javob bermadi.');
-        const currentPage = location.pathname.split('/').pop() || 'index.html';
-        if (currentPage !== 'login.html' && currentPage !== 'register.html') {
-          location.href = 'login.html';
+        const currentPage = location.pathname.split('/').pop() || 'index';
+        if (currentPage !== 'login' && currentPage !== 'register') {
+          location.href = 'login';
         }
         resolve(null);
       }, 12000);
@@ -1814,14 +1814,14 @@ window.MllyCore = {
         unsub();
         try {
           if (!user) {
-            location.href = 'login.html';
+            location.href = 'login';
             resolve(null);
             return;
           }
 
-          const currentPage = location.pathname.split('/').pop() || 'index.html';
-          if (!user.emailVerified && currentPage !== 'verify-email.html') {
-            location.href = 'verify-email.html';
+          const currentPage = location.pathname.split('/').pop() || 'index';
+          if (!user.emailVerified && currentPage !== 'verify-email') {
+            location.href = 'verify-email';
             resolve(null);
             return;
           }
@@ -1844,7 +1844,7 @@ window.MllyCore = {
           }
           const requiredRole = document.documentElement.dataset.requiredRole;
           if (requiredRole && profile?.role !== requiredRole) {
-            location.href = 'dashboard.html';
+            location.href = 'dashboard';
             resolve(null);
             return;
           }

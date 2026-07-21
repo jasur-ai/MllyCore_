@@ -377,7 +377,7 @@
               <div class="text-sm">✅ Bajarilgan: <b>${o.completedTasks}</b></div>
               <div class="text-sm">💡 Mening g'oyalarim: <b>${o.myIdeas}</b></div>
               <div class="text-sm">🔔 O'qilmagan: <b>${o.unreadNotifications}</b></div>
-              <a class="btn btn-tertiary btn-sm" style="margin-top:10px" href="team.html?id=${encodeURIComponent(o.teamId)}">Ochish</a>
+              <a class="btn btn-tertiary btn-sm" style="margin-top:10px" href="team?id=${encodeURIComponent(o.teamId)}">Ochish</a>
             </div>
           `).join('');
         } catch (e) { console.error('Overview', e); }

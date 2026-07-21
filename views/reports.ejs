@@ -46,7 +46,7 @@
         <div class="workspace-command-tools">
           <span class="badge badge-active" id="userRoleBadge">Member</span>
           <button class="btn btn-tertiary btn-sm" id="refreshReportsBtn" title="Ma'lumotlarni yangilash" aria-label="Yangilash">🔄</button>
-          <a class="btn btn-tertiary btn-sm" href="dashboard.html">Dashboard</a>
+          <a class="btn btn-tertiary btn-sm" href="dashboard">Dashboard</a>
         </div>
       </section>
 
@@ -190,7 +190,7 @@
           <div class="workspace-surface pad text-center py-6" style="padding: 40px; text-align: center;">
             <h3>Sizda hisobotlar bo'limiga kirish ruxsati yo'q</h3>
             <p class="muted">Hisobotlar paneli faqat Admin, Manager va Team Lead'lar uchun ochiq.</p>
-            <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+            <a href="dashboard" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
           </div>
         `;
         // Sidebar elementlaridan ham "Hisobotlar paneli" olib tashlanadi
@@ -205,7 +205,7 @@
           <div class="workspace-surface pad text-center py-6">
             <h3>Siz hech qanday jamoa a'zosi emassiz</h3>
             <p class="muted">Hisobotlar bo'limi faqat jamoaviy workspace'ga qo'shilganingizdan so'ng ochiladi.</p>
-            <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+            <a href="dashboard" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
           </div>
         `;
         return;
@@ -245,7 +245,7 @@
               <span class="empty-ico">📭</span>
               <span class="empty-title">Hali hisobotlar yo'q</span>
               <span class="empty-copy">Bu jamoa uchun hali hech qanday hisobot topshirilmagan. A'zolar kunlik/haftalik hisobotlarni yuborganidan so'ng ular shu yerda paydo bo'ladi.</span>
-              <div style="margin-top:14px;"><a href="dashboard.html" class="btn btn-primary btn-sm">Dashboardga Qaytish</a></div>
+              <div style="margin-top:14px;"><a href="dashboard" class="btn btn-primary btn-sm">Dashboardga Qaytish</a></div>
             </div>`;
           return;
         }
@@ -506,7 +506,7 @@
             <div class="workspace-surface pad" style="text-align:center;padding:40px;">
               <h3>Sizga hali hech qanday jamoa biriktirilmagan</h3>
               <p class="muted">Admin sizni jamoalarga mas'ul qilib tayinlashi kerak. Sozlamalar uchun Admin paneliga murojaat qiling.</p>
-              <a href="dashboard.html" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
+              <a href="dashboard" class="btn btn-primary mt-3">Dashboardga Qaytish</a>
             </div>
           `;
           return;
@@ -587,7 +587,7 @@
           <div class="workspace-surface pad mb-4">
             <div class="flex justify-between items-center">
               <h2>Platformadagi Barcha Hisobotlar Monitoringi (${currentTabPeriod === 'daily' ? 'Kunlik' : currentTabPeriod === 'weekly' ? 'Haftalik' : 'Oylik'})</h2>
-              <a href="admin.html" class="btn btn-secondary btn-sm">Managerlarni Boshqarish &rarr;</a>
+              <a href="admin" class="btn btn-secondary btn-sm">Managerlarni Boshqarish &rarr;</a>
             </div>
           </div>
           <div class="workspace-surface pad">

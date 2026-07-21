@@ -204,7 +204,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   // Eski logika: `(!isAdmin && !isManager)` — manager butunlay chetlatilgan edi.
   // Yangi: isAdmin bo'lmasa, hamma ko'radi (member + team_lead + manager).
   const teamLinks = (!isAdmin) && teams.map((team) => `
-        <a href="team.html?id=${team.id}" class="nav-item">
+        <a href="team?id=${team.id}" class="nav-item">
           <div class="team-logo ${team.color || 'tl-1'}" style="width:26px;height:26px;border-radius:8px;font-size:11px">${team.logo || 'W'}</div>
           <span style="font-size:13px">${team.name}</span>
         </a>
@@ -213,23 +213,23 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   let navItems = '';
   if (isAdmin) {
     navItems = `
-      <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Statistika</a>
-      <a href="admin.html" class="nav-item ${active === 'admin' ? 'active' : ''}">Admin paneli</a>
-      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Barcha Hisobotlar</a>
-      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
+      <a href="dashboard" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Statistika</a>
+      <a href="admin" class="nav-item ${active === 'admin' ? 'active' : ''}">Admin paneli</a>
+      <a href="reports" class="nav-item ${active === 'reports' ? 'active' : ''}">Barcha Hisobotlar</a>
+      <a href="notifications" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
         ${unread ? `<span class="count">${unread}</span>` : ''}
       </a>
-      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
+      <a href="profile" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else if (isManager) {
     navItems = `
-      <a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Team Hisobotlari</a>
-      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
+      <a href="reports" class="nav-item ${active === 'reports' ? 'active' : ''}">Team Hisobotlari</a>
+      <a href="notifications" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
         ${unread ? `<span class="count">${unread}</span>` : ''}
       </a>
-      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
+      <a href="profile" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
     `;
   } else {
     // FAQAT TEAM LEAD bo'lsa yoki jamoasi bo'lsa hisobotlar panelini ko'rsatish
@@ -238,14 +238,14 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
     const hasTeam = teams && teams.length > 0;
     
     navItems = `
-      <a href="dashboard.html" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
-      ${(hasTeam && isTeamLead) ? `<a href="reports.html" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>` : ''}
-      <a href="my-ideas.html" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
-      <a href="notifications.html" class="nav-item ${active === 'notif' ? 'active' : ''}">
+      <a href="dashboard" class="nav-item ${active === 'dashboard' ? 'active' : ''}">Dashboard</a>
+      ${(hasTeam && isTeamLead) ? `<a href="reports" class="nav-item ${active === 'reports' ? 'active' : ''}">Hisobotlar paneli</a>` : ''}
+      <a href="my-ideas" class="nav-item ${active === 'ideas' ? 'active' : ''}">G'oyalarim</a>
+      <a href="notifications" class="nav-item ${active === 'notif' ? 'active' : ''}">
         Bildirishnomalar
         ${unread ? `<span class="count">${unread}</span>` : ''}
       </a>
-      <a href="profile.html" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
+      <a href="profile" class="nav-item ${active === 'profile' ? 'active' : ''}">Profil sozlamalari</a>
 
       <div class="nav-section">Workspace'larim</div>
       ${teamLinks}
@@ -254,7 +254,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
 
   return `
   <header class="mobile-header">
-    <a href="dashboard.html" class="brand mobile-brand">
+    <a href="dashboard" class="brand mobile-brand">
       <div class="brand-logo"><img src="images/logo-icon-small.svg" alt="M" width="23" height="24"></div>
       <div>
         <div class="brand-name"><img src="images/logo-text-small.svg" alt="MllyCore" height="22" style="vertical-align:middle"></div>
@@ -269,7 +269,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
   </header>
   <div class="sidebar-backdrop" onclick="document.body.classList.remove('nav-open')"></div>
   <aside class="sidebar">
-    <a href="dashboard.html" class="brand">
+    <a href="dashboard" class="brand">
       <div class="brand-logo"><img src="images/logo-icon.svg" alt="M" width="32" height="34"></div>
       <div>
         <div class="brand-name"><img src="images/logo-text.svg" alt="MllyCore" height="31" style="vertical-align:middle"></div>
@@ -291,7 +291,7 @@ window.renderLayout = function(active, context = window.APP_CONTEXT || {}) {
         <div class="text-sm font-semibold" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${profile.name || profile.email}</div>
         <div class="text-xs muted">@${profile.username || 'user'}</div>
       </div>
-      <a href="login.html" title="Chiqish" class="btn btn-tertiary btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login.html')">
+      <a href="login" title="Chiqish" class="btn btn-tertiary btn-sm" style="padding:6px" onclick="event.preventDefault(); window.MllyCore?.logout?.().finally(()=>location.href='login')">
         Chiqish
       </a>
     </div>
@@ -398,10 +398,10 @@ window.mountLayout = function(active, context) {
         try {
           const r = await window.MllyCore.search(q);
           const items = [];
-          (r.results && r.results.tasks || []).forEach((x) => items.push({ label: '✓ ' + (x.title || ''), sub: 'Vazifa', url: 'team.html?id=' + (x.teamId || '') }));
-          (r.results && r.results.ideas || []).forEach((x) => items.push({ label: '💡 ' + (x.title || ''), sub: 'G‘oya', url: 'idea.html?id=' + (x.id || '') }));
-          (r.results && r.results.teams || []).forEach((x) => items.push({ label: '🏢 ' + (x.name || ''), sub: 'Workspace', url: 'team.html?id=' + (x.id || '') }));
-          (r.results && r.results.messages || []).forEach((x) => items.push({ label: '💬 ' + ((x.text || '').slice(0, 40)), sub: 'Xabar', url: 'team.html?id=' + (x.teamId || '') }));
+          (r.results && r.results.tasks || []).forEach((x) => items.push({ label: '✓ ' + (x.title || ''), sub: 'Vazifa', url: 'team?id=' + (x.teamId || '') }));
+          (r.results && r.results.ideas || []).forEach((x) => items.push({ label: '💡 ' + (x.title || ''), sub: 'G‘oya', url: 'idea?id=' + (x.id || '') }));
+          (r.results && r.results.teams || []).forEach((x) => items.push({ label: '🏢 ' + (x.name || ''), sub: 'Workspace', url: 'team?id=' + (x.id || '') }));
+          (r.results && r.results.messages || []).forEach((x) => items.push({ label: '💬 ' + ((x.text || '').slice(0, 40)), sub: 'Xabar', url: 'team?id=' + (x.teamId || '') }));
           results.innerHTML = items.length ? items.map((it, i) => '<div class="cmd-item" data-url="' + it.url + '" style="padding:8px;border-radius:6px;cursor:pointer;' + (i === 0 ? 'background:var(--bg);' : '') + '"><strong>' + it.label + '</strong> <span class="muted">' + it.sub + '</span></div>').join('') : '<div class="muted">Topilmadi</div>';
           results.querySelectorAll('.cmd-item').forEach((el) => el.addEventListener('click', () => { location.href = el.dataset.url; }));
         } catch (err) { results.innerHTML = '<div class="muted">Xato: ' + err.message + '</div>'; }

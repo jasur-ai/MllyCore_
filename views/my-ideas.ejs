@@ -155,7 +155,7 @@
       `).join('') : "<div class=\"workspace-empty\"><h3>Shaxsiy g'oya yo'q</h3><p>Birinchi shaxsiy g'oyangizni yarating.</p></div>";
 
       document.getElementById('ideas').innerHTML = data.ideas.length ? data.ideas.map((i) => `
-        <a href="idea.html?id=${i.id}" class="workspace-record">
+        <a href="idea?id=${i.id}" class="workspace-record">
           <div class="workspace-record-top">
             <h3>${escapeHtml(i.title)}</h3>
             <span class="badge">${escapeHtml(i.status || i.category || '-')}</span>

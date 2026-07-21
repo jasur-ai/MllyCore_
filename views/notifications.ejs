@@ -107,18 +107,18 @@
       const type = String(notification.type || '');
       if (type === 'team_invite') return null;
       if (type === 'team_message') {
-        return `team.html?id=${notification.teamId}&focus=chat&entity=${notification.relatedEntityId || notification.teamId}`;
+        return `team?id=${notification.teamId}&focus=chat&entity=${notification.relatedEntityId || notification.teamId}`;
       }
       if (type.startsWith('task_')) {
-        return `team.html?id=${notification.teamId}&focus=tasks&entity=${notification.relatedEntityId || ''}`;
+        return `team?id=${notification.teamId}&focus=tasks&entity=${notification.relatedEntityId || ''}`;
       }
       if (type.includes('idea') || type.includes('startup')) {
-        return `idea.html?id=${notification.relatedEntityId}`;
+        return `idea?id=${notification.relatedEntityId}`;
       }
       if (type === 'team_joined' || type === 'team_invite_accepted') {
-        return `team.html?id=${notification.teamId}`;
+        return `team?id=${notification.teamId}`;
       }
-      return notification.teamId ? `team.html?id=${notification.teamId}` : null;
+      return notification.teamId ? `team?id=${notification.teamId}` : null;
     }
 
     function notificationChecks(notification) {
@@ -199,7 +199,7 @@
             await MllyCore.markNotificationsRead({ types: ['team_invite'], relatedEntityId: inviteId });
             errorBox.className = 'text-sm muted feedback-success';
             errorBox.textContent = 'Workspacega qo\'shildingiz.';
-            setTimeout(() => { location.href = `team.html?id=${result.teamId}`; }, 600);
+            setTimeout(() => { location.href = `team?id=${result.teamId}`; }, 600);
           } catch (error) {
             errorBox.textContent = error.message || 'Taklif qabul qilinmadi.';
             button.disabled = false;
