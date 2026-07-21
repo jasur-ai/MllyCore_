@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#0f172a">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <script src="js/icons.js"></script>
+  
   <script>(function(){try{var s=localStorage.getItem('mllycore-theme')||'dark';document.documentElement.className=s==='light'?'theme-light':'theme-dark'}catch(_){document.documentElement.className='theme-dark';}})();</script>
 </head>
 <body>
@@ -23,6 +23,7 @@
   </div>
   <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
+  
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
@@ -296,8 +297,8 @@
     function renderEntries(data, currentUserId, isLead, isManagerViewer) {
       const ideas = data.ideas.filter((entry) => entry.entryType !== 'startup');
       const startups = data.ideas.filter((entry) => entry.entryType === 'startup');
-      document.getElementById('ideaStat').textContent = ideas.length;
-      document.getElementById('startupStat').textContent = startups.length;
+      var _st = document.getElementById('ideaStat'); if (_st) _st.textContent = ideas.length;
+      _st = document.getElementById('startupStat'); if (_st) _st.textContent = startups.length;
       document.getElementById('ideasCount').textContent = `${ideas.length} ta`;
       document.getElementById('startupsCount').textContent = `${startups.length} ta`;
 
@@ -627,9 +628,9 @@
       const root = document.getElementById('content');
       // FIX (Stability): If already rendered, only update dynamic components
       if (root.querySelector('.workspace-command')) {
-         document.getElementById('ideaStat').textContent = data.ideas.length;
-         document.getElementById('startupStat').textContent = data.ideas.filter(i => i.entryType === 'startup').length;
-         document.getElementById('chatStat').textContent = data.messages.length;
+         var _st = document.getElementById('ideaStat'); if (_st) _st.textContent = data.ideas.length;
+         var _st2 = document.getElementById('startupStat'); if (_st2) _st2.textContent = data.ideas.filter(i => i.entryType === 'startup').length;
+         var _st3 = document.getElementById('chatStat'); if (_st3) _st3.textContent = data.messages.length;
          
          renderEntries(data, currentUserId, isLead, isManagerViewer);
          renderTasks(data, currentUserId, isLead, isViewer || isManagerViewer);
@@ -657,6 +658,7 @@
          window.__clearLoadingTimeout?.();
          return;
       }
+      root.innerHTML = `
         <section class="workspace-command">
           <div>
             <h1 class="workspace-command-title">${escapeHtml(data.team.name)}</h1>
@@ -2200,7 +2202,7 @@
       
       body.appendChild(list);
     } else {
-      body.innerHTML += '<div class="tsk-empty"><span class="tsk-empty-ico">📋</span><h4>Topshiriq yo'q</h4><p>Lead yoki jamoa yangi topshiriq qo'shganda shu yerda ko'rinadi.</p></div>';
+      body.innerHTML += `<div class="tsk-empty"><span class="tsk-empty-ico">📋</span><h4>Topshiriq yo'q</h4><p>Lead yoki jamoa yangi topshiriq qo'shganda shu yerda ko'rinadi.</p></div>`;
     }
   }
   
@@ -2229,7 +2231,7 @@
           <span class="badge ${status === 'completed' ? 'badge-active' : ''}">${escapeHtml(status)}</span>
           <span class="badge">${escapeHtml(task.assignmentMode || 'open')}</span>
           <span class="badge" style="${task.blocked ? 'background:#7f1d1d;color:#fff' : ''}">${task.blocked ? '🔒 Bloklangan' : 'Ochiq'}</span>
-          <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : 'yo'q')}</span>
+          <span class="badge">Deadline: ${escapeHtml(task.deadlineAt ? fmtDate(task.deadlineAt) : "yo'q")}</span>
         </div>
         
         <div class="tsk-detail-desc">${escapeHtml(task.description || 'Tavsif kiritilmagan.')}</div>
@@ -2237,8 +2239,8 @@
         <div class="tsk-detail-info">
           <div class="tsk-detail-row"><span>Mas'ul</span><strong>${escapeHtml(assignedName)}</strong></div>
           <div class="tsk-detail-row"><span>Yaratuvchi</span><strong>${escapeHtml(task.createdByName || 'User')}</strong></div>
-          ${task.requiredSkill ? '<div class="tsk-detail-row"><span>Ko'nikma</span><strong>' + escapeHtml(task.requiredSkill) + '</strong></div>' : ''}
-          ${Array.isArray(task.dependsOn) && task.dependsOn.length ? '<div class="tsk-detail-row"><span>Bog'liq</span><strong>' + task.dependsOn.map(id => escapeHtml((tasks.find(t => t.id === id) || {}).title || id)).join(', ') + '</strong></div>' : ''}
+          ${task.requiredSkill ? `<div class="tsk-detail-row"><span>Ko'nikma</span><strong>${escapeHtml(task.requiredSkill)}</strong></div>` : ''}
+          ${Array.isArray(task.dependsOn) && task.dependsOn.length ? `<div class="tsk-detail-row"><span>Bog'liq</span><strong>${task.dependsOn.map(id => escapeHtml((tasks.find(t => t.id === id) || {}).title || id)).join(', ')}</strong></div>` : ''}
         </div>
         
         ${taskSubs.length ? `
@@ -2276,7 +2278,7 @@
         assignedTo: document.getElementById('tskQAssignee')?.value || '',
         dueDate: document.getElementById('tskQDeadline')?.value || ''
       });
-      if (fb) { fb.textContent = '✅ Topshiriq qo'shildi!'; fb.style.color = 'var(--success)'; }
+      if (fb) { fb.textContent = "✅ Topshiriq qo'shildi!"; fb.style.color = 'var(--success)'; }
       const uid = window.MLLYCORE_AUTH_USER?.uid;
       if (uid && workspaceState.team.id) {
         await refreshWorkspace(workspaceState.team.id, uid);
@@ -2339,11 +2341,23 @@
   </script>
   <script>
     if ("serviceWorker" in navigator && location.protocol !== "file:") {
-      window.addEventListener("load", function() {
+      var isLocalDevSW = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+      var registerSW = function() {
         navigator.serviceWorker.register("sw.js").catch(function(err) {
           console.warn("SW registration failed:", err);
         });
-      });
+      };
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          if (isLocalDevSW) {
+            regs.forEach(function(r) { try { r.unregister(); } catch(_) {} });
+          } else {
+            registerSW();
+          }
+        });
+      } else {
+        if (!isLocalDevSW) registerSW();
+      }
     }
   </script>
 </body>

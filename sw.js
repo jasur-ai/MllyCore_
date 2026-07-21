@@ -6,7 +6,7 @@
 // file:// protokolda SW ro'yxatdan o'tmaydi — bu normal holat.
 // HTML dagi SW registration kodi 'location.protocol === "file:"' check bilan o'ralgan.
 
-const CACHE = 'mllycore-shell-v4';
+const CACHE = 'mllycore-shell-v6';
 const SHELL = [
   // HTML pages (PWA app-shell) — barcha sahifalar birinchi yuklashda keshlanadi
   'index.html',

@@ -9,6 +9,15 @@ const crypto = require('crypto');
 function initAdmin() {
   if (admin.apps.length) return admin.app();
 
+  // Local emulator rejimi (Firebase emulator hosts o'rnatilgan bo'lsa)
+  var emulatorFirestore = process.env.FIRESTORE_EMULATOR_HOST;
+  var emulatorAuth = process.env.FIREBASE_AUTH_EMULATOR_HOST;
+  
+  if (emulatorFirestore || emulatorAuth) {
+    // Emulatorda Admin SDK credentialsiz ishlaydi — faqat projectId kerak
+    return admin.initializeApp({ projectId: 'mllycore' });
+  }
+
   const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   const localPath = path.join(process.cwd(), 'serviceAccountKey.json');
   let serviceAccount;

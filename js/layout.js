@@ -69,8 +69,10 @@
     const bar = document.getElementById('connStatusBar');
     if (bar) {
       bar.className = 'conn-bar ' + (online ? 'conn-ok' : 'conn-err');
-      bar.querySelector('.conn-dot').style.background = online ? '#22c55e' : '#ef4444';
-      bar.querySelector('.conn-text').textContent = online ? 'Firestore: ulangan' : 'Firestore: uzilgan';
+      var dot = bar.querySelector('.conn-dot');
+      if (dot) dot.style.background = online ? '#22c55e' : '#ef4444';
+      var txt = bar.querySelector('.conn-text');
+      if (txt) txt.textContent = online ? 'Firestore: ulangan' : 'Firestore: uzilgan';
     }
   };
 
@@ -142,7 +144,7 @@
           message: String(message || 'Unknown error').slice(0, 2000),
           stack: extra && extra.stack ? extra.stack : null,
           context: extra && extra.context ? extra.context : (location.pathname || ''),
-        });
+        }).catch(function() {});
       }
     } catch (_) { /* non-fatal */ }
   };

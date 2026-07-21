@@ -7,6 +7,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js",
+    "emulators": "firebase emulators:start --only auth,firestore,storage",
+    "seed": "node scripts/seed-dev-data.js",
+    "dev:all": "node scripts/start-dev.js",
     "tw:build": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --minify",
     "tw:watch": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --watch",
     "reset:prod": "node scripts/reset-production-data.js",

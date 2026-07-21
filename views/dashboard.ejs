@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Dashboard - MllyCore</title>
   <!-- Xavfsizlik: JS yuklanmasa ham 20 soniyadan keyin avtomatik qayta yuklash -->
-  <meta http-equiv="refresh" content="20;url=dashboard.html?retry=1" id="metaHardTimeout">
+  <meta http-equiv="refresh" content="30;url=dashboard.html?retry=1" id="metaHardTimeout">
   <link rel="icon" type="image/svg+xml" href="images/favicon.svg">
   <link rel="apple-touch-icon" href="images/favicon.svg">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -13,7 +13,7 @@
   <meta name="theme-color" content="#0f172a">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css">
-  <script src="js/icons.js"></script>
+  
   <script>(function(){try{var s=localStorage.getItem('mllycore-theme')||'dark';document.documentElement.className=s==='light'?'theme-light':'theme-dark'}catch(_){document.documentElement.className='theme-dark';}})();</script>
 </head>
 <body>
@@ -256,6 +256,7 @@
 
   <script src="js/theme.js"></script>
   <script src="js/firebase-config.js"></script>
+  
   <script src="js/firebase-service.js"></script>
   <script src="js/auth-guard.js"></script>
   <script src="js/layout.js"></script>
@@ -329,6 +330,7 @@
     }
 
     (async () => {
+      try {
       const user = await window.MLLYCORE_AUTH_READY;
       if (!user) return;
       const profile = window.MLLYCORE_PROFILE;
@@ -977,15 +979,28 @@
           stats.innerHTML = '<div class="workspace-empty"><h3>Ma’lumot yuklanmadi</h3><p>Internet aloqangizni tekshiring va sahifani yangilang.</p><button class="btn btn-primary btn-sm" onclick="location.reload()">🔄 Qayta urinish</button></div>';
         }
       }, 10000);
+    } catch (e) { /* async IIFE: yashirin xatolarni log qilmaymiz */ }
     })();
   </script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      window.addEventListener('load', function() {
+      var isLocalDevSW = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+      var registerSW = function() {
         navigator.serviceWorker.register('sw.js').catch(function(err) {
           console.warn('SW registration failed:', err);
         });
-      });
+      };
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.getRegistrations().then(function(regs) {
+          if (isLocalDevSW) {
+            regs.forEach(function(r) { try { r.unregister(); } catch(_) {} });
+          } else {
+            registerSW();
+          }
+        });
+      } else {
+        if (!isLocalDevSW) registerSW();
+      }
     }
   </script>
 </body>

@@ -25,45 +25,65 @@ window.MllyCore = {
     if (!window.MLLYCORE_FIREBASE_ENABLED) return null;
     if (firebaseState.ready) return firebaseState;
 
-    // FIX: SDK yuklanishiga global timeout va xatolik nazorati
     if (window.__mlly_init_promise) return window.__mlly_init_promise;
 
     window.__mlly_init_promise = (async () => {
       try {
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Firebase SDK timeout (10s)')), 10000);
-        });
+        console.log('[MllyCore] init: Loading Firebase SDK...');
 
-        const loadFirebase = (async () => {
-          const [appMod, authMod, dbMod] = await Promise.all([
-            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js'),
-            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js'),
-            import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js')
-          ]);
+        const [appMod, authMod, dbMod] = await Promise.all([
+          import('https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js'),
+          import('https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js'),
+          import('https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js')
+        ]);
 
-          firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
-          firebaseState.auth = authMod.getAuth(firebaseState.app);
-          await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
+        console.log('[MllyCore] init: SDK loaded, initializing...');
 
-          let db;
+        firebaseState.app = appMod.initializeApp(window.MLLYCORE_FIREBASE_CONFIG);
+        firebaseState.auth = authMod.getAuth(firebaseState.app);
+
+        var isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+
+        if (isLocal) {
           try {
-            db = dbMod.getFirestore(firebaseState.app);
-            // Oflayn ishlashni yoqish
-            dbMod.enableIndexedDbPersistence(db).catch(() => {});
+            authMod.connectAuthEmulator(firebaseState.auth, 'http://localhost:9099', { disableWarnings: true });
           } catch (e) {
+            console.warn('[MllyCore] init: Auth emulator connection failed:', e);
+          }
+        }
+
+        await authMod.setPersistence(firebaseState.auth, authMod.browserSessionPersistence);
+
+        let db;
+        try {
+          if (dbMod.initializeFirestore && dbMod.persistentLocalCache) {
+            db = dbMod.initializeFirestore(firebaseState.app, {
+              localCache: dbMod.persistentLocalCache({ tabManager: dbMod.persistentMultipleTabManager() }),
+            });
+          } else {
             db = dbMod.getFirestore(firebaseState.app);
           }
-          firebaseState.db = db;
-          firebaseState.modules = { authMod, dbMod };
-          firebaseState.ready = true;
-          return firebaseState;
-        })();
+        } catch (e) {
+          db = dbMod.getFirestore(firebaseState.app);
+        }
 
-        return await Promise.race([loadFirebase, timeoutPromise]);
+        if (isLocal) {
+          try {
+            dbMod.connectFirestoreEmulator(db, 'localhost', 8081);
+          } catch (e) {
+            console.warn('[MllyCore] init: Firestore emulator connection failed:', e);
+          }
+        }
+
+        firebaseState.db = db;
+        firebaseState.modules = { authMod, dbMod };
+        firebaseState.ready = true;
+        console.log('[MllyCore] init: READY');
+        return firebaseState;
       } catch (e) {
-        console.error('MllyCore init() xatosi:', e.message);
+        console.error('[MllyCore] init() xatosi:', e.message);
         firebaseState.ready = false;
-        window.__mlly_init_promise = null; // Qayta urinish uchun
+        window.__mlly_init_promise = null;
         throw e;
       }
     })();
@@ -153,6 +173,7 @@ window.MllyCore = {
       }
       email = user.email;
     }
+
     return signInWithEmailAndPassword(state.auth, email, password);
   },
 
@@ -564,7 +585,8 @@ window.MllyCore = {
   // ===== T6 Feature Flags =====
   async getFeatureFlags({ teamId = '' } = {}) {
     const authUser = await this.ensureAuthed();
-    return apiPost('/api/feature-flags', authUser, { teamId });
+    const params = teamId ? '?teamId=' + encodeURIComponent(teamId) : '';
+    return apiGet('/api/feature-flags' + params, authUser);
   },
   async setFeatureFlags({ flags = {}, target = 'global' } = {}) {
     const authUser = await this.ensureAuthed();
@@ -1844,6 +1866,25 @@ window.MllyCore = {
     });
   }
 };
+
+async function apiGet(url, authUser, forceRefreshToken = false) {
+  let finalUrl = url;
+  if (!/[?&]action=/.test(url)) {
+    const seg = url.split('?')[0].split('/').filter(Boolean).pop() || '';
+    const sep = url.includes('?') ? '&' : '?';
+    finalUrl = url + sep + 'action=' + encodeURIComponent(seg);
+  }
+  const idToken = await authUser.getIdToken(forceRefreshToken);
+  const response = await fetch(finalUrl, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${idToken}`
+    }
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || 'So\'rov bajarilmadi.');
+  return payload;
+}
 
 async function apiPost(url, authUser, body, forceRefreshToken = false) {
   // Hosting rewrite (/api/(.*) -> /api/index) ba'zan asl pathni o'chirib yuboradi,

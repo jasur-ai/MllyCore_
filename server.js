@@ -10,6 +10,24 @@
 const express = require('express');
 const path = require('path');
 
+// Firebase emulator host'larini o'rnatish — API Admin SDK emulator ga ulansin
+// Server ishga tushganda env vars darhol o'rnatiladi (async emas)
+const net = require('net');
+function tryPort(port) {
+  try {
+    var s = new net.Socket();
+    s.connect(port, '127.0.0.1');
+    s.on('connect', function() {
+      s.destroy();
+      if (port === 8081 && !process.env.FIRESTORE_EMULATOR_HOST) process.env.FIRESTORE_EMULATOR_HOST = 'localhost:8081';
+      if (port === 9099 && !process.env.FIREBASE_AUTH_EMULATOR_HOST) process.env.FIREBASE_AUTH_EMULATOR_HOST = 'localhost:9099';
+    });
+    s.on('error', function() { s.destroy(); });
+  } catch (_) {}
+}
+if (!process.env.FIRESTORE_EMULATOR_HOST) tryPort(8081);
+if (!process.env.FIREBASE_AUTH_EMULATOR_HOST) tryPort(9099);
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -23,11 +41,13 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // ── 3. Static File Serving ──────────────────────────────────────────────────
 // All original static assets served from their original locations
-app.use('/css', express.static(path.join(__dirname, 'css'), { maxAge: '1h' }));
-app.use('/js', express.static(path.join(__dirname, 'js'), { maxAge: '1h' }));
+// Dev mode: no caching so changes are visible immediately
+var noCacheOpts = { maxAge: 0, setHeaders: function(res) { res.set('Cache-Control', 'no-store, must-revalidate'); } };
+app.use('/css', express.static(path.join(__dirname, 'css'), noCacheOpts));
+app.use('/js', express.static(path.join(__dirname, 'js'), noCacheOpts));
 app.use('/images', express.static(path.join(__dirname, 'images'), { maxAge: '1d' }));
-app.use('/design-tokens', express.static(path.join(__dirname, 'design-tokens'), { maxAge: '1h' }));
-app.use('/scripts', express.static(path.join(__dirname, 'scripts'), { maxAge: '1h' }));
+app.use('/design-tokens', express.static(path.join(__dirname, 'design-tokens'), noCacheOpts));
+app.use('/scripts', express.static(path.join(__dirname, 'scripts'), noCacheOpts));
 
 // Root-level static files
 app.get('/sw.js', (req, res) => res.sendFile(path.join(__dirname, 'sw.js')));
