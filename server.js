@@ -78,6 +78,7 @@ app.get('/reports', (req, res) => res.render('reports'));
 app.get('/tw-demo', (req, res) => res.render('tw-demo'));
 
 // Legacy .html URL redirects — keep for backward compatibility
+app.get('/index', (req, res) => res.redirect('/'));
 app.get('/index.html', (req, res) => res.redirect('/'));
 app.get('/login.html', (req, res) => res.redirect('/login'));
 app.get('/register.html', (req, res) => res.redirect('/register'));
