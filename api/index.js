@@ -659,8 +659,6 @@ async function handleUpdateEntryOwner(req, res, db, decoded, user) {
   const userSnap = await db.collection('users').doc(ownerUserId).get();
   const ownerName = userSnap.exists ? (userSnap.data().name || userSnap.data().email || '') : '';
   await db.collection('ideas').doc(ideaId).update({ ownerUserId, ownerName, updatedAt: SV() });
-  return { status: 200, success: true };
-}
   await audit(db, 'entry_owner_changed', {
     teamId, ideaId, fromUserId: oldOwner, toUserId: ownerUserId,
     restoreCollection: 'ideas', restoreDocId: ideaId,

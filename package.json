@@ -1,11 +1,12 @@
 {
   "name": "mllycore-startup-platform",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
-  "description": "MllyCore startup ideas platform frontend with Firebase backend integration.",
+  "description": "MllyCore startup ideas platform — Node.js/Express version with Firebase backend.",
+  "main": "server.js",
   "scripts": {
-    "dev": "firebase emulators:start --only hosting,auth,firestore,storage",
-    "serve": "firebase emulators:start --only hosting",
+    "start": "node server.js",
+    "dev": "node server.js",
     "tw:build": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --minify",
     "tw:watch": "npx tailwindcss -i ./src/style.css -o ./css/tailwind.css --watch",
     "reset:prod": "node scripts/reset-production-data.js",
@@ -18,6 +19,8 @@
     "test:crud": "firebase emulators:exec --only auth,firestore \"node scripts/test-crud.js\""
   },
   "dependencies": {
+    "express": "^4.21.0",
+    "ejs": "^3.1.10",
     "firebase-admin": "^13.10.0",
     "sharp": "^0.35.3"
   },
