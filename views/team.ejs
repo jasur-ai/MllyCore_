@@ -298,8 +298,8 @@
       const startups = data.ideas.filter((entry) => entry.entryType === 'startup');
       var _st = document.getElementById('ideaStat'); if (_st) _st.textContent = ideas.length;
       _st = document.getElementById('startupStat'); if (_st) _st.textContent = startups.length;
-      document.getElementById('ideasCount').textContent = `${ideas.length} ta`;
-      document.getElementById('startupsCount').textContent = `${startups.length} ta`;
+      var _ic = document.getElementById('ideasCount'); if (_ic) _ic.textContent = `${ideas.length} ta`;
+      var _sc = document.getElementById('startupsCount'); if (_sc) _sc.textContent = `${startups.length} ta`;
 
       document.getElementById('startupList').innerHTML = startups.length ? startups.map((item) => `
         <div class="workspace-record workspace-record-startup workspace-record-accent" data-startup-id="${item.id}">
