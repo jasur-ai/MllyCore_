@@ -1,465 +1,465 @@
 <!DOCTYPE html>
-<html lang=\"uz\">
+<html lang="uz">
 <head>
-  <meta charset=\"UTF-8\">
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Tailwind CSS Showcase — MllyCore</title>
-  <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
-  <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
-  <link href=\"https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap\" rel=\"stylesheet\">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
   <!-- Asosiy CSS (mlly-* custom properties) -->
-  <link rel=\"stylesheet\" href=\"css/styles.css\">
+  <link rel="stylesheet" href="css/styles.css">
   <!-- Tailwind CSS utility classes -->
-  <link rel=\"stylesheet\" href=\"css/tailwind.css\">
+  <link rel="stylesheet" href="css/tailwind.css">
   
 </head>
 <body>
-  <script src=\"js/theme.js\"></script>
+  <script src="js/theme.js"></script>
 
-  <div class=\"min-h-screen\"
-       style=\"font-family: 'Manrope', 'Inter', system-ui, sans-serif;\">
+  <div class="min-h-screen"
+       style="font-family: 'Manrope', 'Inter', system-ui, sans-serif;">
     
     <!-- ===== Header / Navigation ===== -->
-    <header class=\"flex items-center justify-between px-6 py-4 md:px-10\"
-            style=\"width: min(1240px, calc(100% - 40px)); margin: 0 auto;\">
-      <a href=\"index\" class=\"inline-flex items-center gap-3 no-underline\">
-        <span class=\"w-11 h-11 rounded-mlly-lg inline-flex items-center justify-center\"
-              style=\"background: linear-gradient(135deg, #2f81f7, #7c5cfc); padding: 6px;\">
-          <img src=\"images/logo-icon.svg\" alt=\"M\" class=\"w-full h-full object-contain\">
+    <header class="flex items-center justify-between px-6 py-4 md:px-10"
+            style="width: min(1240px, calc(100% - 40px)); margin: 0 auto;">
+      <a href="index" class="inline-flex items-center gap-3 no-underline">
+        <span class="w-11 h-11 rounded-mlly-lg inline-flex items-center justify-center"
+              style="background: linear-gradient(135deg, #2f81f7, #7c5cfc); padding: 6px;">
+          <img src="images/logo-icon.svg" alt="M" class="w-full h-full object-contain">
         </span>
-        <span class=\"font-display font-bold text-mlly-text text-lg hidden sm:inline\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">MllyCore</span>
+        <span class="font-display font-bold text-mlly-text text-lg hidden sm:inline"
+              style="font-family: 'Space Grotesk', sans-serif;">MllyCore</span>
       </a>
 
-      <nav class=\"flex items-center gap-2\">
-        <button type=\"button\"
-                class=\"w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-mlly border border-mlly-border bg-mlly-white-4 cursor-pointer text-mlly-text transition-all duration-150 hover:bg-mlly-panel-2\"
-                onclick=\"window.MllyCoreTheme?.toggle?.()\">
-          <span class=\"theme-sun text-lg leading-none\" aria-hidden=\"true\">&#9728;</span>
-          <span class=\"theme-moon text-lg leading-none\" aria-hidden=\"true\">&#9790;</span>
+      <nav class="flex items-center gap-2">
+        <button type="button"
+                class="w-[42px] h-[42px] min-w-[42px] flex items-center justify-center rounded-mlly border border-mlly-border bg-mlly-white-4 cursor-pointer text-mlly-text transition-all duration-150 hover:bg-mlly-panel-2"
+                onclick="window.MllyCoreTheme?.toggle?.()">
+          <span class="theme-sun text-lg leading-none" aria-hidden="true">&#9728;</span>
+          <span class="theme-moon text-lg leading-none" aria-hidden="true">&#9790;</span>
         </button>
-        <a href=\"login\"
-           class=\"btn-secondary text-sm font-semibold px-4 py-2.5 rounded-mlly border border-mlly-border text-mlly-text bg-transparent cursor-pointer transition-all duration-150 hover:bg-mlly-panel-2 no-underline\">Kirish</a>
-        <a href=\"register\"
-           class=\"text-sm font-semibold px-5 py-2.5 rounded-mlly text-white cursor-pointer transition-all duration-150 no-underline\"
-           style=\"background: linear-gradient(135deg, #2f81f7, #7c5cfc); box-shadow: 0 12px 32px rgba(47,129,247,0.28);\">Ro'yxatdan o'tish</a>
+        <a href="login"
+           class="btn-secondary text-sm font-semibold px-4 py-2.5 rounded-mlly border border-mlly-border text-mlly-text bg-transparent cursor-pointer transition-all duration-150 hover:bg-mlly-panel-2 no-underline">Kirish</a>
+        <a href="register"
+           class="text-sm font-semibold px-5 py-2.5 rounded-mlly text-white cursor-pointer transition-all duration-150 no-underline"
+           style="background: linear-gradient(135deg, #2f81f7, #7c5cfc); box-shadow: 0 12px 32px rgba(47,129,247,0.28);">Ro'yxatdan o'tish</a>
       </nav>
     </header>
 
-    <main class=\"px-6 md:px-10\"
-          style=\"width: min(1240px, calc(100% - 40px)); margin: 0 auto;\">
+    <main class="px-6 md:px-10"
+          style="width: min(1240px, calc(100% - 40px)); margin: 0 auto;">
 
       <!-- ===== Hero section (Tailwind utility classes) ===== -->
-      <section class=\"py-12 md:py-16 text-center md:text-left\">
-        <div class=\"grid md:grid-cols-2 gap-10 items-center\">
+      <section class="py-12 md:py-16 text-center md:text-left">
+        <div class="grid md:grid-cols-2 gap-10 items-center">
           
           <!-- Left: text -->
-          <div class=\"space-y-5\">
-            <div class=\"inline-flex items-center gap-2\">
-              <span class=\"px-3 py-1.5 rounded-mlly-full text-xs font-bold tracking-wider uppercase\"
-                    style=\"background: rgba(47,129,247,0.12); color: #79c0ff; border: 1px solid rgba(47,129,247,0.24);\">
+          <div class="space-y-5">
+            <div class="inline-flex items-center gap-2">
+              <span class="px-3 py-1.5 rounded-mlly-full text-xs font-bold tracking-wider uppercase"
+                    style="background: rgba(47,129,247,0.12); color: #79c0ff; border: 1px solid rgba(47,129,247,0.24);">
                 ⚡ Tailwind CSS
               </span>
-              <span class=\"px-3 py-1.5 rounded-mlly-full text-xs font-bold text-mlly-muted\"
-                    style=\"background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);\">
+              <span class="px-3 py-1.5 rounded-mlly-full text-xs font-bold text-mlly-muted"
+                    style="background: rgba(255,255,255,0.04); border: 1px solid rgba(148,163,184,0.18);">
                 v3.4
               </span>
             </div>
 
-            <h1 class=\"font-display text-mlly-hero leading-[0.98] tracking-tight max-w-[13ch] mx-auto md:mx-0\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
-              <span class=\"text-gradient\">Utility-first</span><br>
-              <span class=\"text-mlly-text\">design system</span>
+            <h1 class="font-display text-mlly-hero leading-[0.98] tracking-tight max-w-[13ch] mx-auto md:mx-0"
+                style="font-family: 'Space Grotesk', sans-serif;">
+              <span class="text-gradient">Utility-first</span><br>
+              <span class="text-mlly-text">design system</span>
             </h1>
 
-            <p class=\"text-mlly-muted text-lg leading-relaxed max-w-[600px] mx-auto md:mx-0\">
-              MllyCore ning <code class=\"text-mlly-info font-mono text-sm px-1.5 py-0.5 rounded\"
-                                   style=\"background: rgba(88,166,255,0.10);\">mlly-*</code> 
+            <p class="text-mlly-muted text-lg leading-relaxed max-w-[600px] mx-auto md:mx-0">
+              MllyCore ning <code class="text-mlly-info font-mono text-sm px-1.5 py-0.5 rounded"
+                                   style="background: rgba(88,166,255,0.10);">mlly-*</code> 
               Tailwind klasslari bilan professional UI komponentlarini 
-              <span class=\"text-mlly-success font-semibold\">tez</span> va 
-              <span class=\"text-mlly-primary font-semibold\">izchil</span> yarating.
+              <span class="text-mlly-success font-semibold">tez</span> va 
+              <span class="text-mlly-primary font-semibold">izchil</span> yarating.
             </p>
 
-            <div class=\"flex flex-wrap gap-3 justify-center md:justify-start\">
-              <button class=\"btn btn-primary\">🚀 Boshlash</button>
-              <a href=\"#components\"
-                 class=\"btn-secondary text-sm font-semibold px-5 py-2.5 rounded-mlly border border-mlly-border text-mlly-text bg-transparent cursor-pointer transition-all duration-150 hover:bg-mlly-panel-2 no-underline\">📚 Komponentlar</a>
+            <div class="flex flex-wrap gap-3 justify-center md:justify-start">
+              <button class="btn btn-primary">🚀 Boshlash</button>
+              <a href="#components"
+                 class="btn-secondary text-sm font-semibold px-5 py-2.5 rounded-mlly border border-mlly-border text-mlly-text bg-transparent cursor-pointer transition-all duration-150 hover:bg-mlly-panel-2 no-underline">📚 Komponentlar</a>
             </div>
           </div>
 
           <!-- Right: code preview card -->
-          <div class=\"rounded-mlly-3xl border border-mlly-border overflow-hidden shadow-mlly-window\"
-               style=\"background: rgba(10,16,28,0.85);\">
-            <div class=\"flex gap-2 px-4 py-3 border-b border-mlly-border/60\">
-              <span class=\"w-2.5 h-2.5 rounded-full\" style=\"background: rgba(148,163,184,0.3);\"></span>
-              <span class=\"w-2.5 h-2.5 rounded-full\" style=\"background: rgba(148,163,184,0.3);\"></span>
-              <span class=\"w-2.5 h-2.5 rounded-full\" style=\"background: rgba(148,163,184,0.3);\"></span>
-              <span class=\"ml-2 text-xs text-mlly-muted font-mono\">tw-demo</span>
+          <div class="rounded-mlly-3xl border border-mlly-border overflow-hidden shadow-mlly-window"
+               style="background: rgba(10,16,28,0.85);">
+            <div class="flex gap-2 px-4 py-3 border-b border-mlly-border/60">
+              <span class="w-2.5 h-2.5 rounded-full" style="background: rgba(148,163,184,0.3);"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background: rgba(148,163,184,0.3);"></span>
+              <span class="w-2.5 h-2.5 rounded-full" style="background: rgba(148,163,184,0.3);"></span>
+              <span class="ml-2 text-xs text-mlly-muted font-mono">tw-demo.html</span>
             </div>
-            <pre class=\"p-5 text-sm leading-relaxed font-mono text-mlly-muted overflow-x-auto\"
-                 style=\"color: #aab6c8;\"><code><span style=\"color: #79c0ff;\">&lt;div</span> <span style=\"color: #ffa657;\">class</span>=<span style=\"color: #a5d6ff;\">\"<span style=\"color: #7ee787;\">bg-mlly-panel</span> <span style=\"color: #7ee787;\">rounded-mlly-xl</span></span>
-<span style=\"color: #a5d6ff;\">       <span style=\"color: #7ee787;\">shadow-mlly-card</span> <span style=\"color: #7ee787;\">p-6</span></span>
-<span style=\"color: #a5d6ff;\">       <span style=\"color: #7ee787;\">border</span> <span style=\"color: #7ee787;\">border-mlly-border</span>\"</span><span style=\"color: #79c0ff;\">&gt;</span>
-  <span style=\"color: #79c0ff;\">&lt;h3</span> <span style=\"color: #ffa657;\">class</span>=<span style=\"color: #a5d6ff;\">\"<span style=\"color: #7ee787;\">text-mlly-text</span> <span style=\"color: #7ee787;\">text-lg</span></span>
-<span style=\"color: #a5d6ff;\">      <span style=\"color: #7ee787;\">font-bold</span>\"</span><span style=\"color: #79c0ff;\">&gt;</span>Card<span style=\"color: #79c0ff;\">&lt;/h3&gt;</span>
-  <span style=\"color: #79c0ff;\">&lt;p</span> <span style=\"color: #ffa657;\">class</span>=<span style=\"color: #a5d6ff;\">\"<span style=\"color: #7ee787;\">text-mlly-muted</span> <span style=\"color: #7ee787;\">text-sm</span></span>
-<span style=\"color: #a5d6ff;\">      <span style=\"color: #7ee787;\">mt-2</span>\"</span><span style=\"color: #79c0ff;\">&gt;</span>Content<span style=\"color: #79c0ff;\">&lt;/p&gt;</span>
-<span style=\"color: #79c0ff;\">&lt;/div&gt;</span></code></pre>
+            <pre class="p-5 text-sm leading-relaxed font-mono text-mlly-muted overflow-x-auto"
+                 style="color: #aab6c8;"><code><span style="color: #79c0ff;">&lt;div</span> <span style="color: #ffa657;">class</span>=<span style="color: #a5d6ff;">"<span style="color: #7ee787;">bg-mlly-panel</span> <span style="color: #7ee787;">rounded-mlly-xl</span></span>
+<span style="color: #a5d6ff;">       <span style="color: #7ee787;">shadow-mlly-card</span> <span style="color: #7ee787;">p-6</span></span>
+<span style="color: #a5d6ff;">       <span style="color: #7ee787;">border</span> <span style="color: #7ee787;">border-mlly-border</span>"</span><span style="color: #79c0ff;">&gt;</span>
+  <span style="color: #79c0ff;">&lt;h3</span> <span style="color: #ffa657;">class</span>=<span style="color: #a5d6ff;">"<span style="color: #7ee787;">text-mlly-text</span> <span style="color: #7ee787;">text-lg</span></span>
+<span style="color: #a5d6ff;">      <span style="color: #7ee787;">font-bold</span>"</span><span style="color: #79c0ff;">&gt;</span>Card<span style="color: #79c0ff;">&lt;/h3&gt;</span>
+  <span style="color: #79c0ff;">&lt;p</span> <span style="color: #ffa657;">class</span>=<span style="color: #a5d6ff;">"<span style="color: #7ee787;">text-mlly-muted</span> <span style="color: #7ee787;">text-sm</span></span>
+<span style="color: #a5d6ff;">      <span style="color: #7ee787;">mt-2</span>"</span><span style="color: #79c0ff;">&gt;</span>Content<span style="color: #79c0ff;">&lt;/p&gt;</span>
+<span style="color: #79c0ff;">&lt;/div&gt;</span></code></pre>
           </div>
         </div>
       </section>
 
       <!-- ===== Available mlly-* utility classes ===== -->
-      <section class=\"py-10\" id=\"components\">
-        <div class=\"text-center mb-10\">
-          <span class=\"text-xs font-bold tracking-[0.12em] uppercase text-mlly-info mb-2 inline-block\">Utility classes</span>
-          <h2 class=\"font-display text-3xl md:text-4xl font-bold text-mlly-text\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            <span class=\"text-gradient\">Tailwind</span> mlly-* klasslari
+      <section class="py-10" id="components">
+        <div class="text-center mb-10">
+          <span class="text-xs font-bold tracking-[0.12em] uppercase text-mlly-info mb-2 inline-block">Utility classes</span>
+          <h2 class="font-display text-3xl md:text-4xl font-bold text-mlly-text"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            <span class="text-gradient">Tailwind</span> mlly-* klasslari
           </h2>
-          <p class=\"text-mlly-muted mt-2 max-w-2xl mx-auto\">
-            MllyCore dizayn tizimi Tailwind <code class=\"font-mono\">mlly-*</code> prefiksi orqali
+          <p class="text-mlly-muted mt-2 max-w-2xl mx-auto">
+            MllyCore dizayn tizimi Tailwind <code class="font-mono">mlly-*</code> prefiksi orqali
             barcha komponentlarga tayyor. Quyida har bir klassni amalda ko'ring.
           </p>
         </div>
 
         <!-- === Color swatches === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            🎨 Ranglar <span class=\"text-mlly-muted text-sm font-normal\">(mlly-* prefiksi)</span>
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            🎨 Ranglar <span class="text-mlly-muted text-sm font-normal">(mlly-* prefiksi)</span>
           </h3>
-          <div class=\"grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3\">
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #080b12;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">bg</code><br><span class=\"text-mlly-muted\">#080b12</span></div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-3">
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #080b12;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">bg</code><br><span class="text-mlly-muted">#080b12</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #111721;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">bg-2</code><br><span class=\"text-mlly-muted\">#111721</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #111721;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">bg-2</code><br><span class="text-mlly-muted">#111721</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #19202b;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">panel</code><br><span class=\"text-mlly-muted\">#19202b</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #19202b;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">panel</code><br><span class="text-mlly-muted">#19202b</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #212836;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">panel-2</code><br><span class=\"text-mlly-muted\">#212836</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #212836;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">panel-2</code><br><span class="text-mlly-muted">#212836</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #2d3544;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">border</code><br><span class=\"text-mlly-muted\">#2d3544</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #2d3544;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">border</code><br><span class="text-mlly-muted">#2d3544</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #2f81f7;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">primary</code><br><span class=\"text-mlly-muted\">#2f81f7</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #2f81f7;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">primary</code><br><span class="text-mlly-muted">#2f81f7</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #7c5cfc;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">primary-2</code><br><span class=\"text-mlly-muted\">#7c5cfc</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #7c5cfc;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">primary-2</code><br><span class="text-mlly-muted">#7c5cfc</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #3fb950;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">success</code><br><span class=\"text-mlly-muted\">#3fb950</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #3fb950;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">success</code><br><span class="text-mlly-muted">#3fb950</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #d29922;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">warning</code><br><span class=\"text-mlly-muted\">#d29922</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #d29922;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">warning</code><br><span class="text-mlly-muted">#d29922</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #f85149;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">danger</code><br><span class=\"text-mlly-muted\">#f85149</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #f85149;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">danger</code><br><span class="text-mlly-muted">#f85149</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #58a6ff;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">info</code><br><span class=\"text-mlly-muted\">#58a6ff</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #58a6ff;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">info</code><br><span class="text-mlly-muted">#58a6ff</span></div>
             </div>
-            <div class=\"rounded-mlly overflow-hidden border border-mlly-border\">
-              <div class=\"h-14\" style=\"background: #8b949e;\"></div>
-              <div class=\"p-2 text-xs\"><code class=\"font-mono\">muted</code><br><span class=\"text-mlly-muted\">#8b949e</span></div>
+            <div class="rounded-mlly overflow-hidden border border-mlly-border">
+              <div class="h-14" style="background: #8b949e;"></div>
+              <div class="p-2 text-xs"><code class="font-mono">muted</code><br><span class="text-mlly-muted">#8b949e</span></div>
             </div>
           </div>
         </div>
 
         <!-- === Cards showcase === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            📦 Kartalar <span class=\"text-mlly-muted text-sm font-normal\">bg-mlly-panel + rounded-mlly-* + shadow-mlly-*</span>
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            📦 Kartalar <span class="text-mlly-muted text-sm font-normal">bg-mlly-panel + rounded-mlly-* + shadow-mlly-*</span>
           </h3>
-          <div class=\"grid sm:grid-cols-2 lg:grid-cols-3 gap-4\">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Simple card -->
-            <div class=\"bg-mlly-panel border border-mlly-border rounded-mlly-xl shadow-mlly-card p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/50\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-lg mb-4\">📊</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Stat card</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">
-                <code class=\"font-mono text-mlly-info text-xs\">bg-mlly-panel</code> + 
-                <code class=\"font-mono text-mlly-info text-xs\">rounded-mlly-xl</code>
+            <div class="bg-mlly-panel border border-mlly-border rounded-mlly-xl shadow-mlly-card p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/50">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-lg mb-4">📊</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Stat card</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">
+                <code class="font-mono text-mlly-info text-xs">bg-mlly-panel</code> + 
+                <code class="font-mono text-mlly-info text-xs">rounded-mlly-xl</code>
               </p>
-              <div class=\"mt-4 flex items-center gap-2\">
-                <span class=\"text-mlly-text font-bold text-2xl\">1,234</span>
-                <span class=\"text-mlly-success text-xs font-semibold bg-mlly-success/15 px-2 py-0.5 rounded-mlly-full\">+12%</span>
+              <div class="mt-4 flex items-center gap-2">
+                <span class="text-mlly-text font-bold text-2xl">1,234</span>
+                <span class="text-mlly-success text-xs font-semibold bg-mlly-success/15 px-2 py-0.5 rounded-mlly-full">+12%</span>
               </div>
             </div>
 
             <!-- Card with gradient border -->
-            <div class=\"bg-mlly-panel border border-mlly-primary/20 rounded-mlly-xl shadow-mlly-card p-6 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-mlly-glow-strong\"
-                 style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.15), 0 12px 30px rgba(2,6,23,0.22);\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-info/15 text-mlly-info flex items-center justify-center text-lg mb-4\">📈</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Glow card</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">
-                Hover'da <code class=\"font-mono text-mlly-info text-xs\">shadow-mlly-glow-strong</code>
+            <div class="bg-mlly-panel border border-mlly-primary/20 rounded-mlly-xl shadow-mlly-card p-6 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-mlly-glow-strong"
+                 style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.15), 0 12px 30px rgba(2,6,23,0.22);">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-info/15 text-mlly-info flex items-center justify-center text-lg mb-4">📈</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Glow card</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">
+                Hover'da <code class="font-mono text-mlly-info text-xs">shadow-mlly-glow-strong</code>
               </p>
-              <div class=\"mt-4 flex items-center gap-2\">
-                <span class=\"text-mlly-text font-bold text-2xl\">89%</span>
-                <span class=\"text-mlly-muted text-xs\">uptime</span>
+              <div class="mt-4 flex items-center gap-2">
+                <span class="text-mlly-text font-bold text-2xl">89%</span>
+                <span class="text-mlly-muted text-xs">uptime</span>
               </div>
             </div>
 
             <!-- Card with icon -->
-            <div class=\"bg-mlly-panel-2 border border-mlly-border rounded-mlly-2xl shadow-mlly-surface p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary-2/40\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-primary-2/15 text-mlly-primary-2 flex items-center justify-center text-lg mb-4\">🎯</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Deep card</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">
-                <code class=\"font-mono text-mlly-info text-xs\">bg-mlly-panel-2</code> + 
-                <code class=\"font-mono text-mlly-info text-xs\">rounded-mlly-2xl</code>
+            <div class="bg-mlly-panel-2 border border-mlly-border rounded-mlly-2xl shadow-mlly-surface p-6 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary-2/40">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-primary-2/15 text-mlly-primary-2 flex items-center justify-center text-lg mb-4">🎯</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Deep card</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">
+                <code class="font-mono text-mlly-info text-xs">bg-mlly-panel-2</code> + 
+                <code class="font-mono text-mlly-info text-xs">rounded-mlly-2xl</code>
               </p>
-              <div class=\"mt-4 flex items-center gap-2\">
-                <span class=\"badge badge-active bg-mlly-success/15 text-mlly-success border-mlly-success/30\">Active</span>
+              <div class="mt-4 flex items-center gap-2">
+                <span class="badge badge-active bg-mlly-success/15 text-mlly-success border-mlly-success/30">Active</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- === Stats grid (workspace stat cards) === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
             📊 Statistik kartalar
           </h3>
-          <div class=\"grid grid-cols-2 lg:grid-cols-4 gap-3\">
-            <div class=\"bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25\"
-                 style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);\">
-              <span class=\"text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2\">Workspace'lar</span>
-              <span class=\"text-mlly-text text-3xl font-bold block\">12</span>
-              <span class=\"text-mlly-muted text-xs mt-2 block\">Production units</span>
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div class="bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25"
+                 style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);">
+              <span class="text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2">Workspace'lar</span>
+              <span class="text-mlly-text text-3xl font-bold block">12</span>
+              <span class="text-mlly-muted text-xs mt-2 block">Production units</span>
             </div>
-            <div class=\"bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25\"
-                 style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);\">
-              <span class=\"text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2\">Lead</span>
-              <span class=\"text-mlly-text text-3xl font-bold block\">8</span>
-              <span class=\"text-mlly-muted text-xs mt-2 block\">Team leadlar</span>
+            <div class="bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25"
+                 style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);">
+              <span class="text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2">Lead</span>
+              <span class="text-mlly-text text-3xl font-bold block">8</span>
+              <span class="text-mlly-muted text-xs mt-2 block">Team leadlar</span>
             </div>
-            <div class=\"bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25\"
-                 style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);\">
-              <span class=\"text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2\">A'zolar</span>
-              <span class=\"text-mlly-text text-3xl font-bold block\">24</span>
-              <span class=\"text-mlly-muted text-xs mt-2 block\">Jami userlar</span>
+            <div class="bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25"
+                 style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);">
+              <span class="text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2">A'zolar</span>
+              <span class="text-mlly-text text-3xl font-bold block">24</span>
+              <span class="text-mlly-muted text-xs mt-2 block">Jami userlar</span>
             </div>
-            <div class=\"bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25\"
-                 style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);\">
-              <span class=\"text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2\">Yangi</span>
-              <span class=\"text-mlly-text text-3xl font-bold block\">5</span>
-              <span class=\"text-mlly-muted text-xs mt-2 block\">Bildirishnomalar</span>
+            <div class="bg-mlly-bg-2 border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-primary/25"
+                 style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.10);">
+              <span class="text-mlly-muted text-xs font-semibold uppercase tracking-wider block mb-2">Yangi</span>
+              <span class="text-mlly-text text-3xl font-bold block">5</span>
+              <span class="text-mlly-muted text-xs mt-2 block">Bildirishnomalar</span>
             </div>
           </div>
         </div>
 
         <!-- === Buttons showcase === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            🔘 Tugmalar <span class=\"text-mlly-muted text-sm font-normal\">3 darajali ierarxiya</span>
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            🔘 Tugmalar <span class="text-mlly-muted text-sm font-normal">3 darajali ierarxiya</span>
           </h3>
-          <div class=\"flex flex-wrap gap-3 items-center\">
-            <button class=\"btn btn-primary\">Primary</button>
-            <button class=\"btn-secondary border border-mlly-border text-mlly-text bg-transparent rounded-mlly px-4 py-2.5 text-sm font-semibold hover:bg-mlly-panel-2 transition-all duration-150\">Secondary</button>
-            <button class=\"text-mlly-muted text-sm font-semibold px-3 py-2 rounded-mlly bg-transparent border-0 cursor-pointer hover:text-mlly-text hover:bg-mlly-panel-2 transition-all duration-150\">Tertiary</button>
-            <button class=\"btn btn-danger bg-mlly-danger/15 text-mlly-danger border-mlly-danger/30 px-4 py-2 rounded-mlly text-sm font-semibold cursor-pointer hover:bg-mlly-danger/20 transition-all duration-150\">Danger</button>
-            <button class=\"text-mlly-success text-sm font-semibold bg-mlly-success/15 px-3 py-1.5 rounded-mlly-full border border-mlly-success/30 inline-flex items-center gap-1.5\">✅ Success</button>
-            <button class=\"text-mlly-warning text-sm font-semibold bg-mlly-warning/15 px-3 py-1.5 rounded-mlly-full border border-mlly-warning/30 inline-flex items-center gap-1.5\">⚠️ Warning</button>
+          <div class="flex flex-wrap gap-3 items-center">
+            <button class="btn btn-primary">Primary</button>
+            <button class="btn-secondary border border-mlly-border text-mlly-text bg-transparent rounded-mlly px-4 py-2.5 text-sm font-semibold hover:bg-mlly-panel-2 transition-all duration-150">Secondary</button>
+            <button class="text-mlly-muted text-sm font-semibold px-3 py-2 rounded-mlly bg-transparent border-0 cursor-pointer hover:text-mlly-text hover:bg-mlly-panel-2 transition-all duration-150">Tertiary</button>
+            <button class="btn btn-danger bg-mlly-danger/15 text-mlly-danger border-mlly-danger/30 px-4 py-2 rounded-mlly text-sm font-semibold cursor-pointer hover:bg-mlly-danger/20 transition-all duration-150">Danger</button>
+            <button class="text-mlly-success text-sm font-semibold bg-mlly-success/15 px-3 py-1.5 rounded-mlly-full border border-mlly-success/30 inline-flex items-center gap-1.5">✅ Success</button>
+            <button class="text-mlly-warning text-sm font-semibold bg-mlly-warning/15 px-3 py-1.5 rounded-mlly-full border border-mlly-warning/30 inline-flex items-center gap-1.5">⚠️ Warning</button>
           </div>
         </div>
 
         <!-- === Badges === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            🏷️ Badge'lar <span class=\"text-mlly-muted text-sm font-normal\">rounded-mlly-full</span>
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            🏷️ Badge'lar <span class="text-mlly-muted text-sm font-normal">rounded-mlly-full</span>
           </h3>
-          <div class=\"flex flex-wrap gap-2\">
-            <span class=\"badge\">Default</span>
-            <span class=\"badge badge-active bg-mlly-success/15 text-mlly-success border-mlly-success/30\">Active</span>
-            <span class=\"badge badge-planned bg-mlly-info/15 text-mlly-info border-mlly-info/30\">Planned</span>
-            <span class=\"badge badge-draft bg-mlly-warning/15 text-mlly-warning border-mlly-warning/30\">Draft</span>
-            <span class=\"badge badge-rejected bg-mlly-danger/15 text-mlly-danger border-mlly-danger/30\">Rejected</span>
-            <span class=\"badge badge-progress bg-mlly-primary-2/15 text-mlly-primary-2 border-mlly-primary-2/30\">In Progress</span>
-            <span class=\"badge badge-raw text-mlly-muted bg-mlly-muted/10 border-mlly-muted/20\">Raw</span>
+          <div class="flex flex-wrap gap-2">
+            <span class="badge">Default</span>
+            <span class="badge badge-active bg-mlly-success/15 text-mlly-success border-mlly-success/30">Active</span>
+            <span class="badge badge-planned bg-mlly-info/15 text-mlly-info border-mlly-info/30">Planned</span>
+            <span class="badge badge-draft bg-mlly-warning/15 text-mlly-warning border-mlly-warning/30">Draft</span>
+            <span class="badge badge-rejected bg-mlly-danger/15 text-mlly-danger border-mlly-danger/30">Rejected</span>
+            <span class="badge badge-progress bg-mlly-primary-2/15 text-mlly-primary-2 border-mlly-primary-2/30">In Progress</span>
+            <span class="badge badge-raw text-mlly-muted bg-mlly-muted/10 border-mlly-muted/20">Raw</span>
           </div>
         </div>
 
         <!-- === Form elements === -->
-        <div class=\"mb-12 grid md:grid-cols-2 gap-8\">
+        <div class="mb-12 grid md:grid-cols-2 gap-8">
           <div>
-            <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
+            <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+                style="font-family: 'Space Grotesk', sans-serif;">
               📝 Form elementlari
             </h3>
-            <div class=\"space-y-4\">
+            <div class="space-y-4">
               <div>
-                <label class=\"block text-mlly-muted text-sm font-medium mb-1.5\">Email</label>
-                <input type=\"email\" placeholder=\"user@example.com\"
-                       class=\"w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary\"
-                       style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.08) inset;\">
+                <label class="block text-mlly-muted text-sm font-medium mb-1.5">Email</label>
+                <input type="email" placeholder="user@example.com"
+                       class="w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary"
+                       style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.08) inset;">
               </div>
               <div>
-                <label class=\"block text-mlly-muted text-sm font-medium mb-1.5\">Parol</label>
-                <input type=\"password\" placeholder=\"••••••••\"
-                       class=\"w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary\"
-                       style=\"box-shadow: 0 0 0 0.5px rgba(47,129,247,0.08) inset;\">
+                <label class="block text-mlly-muted text-sm font-medium mb-1.5">Parol</label>
+                <input type="password" placeholder="••••••••"
+                       class="w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary"
+                       style="box-shadow: 0 0 0 0.5px rgba(47,129,247,0.08) inset;">
               </div>
               <div>
-                <label class=\"block text-mlly-muted text-sm font-medium mb-1.5\">Tavsif</label>
-                <textarea rows=\"3\" placeholder=\"Biror narsa yozing...\"
-                          class=\"w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary resize-none\"></textarea>
+                <label class="block text-mlly-muted text-sm font-medium mb-1.5">Tavsif</label>
+                <textarea rows="3" placeholder="Biror narsa yozing..."
+                          class="w-full px-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary resize-none"></textarea>
               </div>
-              <div class=\"flex items-center gap-2\">
-                <input type=\"checkbox\" id=\"agree\" class=\"accent-mlly-primary w-4 h-4 rounded\">
-                <label for=\"agree\" class=\"text-mlly-text text-sm cursor-pointer\">Shartlarga roziman</label>
+              <div class="flex items-center gap-2">
+                <input type="checkbox" id="agree" class="accent-mlly-primary w-4 h-4 rounded">
+                <label for="agree" class="text-mlly-text text-sm cursor-pointer">Shartlarga roziman</label>
               </div>
             </div>
           </div>
           <div>
-            <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
+            <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+                style="font-family: 'Space Grotesk', sans-serif;">
               🔍 Qidiruv / Avatar
             </h3>
-            <div class=\"space-y-4\">
+            <div class="space-y-4">
               <!-- Search -->
-              <div class=\"relative\">
-                <svg class=\"absolute left-3 top-1/2 -translate-y-1/2 text-mlly-muted\" width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"M21 21l-4.3-4.3\"/></svg>
-                <input type=\"text\" placeholder=\"Workspace ichidan qidirish...\"
-                       class=\"w-full pl-10 pr-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary\">
+              <div class="relative">
+                <svg class="absolute left-3 top-1/2 -translate-y-1/2 text-mlly-muted" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+                <input type="text" placeholder="Workspace ichidan qidirish..."
+                       class="w-full pl-10 pr-3.5 py-2.5 rounded-mlly bg-mlly-panel-2 border border-mlly-border text-mlly-text text-sm outline-none transition-all duration-150 focus:border-mlly-primary">
               </div>
               <!-- Avatars -->
-              <div class=\"flex items-center gap-3\">
-                <div class=\"w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm\"
-                     style=\"background: linear-gradient(135deg, #7c5cfc, #ec4899);\">AK</div>
-                <div class=\"w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm\"
-                     style=\"background: linear-gradient(135deg, #3fb950, #06b6d4);\">JS</div>
-                <div class=\"w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm\"
-                     style=\"background: linear-gradient(135deg, #d29922, #f85149);\">MT</div>
-                <div class=\"w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm\"
-                     style=\"background: linear-gradient(135deg, #2f81f7, #7c5cfc);\">+3</div>
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                     style="background: linear-gradient(135deg, #7c5cfc, #ec4899);">AK</div>
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                     style="background: linear-gradient(135deg, #3fb950, #06b6d4);">JS</div>
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                     style="background: linear-gradient(135deg, #d29922, #f85149);">MT</div>
+                <div class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-white text-sm"
+                     style="background: linear-gradient(135deg, #2f81f7, #7c5cfc);">+3</div>
               </div>
               <!-- Workspace record (mini card) -->
-              <div class=\"border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-info/30 hover:bg-mlly-panel/80\"
-                   style=\"background: rgba(13,17,23,0.56);\">
-                <div class=\"flex items-start justify-between gap-3\">
+              <div class="border border-mlly-border rounded-mlly-lg p-4 transition-all duration-150 hover:-translate-y-0.5 hover:border-mlly-info/30 hover:bg-mlly-panel/80"
+                   style="background: rgba(13,17,23,0.56);">
+                <div class="flex items-start justify-between gap-3">
                   <div>
-                    <h4 class=\"text-mlly-text font-semibold text-base m-0\">Growth Lab</h4>
-                    <div class=\"flex flex-wrap gap-2 mt-2\">
-                      <span class=\"text-mlly-muted text-xs inline-flex items-center gap-1 px-2 py-0.5 rounded-mlly-full bg-mlly-white-4 border border-mlly-border/50\">14 a'zo</span>
-                      <span class=\"badge badge-active text-xs\">Active</span>
+                    <h4 class="text-mlly-text font-semibold text-base m-0">Growth Lab</h4>
+                    <div class="flex flex-wrap gap-2 mt-2">
+                      <span class="text-mlly-muted text-xs inline-flex items-center gap-1 px-2 py-0.5 rounded-mlly-full bg-mlly-white-4 border border-mlly-border/50">14 a'zo</span>
+                      <span class="badge badge-active text-xs">Active</span>
                     </div>
                   </div>
-                  <span class=\"w-11 h-11 rounded-mlly flex items-center justify-center font-bold text-white text-sm flex-shrink-0\"
-                        style=\"background: linear-gradient(135deg, #7c5cfc, #6e62e5);\">G</span>
+                  <span class="w-11 h-11 rounded-mlly flex items-center justify-center font-bold text-white text-sm flex-shrink-0"
+                        style="background: linear-gradient(135deg, #7c5cfc, #6e62e5);">G</span>
                 </div>
-                <p class=\"text-mlly-muted text-sm mt-3 leading-relaxed\">MVP scope bo'yicha roadmap tayyor.</p>
+                <p class="text-mlly-muted text-sm mt-3 leading-relaxed">MVP scope bo'yicha roadmap tayyor.</p>
               </div>
             </div>
           </div>
         </div>
 
         <!-- === Feature cards (component layer) === -->
-        <div class=\"mb-12\">
-          <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-              style=\"font-family: 'Space Grotesk', sans-serif;\">
-            ⚡ Feature card'lar <span class=\"text-mlly-muted text-sm font-normal\">component layer + utility</span>
+        <div class="mb-12">
+          <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+              style="font-family: 'Space Grotesk', sans-serif;">
+            ⚡ Feature card'lar <span class="text-mlly-muted text-sm font-normal">component layer + utility</span>
           </h3>
-          <div class=\"grid sm:grid-cols-3 gap-4\">
+          <div class="grid sm:grid-cols-3 gap-4">
             <!-- Component layer card -->
-            <div class=\"card\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-primary-2/15 text-mlly-primary-2 flex items-center justify-center text-lg mb-3\">🔒</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Xavfsizlik</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">Workspace ichidagi ma'lumotlar ommaviy emas. Faqat a'zolar ko'radi.</p>
-              <div class=\"mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2\">
-                <span class=\"text-mlly-success text-xs font-semibold bg-mlly-success/15 px-2 py-0.5 rounded-mlly-full\">✅ Active</span>
+            <div class="card">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-primary-2/15 text-mlly-primary-2 flex items-center justify-center text-lg mb-3">🔒</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Xavfsizlik</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">Workspace ichidagi ma'lumotlar ommaviy emas. Faqat a'zolar ko'radi.</p>
+              <div class="mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2">
+                <span class="text-mlly-success text-xs font-semibold bg-mlly-success/15 px-2 py-0.5 rounded-mlly-full">✅ Active</span>
               </div>
             </div>
-            <div class=\"card\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-info/15 text-mlly-info flex items-center justify-center text-lg mb-3\">💬</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Real-time Chat</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">Firebase Realtime Database asosida ishlaydi, yangilanishlar darhol keladi.</p>
-              <div class=\"mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2\">
-                <span class=\"text-mlly-info text-xs font-semibold bg-mlly-info/15 px-2 py-0.5 rounded-mlly-full\">🔵 Live</span>
+            <div class="card">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-info/15 text-mlly-info flex items-center justify-center text-lg mb-3">💬</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Real-time Chat</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">Firebase Realtime Database asosida ishlaydi, yangilanishlar darhol keladi.</p>
+              <div class="mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2">
+                <span class="text-mlly-info text-xs font-semibold bg-mlly-info/15 px-2 py-0.5 rounded-mlly-full">🔵 Live</span>
               </div>
             </div>
-            <div class=\"card\">
-              <div class=\"w-10 h-10 rounded-mlly bg-mlly-success/15 text-mlly-success flex items-center justify-center text-lg mb-3\">📋</div>
-              <h4 class=\"text-mlly-text font-bold text-lg mb-1\">Workspace</h4>
-              <p class=\"text-mlly-muted text-sm leading-relaxed\">Admin → Team lead → Member. Har bir rolga alohida UX.</p>
-              <div class=\"mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2\">
-                <span class=\"text-mlly-warning text-xs font-semibold bg-mlly-warning/15 px-2 py-0.5 rounded-mlly-full\">🔄 3 rol</span>
+            <div class="card">
+              <div class="w-10 h-10 rounded-mlly bg-mlly-success/15 text-mlly-success flex items-center justify-center text-lg mb-3">📋</div>
+              <h4 class="text-mlly-text font-bold text-lg mb-1">Workspace</h4>
+              <p class="text-mlly-muted text-sm leading-relaxed">Admin → Team lead → Member. Har bir rolga alohida UX.</p>
+              <div class="mt-4 pt-3 border-t border-mlly-border/50 flex items-center gap-2">
+                <span class="text-mlly-warning text-xs font-semibold bg-mlly-warning/15 px-2 py-0.5 rounded-mlly-full">🔄 3 rol</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- === Spacing & Typography === -->
-        <div class=\"grid md:grid-cols-2 gap-8 mb-12\">
+        <div class="grid md:grid-cols-2 gap-8 mb-12">
           <div>
-            <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
-              📏 Spacing <span class=\"text-mlly-muted text-sm font-normal\">mlly-{1-10}</span>
+            <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+                style="font-family: 'Space Grotesk', sans-serif;">
+              📏 Spacing <span class="text-mlly-muted text-sm font-normal">mlly-{1-10}</span>
             </h3>
-            <div class=\"space-y-1\">
-              <div class=\"flex items-center gap-2\"><div class=\"w-mlly-1 h-mlly-1 rounded bg-mlly-primary/30\"></div><span class=\"text-sm text-mlly-muted\">mlly-1 (4px)</span></div>
-              <div class=\"flex items-center gap-2\"><div class=\"w-mlly-2 h-mlly-2 rounded bg-mlly-info/30\"></div><span class=\"text-sm text-mlly-muted\">mlly-2 (8px)</span></div>
-              <div class=\"flex items-center gap-2\"><div class=\"w-mlly-3 h-mlly-3 rounded bg-mlly-success/30\"></div><span class=\"text-sm text-mlly-muted\">mlly-3 (12px)</span></div>
-              <div class=\"flex items-center gap-2\"><div class=\"w-mlly-4 h-mlly-4 rounded bg-mlly-warning/30\"></div><span class=\"text-sm text-mlly-muted\">mlly-4 (16px)</span></div>
-              <div class=\"flex items-center gap-2\"><div class=\"w-mlly-5 h-mlly-5 rounded bg-mlly-danger/30\"></div><span class=\"text-sm text-mlly-muted\">mlly-5 (20px)</span></div>
+            <div class="space-y-1">
+              <div class="flex items-center gap-2"><div class="w-mlly-1 h-mlly-1 rounded bg-mlly-primary/30"></div><span class="text-sm text-mlly-muted">mlly-1 (4px)</span></div>
+              <div class="flex items-center gap-2"><div class="w-mlly-2 h-mlly-2 rounded bg-mlly-info/30"></div><span class="text-sm text-mlly-muted">mlly-2 (8px)</span></div>
+              <div class="flex items-center gap-2"><div class="w-mlly-3 h-mlly-3 rounded bg-mlly-success/30"></div><span class="text-sm text-mlly-muted">mlly-3 (12px)</span></div>
+              <div class="flex items-center gap-2"><div class="w-mlly-4 h-mlly-4 rounded bg-mlly-warning/30"></div><span class="text-sm text-mlly-muted">mlly-4 (16px)</span></div>
+              <div class="flex items-center gap-2"><div class="w-mlly-5 h-mlly-5 rounded bg-mlly-danger/30"></div><span class="text-sm text-mlly-muted">mlly-5 (20px)</span></div>
             </div>
           </div>
           <div>
-            <h3 class=\"text-mlly-text font-display text-xl font-bold mb-4\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
-              🔤 Typography <span class=\"text-mlly-muted text-sm font-normal\">font-display sarlavhalar uchun</span>
+            <h3 class="text-mlly-text font-display text-xl font-bold mb-4"
+                style="font-family: 'Space Grotesk', sans-serif;">
+              🔤 Typography <span class="text-mlly-muted text-sm font-normal">font-display sarlavhalar uchun</span>
             </h3>
-            <div class=\"space-y-3\">
-              <div><span class=\"text-mlly-6xl font-display font-bold block leading-none\" style=\"font-family: 'Space Grotesk', sans-serif;\">Aa</span><span class=\"text-xs text-mlly-muted\">mlly-6xl (44px)</span></div>
-              <div><span class=\"text-mlly-3xl font-display font-bold block\" style=\"font-family: 'Space Grotesk', sans-serif;\">Heading 3</span><span class=\"text-xs text-mlly-muted\">mlly-3xl (24px)</span></div>
-              <div><span class=\"text-mlly-lg block\">Body text (mlly-lg, 16px)</span><span class=\"text-xs text-mlly-muted\">Regular Manrope</span></div>
-              <div><span class=\"text-mlly-muted text-mlly-base block\">Muted text (mlly-base, 13px)</span><span class=\"text-xs text-mlly-muted\">Multiline</span></div>
+            <div class="space-y-3">
+              <div><span class="text-mlly-6xl font-display font-bold block leading-none" style="font-family: 'Space Grotesk', sans-serif;">Aa</span><span class="text-xs text-mlly-muted">mlly-6xl (44px)</span></div>
+              <div><span class="text-mlly-3xl font-display font-bold block" style="font-family: 'Space Grotesk', sans-serif;">Heading 3</span><span class="text-xs text-mlly-muted">mlly-3xl (24px)</span></div>
+              <div><span class="text-mlly-lg block">Body text (mlly-lg, 16px)</span><span class="text-xs text-mlly-muted">Regular Manrope</span></div>
+              <div><span class="text-mlly-muted text-mlly-base block">Muted text (mlly-base, 13px)</span><span class="text-xs text-mlly-muted">Multiline</span></div>
             </div>
           </div>
         </div>
 
         <!-- === How to use === -->
-        <div class=\"rounded-mlly-3xl border border-mlly-border overflow-hidden mb-12\"
-             style=\"background: rgba(12,20,36,0.72);\">
-          <div class=\"p-6 md:p-8\">
-            <h3 class=\"text-mlly-text font-display text-2xl font-bold mb-2\"
-                style=\"font-family: 'Space Grotesk', sans-serif;\">
+        <div class="rounded-mlly-3xl border border-mlly-border overflow-hidden mb-12"
+             style="background: rgba(12,20,36,0.72);">
+          <div class="p-6 md:p-8">
+            <h3 class="text-mlly-text font-display text-2xl font-bold mb-2"
+                style="font-family: 'Space Grotesk', sans-serif;">
               🚀 Qanday ishlatiladi
             </h3>
-            <p class=\"text-mlly-muted text-sm mb-6\">
-              <code class=\"text-mlly-info font-mono text-xs\">tailwind.css</code> ni HTML'ga link qiling va 
-              <code class=\"text-mlly-info font-mono text-xs\">mlly-*</code> klasslarini ishlating.
+            <p class="text-mlly-muted text-sm mb-6">
+              <code class="text-mlly-info font-mono text-xs">tailwind.css</code> ni HTML'ga link qiling va 
+              <code class="text-mlly-info font-mono text-xs">mlly-*</code> klasslarini ishlating.
             </p>
-            <div class=\"grid gap-4\">
-              <div class=\"flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50\">
-                <span class=\"w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold\">1</span>
-                <span class=\"text-mlly-text text-sm\"><code class=\"font-mono text-mlly-info\">&lt;link href=\"css/tailwind.css\" rel=\"stylesheet\"&gt;</code></span>
+            <div class="grid gap-4">
+              <div class="flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50">
+                <span class="w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold">1</span>
+                <span class="text-mlly-text text-sm"><code class="font-mono text-mlly-info">&lt;link href="css/tailwind.css" rel="stylesheet"&gt;</code></span>
               </div>
-              <div class=\"flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50\">
-                <span class=\"w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold\">2</span>
-                <span class=\"text-mlly-text text-sm\"><code class=\"font-mono text-mlly-info\">npm run tw:build</code> — Tailwind CSS ni qayta kompilyatsiya qilish</span>
+              <div class="flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50">
+                <span class="w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold">2</span>
+                <span class="text-mlly-text text-sm"><code class="font-mono text-mlly-info">npm run tw:build</code> — Tailwind CSS ni qayta kompilyatsiya qilish</span>
               </div>
-              <div class=\"flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50\">
-                <span class=\"w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold\">3</span>
-                <span class=\"text-mlly-text text-sm\"><code class=\"font-mono text-mlly-info\">npm run tw:watch</code> — o'zgarishlarni avtomatik kuzatish</span>
+              <div class="flex items-center gap-3 p-3 rounded-mlly bg-mlly-panel-2/50 border border-mlly-border/50">
+                <span class="w-6 h-6 rounded-mlly-sm bg-mlly-primary/15 text-mlly-primary flex items-center justify-center text-xs font-bold">3</span>
+                <span class="text-mlly-text text-sm"><code class="font-mono text-mlly-info">npm run tw:watch</code> — o'zgarishlarni avtomatik kuzatish</span>
               </div>
             </div>
           </div>
@@ -468,10 +468,10 @@
     </main>
 
     <!-- Footer -->
-    <footer class=\"border-t border-mlly-border/50 py-6 px-6 md:px-10 text-center\"
-            style=\"width: min(1240px, calc(100% - 40px)); margin: 0 auto;\">
-      <p class=\"text-mlly-muted text-xs\">
-        MllyCore Design System v2.0 — Tailwind CSS <code class=\"font-mono text-mlly-info\">mlly-*</code> utility classes
+    <footer class="border-t border-mlly-border/50 py-6 px-6 md:px-10 text-center"
+            style="width: min(1240px, calc(100% - 40px)); margin: 0 auto;">
+      <p class="text-mlly-muted text-xs">
+        MllyCore Design System v2.0 — Tailwind CSS <code class="font-mono text-mlly-info">mlly-*</code> utility classes
       </p>
     </footer>
   </div>
