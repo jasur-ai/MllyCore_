@@ -376,6 +376,7 @@
       const target = document.getElementById('tasksList');
       const count = document.getElementById('taskCount');
       if (count) count.textContent = tasks.length + ' ta';
+      if (!target) return;
 
       // Guruhlarni statuslar bo'yicha ajratamiz
       var groups = {
