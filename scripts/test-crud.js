@@ -207,7 +207,7 @@ async function main() {
     if (taskId) {
       const tk = await db.collection('tasks').doc(taskId).get();
       check('C27: tasks doc exists', tk.exists);
-      check('C28: task fields', tk.exists && tk.data().title === 'CRUD Task' && tk.data().status === 'todo' && tk.data().assignedTo === memberUid);
+      check('C28: task fields', tk.exists && tk.data().title === 'CRUD Task' && tk.data().status === 'open' && tk.data().assignedTo === memberUid);
     }
   }
 
@@ -311,7 +311,7 @@ async function main() {
   console.log('\n══════════════════ CRUD TEST HISOBOT ══════════════════');
   for (const r of results) {
     console.log(`${r.ok ? '  ✅' : '  ❌'} ${r.name}`);
-    if (!r.ok) { fail++; console.log('     ↳', JSON.stringify(r.detail).slice(0, 400)); } else pass++;
+    if (!r.ok) { fail++; console.log('     ↳', r.detail ? JSON.stringify(r.detail).slice(0, 400) : '(no detail)'); } else pass++;
   }
   console.log(`\n  ${pass} passed, ${fail} failed, ${results.length} total`);
   console.log('══════════════════════════════════════════════════════\n');
