@@ -301,7 +301,8 @@
       var _ic = document.getElementById('ideasCount'); if (_ic) _ic.textContent = `${ideas.length} ta`;
       var _sc = document.getElementById('startupsCount'); if (_sc) _sc.textContent = `${startups.length} ta`;
 
-      document.getElementById('startupList').innerHTML = startups.length ? startups.map((item) => `
+      var _sl = document.getElementById('startupList'); if (!_sl) return;
+      _sl.innerHTML = startups.length ? startups.map((item) => `
         <div class="workspace-record workspace-record-startup workspace-record-accent" data-startup-id="${item.id}">
           <div class="workspace-record-top">
             <div>
